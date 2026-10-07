@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><Folder><name>Deneme OSB</name>
+<Placemark><name>1. Etap</name><Polygon><outerBoundaryIs><LinearRing><coordinates>
+31.3999,41.1999,0 31.40045,41.1999,0 31.40045,41.20035,0 31.3999,41.20035,0 31.3999,41.1999,0
+</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
+<Placemark><name>Müdürlük</name><Point><coordinates>31.4001,41.2001,0</coordinates></Point></Placemark>
+<Placemark><name>2. Etap sınır çizgisi</name><LineString><coordinates>
+31.4006,41.1999,0 31.4010,41.1999,0 31.4010,41.2003,0 31.4006,41.2003,0 31.4006,41.1999,0
+</coordinates></LineString></Placemark>
+</Folder></Document></kml>

@@ -1,0 +1,12 @@
+# Parsel verisi ve çıktılar depoya girmez
+data/
+test-kml/
+*.kml
+*.kmz
+*.xlsx
+!tests/ornekler/*.kml
+
+__pycache__/
+*.pyc
+.venv/
+.claude/settings.local.json

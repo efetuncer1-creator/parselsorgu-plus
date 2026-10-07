@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "efe-parselsorgu",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "parselapp.server", "--tarayici-acma"],
+      "port": 8765
+    }
+  ]
+}

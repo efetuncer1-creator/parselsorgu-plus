@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Placemark>
+    <name>Deneme Mahallesi 12-ada-5-parsel</name>
+    <ExtendedData>
+      <Data name="İl"><value>Örnekil</value></Data>
+      <Data name="İlçe"><value>Örnekilçe</value></Data>
+      <Data name="Mahalle"><value>Deneme</value></Data>
+      <Data name="Ada"><value>12</value></Data>
+      <Data name="ParselNo"><value>5</value></Data>
+      <Data name="Alan"><value>1.234,50</value></Data>
+      <Data name="Nitelik"><value>Bahçe</value></Data>
+      <Data name="Mevkii"><value /></Data>
+    </ExtendedData>
+    <Polygon><outerBoundaryIs><LinearRing><coordinates>31.400000000000002,41.200000000000003
+31.400400000000001,41.200000000000003
+31.400400000000001,41.200299999999999
+31.400000000000002,41.200000000000003</coordinates></LinearRing></outerBoundaryIs></Polygon>
+  </Placemark>
+</kml>

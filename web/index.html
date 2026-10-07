@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>efe-parselsorgu</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="ust">
+    <h1>efe-parselsorgu</h1>
+    <div class="sayac" id="sayac" title="Bugün bu bilgisayardan TKGM'ye atılan sorgu sayısı">TKGM sorgusu bugün: –</div>
+  </header>
+
+  <main class="duzen">
+    <nav class="sekmeler" role="tablist" aria-label="Sayfalar" aria-orientation="vertical">
+      <button type="button" role="tab" id="sekme-parsel" data-sekme="parsel" aria-controls="panel-parsel" aria-selected="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5l7-2 9 3-2 13-9 2-5-6z"/><path d="M11 3l-2 18M4 5l14 8"/></svg>
+        <span>Parsel<br>sorgu</span>
+      </button>
+      <button type="button" role="tab" id="sekme-alan" data-sekme="alan" aria-controls="panel-alan" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l12-2 3 10-9 6-7-5z" stroke-dasharray="3 2"/><circle cx="5" cy="6" r="1.8"/><circle cx="17" cy="4" r="1.8"/><circle cx="20" cy="14" r="1.8"/><circle cx="11" cy="20" r="1.8"/><circle cx="4" cy="15" r="1.8"/></svg>
+        <span>Alandan<br>tespit</span>
+      </button>
+    </nav>
+
+    <!-- ===================== Sekme 1: Parsel sorgu ===================== -->
+    <aside class="panel" id="panel-parsel" role="tabpanel" aria-labelledby="sekme-parsel">
+      <section class="kutu">
+        <h2>Sorgu</h2>
+        <form id="sorguForm" class="form">
+          <label>İl <select id="il" required><option value="">Yükle…</option></select></label>
+          <label>İlçe <select id="ilce" required disabled></select></label>
+          <label>Mahalle <select id="mahalle" required disabled></select></label>
+          <div class="ikili">
+            <label>Ada <input id="ada" inputmode="numeric" pattern="[0-9]+" required value="0" placeholder=" "></label>
+            <label>Parsel <input id="parsel" inputmode="numeric" pattern="[0-9]+" required placeholder=" "></label>
+          </div>
+          <label class="secim"><input type="checkbox" id="yenile"> Kayıtlı olsa da TKGM'den yeniden çek</label>
+          <div class="butonlar">
+            <button type="submit" class="ana">Sorgula</button>
+            <button type="button" id="haritaModu" aria-pressed="false">Haritadan sorgula</button>
+          </div>
+          <p class="ipucu">Daha önce sorgulanan parseller ve il/ilçe/mahalle listeleri önbellekten gelir; TKGM'ye tekrar sorgu atılmaz.</p>
+        </form>
+      </section>
+
+      <section class="kutu kutu-liste">
+        <div class="baslik-satir">
+          <h2>Parseller <span id="adet" class="rozet">0</span></h2>
+          <span id="seciliAdet" class="soluk"></span>
+        </div>
+        <input id="filtre" type="search" placeholder="Ara: mahalle, ada/parsel, nitelik…">
+        <div class="butonlar kucuk">
+          <button type="button" id="tumunuSec">Görünenleri seç</button>
+          <button type="button" id="secimiKaldir">Seçimi kaldır</button>
+          <button type="button" id="seciliSil" title="Seçilenleri bu oturumun listesinden çıkarır; tekrar sorgularsan sorgu harcanmadan gelir">Listeden çıkar</button>
+        </div>
+        <ul id="liste" class="liste"></ul>
+      </section>
+
+      <section class="kutu">
+        <h2>Dışa aktar</h2>
+        <form id="disaForm" class="form">
+          <div class="sekme" role="radiogroup">
+            <label><input type="radio" name="bicim" value="kml" checked> KML</label>
+            <label><input type="radio" name="bicim" value="excel"> Excel</label>
+          </div>
+          <div data-bicim="kml">
+            <label class="secim"><input type="checkbox" id="ayriDosyalar"> Her parsel ayrı dosya (zip)</label>
+          </div>
+          <div data-bicim="excel" hidden class="ikili">
+            <label>Koordinat sistemi
+              <select id="sistem"><option value="itrf96">ITRF96 3°</option><option value="ed50">ED50 3°</option></select>
+            </label>
+            <label>Dilim (DOM)
+              <select id="dilim">
+                <option value="otomatik">Otomatik</option>
+                <option>27</option><option>30</option><option>33</option><option>36</option>
+                <option>39</option><option>42</option><option>45</option>
+              </select>
+            </label>
+          </div>
+          <button type="submit" class="ana" id="disaButon">Seçilenleri dışa aktar</button>
+        </form>
+      </section>
+
+      <section class="kutu">
+        <h2>İçe aktar</h2>
+        <p class="ipucu">Alan Yöneticisi ya da parselsorgu KML'leri, fav_list.json. Dosyaları haritaya sürükleyip bırakabilirsin.</p>
+        <div class="butonlar kucuk">
+          <label class="dugme">Dosya seç<input type="file" id="dosyaSec" multiple accept=".kml,.kmz,.json,.geojson" hidden></label>
+          <label class="dugme">Klasör seç<input type="file" id="klasorSec" webkitdirectory hidden></label>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ===================== Sekme 2: Alandan parsel tespiti ===================== -->
+    <aside class="panel" id="panel-alan" role="tabpanel" aria-labelledby="sekme-alan" hidden>
+      <section class="kutu">
+        <h2>Alan belirle</h2>
+        <div class="butonlar">
+          <label class="dugme">Sınır dosyası yükle<input type="file" id="referansSec" multiple accept=".kml,.kmz,.geojson,.json" hidden></label>
+          <button type="button" id="cizimBasla" aria-pressed="false">Haritada çiz</button>
+        </div>
+        <div id="cizimPanel" class="cizim-panel" hidden>
+          <p id="cizimDurum" class="cizim-durum">Haritaya tıklayarak alanın köşelerine pin koy.</p>
+          <div class="butonlar kucuk">
+            <button type="button" id="cizimGeri">Son pini geri al</button>
+            <button type="button" id="cizimBitir" class="ana" disabled>Alanı kapat</button>
+            <button type="button" id="cizimIptal">İptal</button>
+          </div>
+          <p class="ipucu">Alanı kapatmak için ilk pine (sarı) tıkla, son noktada çift tıkla, Enter'a bas ya da "Alanı kapat"a bas. Pinler sürüklenebilir; Ctrl+Z son pini geri alır, Esc çizimi iptal eder.</p>
+        </div>
+        <p class="ipucu">OSB, plan sınırı ya da bütün proje (KML/KMZ). Katmanları ayrı ayrı açıp kapatabilirsin; hesaplarda sadece açık katmanlar kullanılır.</p>
+      </section>
+
+      <section class="kutu">
+        <h2>Alanlar</h2>
+        <ul id="referansListe" class="ref-liste"></ul>
+        <p id="alanYok" class="ipucu">Henüz alan yok. Sınır dosyası yükle ya da haritada çiz.</p>
+      </section>
+
+      <section class="kutu" id="alanDetay" hidden>
+        <div class="baslik-satir">
+          <h2 id="alanBaslik">Seçili alan</h2>
+          <button type="button" id="ozetYenile" class="kucuk-dugme" title="Özeti yeniden hesapla">Yenile</button>
+        </div>
+        <label class="sinir-secim">Alan sınırı
+          <select id="hesapKatmani" title="Hesaplarda (özet, seçim, tarama, dışa aktarma) kullanılacak katman"></select>
+        </label>
+        <div id="ozet" class="ozet"></div>
+
+        <h3>Parselleri seç</h3>
+        <div class="butonlar kucuk">
+          <button type="button" data-sec="icinde" title="Tamamı alanın içinde kalan kayıtlı parseller">İçindekileri seç</button>
+          <button type="button" data-sec="kesisen" title="Alana kısmen de olsa giren kayıtlı parseller">Kesişenleri seç</button>
+          <button type="button" id="bosluklariGoster" aria-pressed="false">Boşlukları göster</button>
+        </div>
+
+        <h3>Boşlukları TKGM'den tara</h3>
+        <p class="ipucu">Her adımda en büyük boşluğun ortasından bir sorgu atılır. Parsel çıkmayan yerler (yol, dere) işaretlenir ve bir daha sorulmaz.</p>
+        <div class="tarama">
+          <label>En fazla <input id="taramaButce" type="number" min="1" max="200" value="10"> sorgu</label>
+          <button type="button" id="taramaBasla" class="ana">Taramayı başlat</button>
+          <button type="button" id="taramaDur" hidden>Durdur</button>
+        </div>
+        <p id="taramaDurum" class="tarama-durum" hidden></p>
+        <button type="button" id="taramaSifirla" class="baglanti" hidden>İşaretli boş noktaları sıfırla</button>
+
+        <h3>Dışa aktar</h3>
+        <div class="form">
+          <div class="sekme" role="radiogroup" aria-label="Hangi parseller">
+            <label><input type="radio" name="alanKapsam" value="kesisen" checked> Kesişenler</label>
+            <label><input type="radio" name="alanKapsam" value="icinde"> Sadece içindekiler</label>
+          </div>
+          <label>Excel koordinat sistemi
+            <select id="alanSistem"><option value="itrf96">ITRF96 3°</option><option value="ed50">ED50 3°</option></select>
+          </label>
+          <div class="butonlar">
+            <button type="button" data-alan-disa="kml" title="Parseller ve alan sınırı tek dosyada">KML (sınır dahil)</button>
+            <button type="button" data-alan-disa="excel" title="Her parselin alan içinde kalan m²'si ve oranıyla">Excel (alan içi m²)</button>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <div class="harita-alan">
+      <div id="harita"></div>
+      <div id="birak" class="birak" hidden>Dosyaları bırak</div>
+    </div>
+  </main>
+
+  <div id="mesajlar" class="mesajlar" aria-live="polite"></div>
+
+  <!-- Uygulama içi onay / ad sorma penceresi (tarayıcının prompt/confirm kutuları her yerde çalışmıyor) -->
+  <dialog id="diyalog" class="diyalog" aria-labelledby="diyalogMetin">
+    <form method="dialog">
+      <p id="diyalogMetin"></p>
+      <input id="diyalogGirdi" type="text" autocomplete="off" hidden>
+      <div class="butonlar">
+        <button type="submit" value="iptal" formnovalidate>İptal</button>
+        <button type="submit" value="tamam" class="ana" id="diyalogTamam">Tamam</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

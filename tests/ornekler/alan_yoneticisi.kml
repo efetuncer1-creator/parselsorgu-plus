@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Alan Yöneticisi 2022</name><Folder><name>12/5</name>
+<Placemark><name>12/5</name><ExtendedData><SchemaData schemaUrl="#E_schema"><SimpleData name=" "><![CDATA[<html><body><h2>Öznitelik Bilgisi</h2><table><tr><td>İl</td><td>Örnekil</td></tr><tr><td>İlçe</td><td>Örnekilçe</td></tr><tr><td>Mahalle</td><td>Deneme</td></tr><tr><td>Ada</td><td>12</td></tr><tr><td>Parsel</td><td>5</td></tr><tr><td>Tapu Alanı</td><td>1.234,50</td></tr><tr><td>Nitelik</td><td>Tarla</td></tr><tr><td>Mevkii</td><td>Yazı</td></tr><tr><td>Pafta</td><td>X00a00a0a</td></tr></table></body></html>]]></SimpleData></SchemaData></ExtendedData>
+<Polygon><outerBoundaryIs><LinearRing><coordinates>
+31.40000000,41.20000000,0 31.40040000,41.20000000,0 31.40040000,41.20030000,0 31.40000000,41.20030000,0 31.40000000,41.20000000,0
+</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
+<Placemark><name>12/5</name><Point><coordinates>31.4002,41.20015,0</coordinates></Point></Placemark>
+<Placemark><name>13/1</name><ExtendedData><SchemaData><SimpleData name=" "><![CDATA[<table><tr><td>İl</td><td>Örnekil</td></tr><tr><td>İlçe</td><td>Örnekilçe</td></tr><tr><td>Mahalle</td><td>Deneme</td></tr><tr><td>Ada</td><td></td></tr><tr><td>Parsel</td><td>1</td></tr><tr><td>Tapu Alanı</td><td>500,00</td></tr></table>]]></SimpleData></SchemaData></ExtendedData>
+<Polygon><outerBoundaryIs><LinearRing><coordinates>31.4005,41.2,0 31.4007,41.2,0 31.4007,41.2002,0 31.4005,41.2,0</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
+</Folder></Document></kml>
