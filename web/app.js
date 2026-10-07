@@ -190,6 +190,9 @@ function sekmeAc(ad) {
   document.querySelectorAll("[role=tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.sekme === ad));
   $("panel-parsel").hidden = ad !== "parsel";
   $("panel-alan").hidden = ad !== "alan";
+  const yuva = document.querySelector(`.yuva[data-yuva="${ad}"]`);
+  yuva.append($("bolumDisa"));
+  disaSecenekleriGuncelle();
   if (ad !== "parsel" && durum.mod === "sorgu") sorguModu(false);
   if (ad !== "alan" && durum.mod === "cizim") cizimIptal();
   if (ad === "alan" && aktifAlan) ozetYukle();
@@ -215,7 +218,7 @@ function listeCiz() {
   const liste = gorunenler();
   $("adet").textContent = durum.parseller.size;
   $("seciliAdet").textContent = durum.secili.size ? `${durum.secili.size} seçili` : "";
-  $("disaButon").textContent = durum.secili.size ? `Seçilenleri dışa aktar (${durum.secili.size})` : "Seçilenleri dışa aktar";
+  disaSecenekleriGuncelle();
   if (!liste.length) {
     ul.innerHTML = `<li class="bos">${durum.parseller.size ? "Eşleşen parsel yok" : "Henüz parsel yok. Sorgula ya da dosya içe aktar."}</li>`;
     return;
@@ -384,15 +387,44 @@ document.querySelectorAll("input[name=bicim]").forEach((r) => r.addEventListener
   document.querySelectorAll("[data-bicim]").forEach((el) => { el.hidden = el.dataset.bicim !== bicim(); });
 }));
 
+const alanSekmesinde = () => !$("panel-alan").hidden;
+const kapsam = () => (alanSekmesinde() && aktifAlan ? document.querySelector("input[name=kapsam]:checked").value : "secili");
+
+function disaKeys() {
+  const k = kapsam();
+  if (k === "secili") return [...durum.secili];
+  return sonOzet ? sonOzet[k].keys : [];
+}
+
+// Alan sekmesinde ve bir alan seçiliyken kapsam/sınır seçenekleri görünür; düğme metni kapsamı söyler.
+function disaSecenekleriGuncelle() {
+  const alanli = alanSekmesinde() && !!aktifAlan;
+  $("alanSecenekleri").hidden = !alanli;
+  if (alanli) {
+    const ad = referanslar.get(aktifAlan)?.veri.ad || "Alan";
+    document.querySelectorAll("[data-alan-adi]").forEach((el) => { el.textContent = `“${ad}”`; });
+  }
+  const n = disaKeys().length;
+  const ne = { secili: "Seçilenleri", kesisen: "Kesişenleri", icinde: "İçindekileri" }[kapsam()];
+  $("disaButon").textContent = n ? `${ne} dışa aktar (${n})` : `${ne} dışa aktar`;
+}
+
+document.querySelectorAll("input[name=kapsam]").forEach((r) => r.addEventListener("change", disaSecenekleriGuncelle));
+
 $("disaForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const keys = [...durum.secili];
-  if (!keys.length) return mesaj("Önce listeden ya da haritadan parsel seç.", true);
+  const keys = disaKeys();
+  if (!keys.length) {
+    return mesaj(kapsam() === "secili" ? "Önce listeden ya da haritadan parsel seç."
+                                       : "Bu alanda dışa aktarılacak parsel yok. Önce parsel içe aktar ya da boşlukları tara.", true);
+  }
+  const alanli = kapsam() !== "secili" || (alanSekmesinde() && aktifAlan);
+  const govde = { keys, bicim: bicim(), ayriDosyalar: $("ayriDosyalar").checked, sistem: $("sistem").value, dilim: $("dilim").value };
+  if (alanli && $("alanSiniriEkle").checked) govde.referansId = aktifAlan;
   const buton = $("disaButon");
   buton.disabled = true;
-  try {
-    await indir({ keys, bicim: bicim(), ayriDosyalar: $("ayriDosyalar").checked, sistem: $("sistem").value, dilim: $("dilim").value });
-  } catch (err) { mesaj(err.message, true); }
+  try { await indir(govde); }
+  catch (err) { mesaj(err.message, true); }
   finally { buton.disabled = false; }
 });
 
@@ -429,7 +461,9 @@ async function dosyalariAktar(dosyalar) {
   await oturumaEkle([...keys]);
   if (aktifAlan) ozetYukle();
   if (keys.size) mesaj(`${uygun.length - hata - bosDosyalar.length} dosyadan ${keys.size} parsel listeye eklendi (${durum.parseller.size - onceki} yeni).`);
-  if (bosDosyalar.length) {
+  if (bosDosyalar.length && alanSekmesinde()) {
+    await referansEkle(bosDosyalar);
+  } else if (bosDosyalar.length) {
     const adlar = bosDosyalar.map((f) => f.name).join(", ");
     if (await onayla(`${adlar} içinde parsel bilgisi yok. Sınır, plan ya da proje dosyasıysa "Alandan tespit" sayfasına alan olarak eklensin mi?`, "Alan olarak ekle")) {
       await referansEkle(bosDosyalar);
@@ -449,9 +483,8 @@ window.addEventListener("drop", (e) => {
   e.preventDefault();
   surukle = 0;
   $("birak").hidden = true;
-  // Alan sekmesindeyken bırakılan dosyalar alan olarak eklenir.
-  if (!$("panel-alan").hidden) referansEkle([...e.dataTransfer.files]);
-  else dosyalariAktar(e.dataTransfer.files);
+  // Parsel içeren dosyalar listeye; parsel içermeyenler alan sekmesinde doğrudan alan olur.
+  dosyalariAktar(e.dataTransfer.files);
 });
 
 // ================================================================================
@@ -533,6 +566,7 @@ function alanSec(id, yaklas = true) {
   referansListeCiz();
   bosluklariTemizle();
   $("alanDetay").hidden = !id;
+  disaSecenekleriGuncelle();
   if (!id) return;
   $("alanBaslik").textContent = referanslar.get(id).veri.ad;
   sinirSecimiDoldur(referanslar.get(id).veri);
@@ -625,6 +659,7 @@ async function ozetYukle() {
     if (id !== aktifAlan) return;
     sonOzet = o;
     ozetCiz(o);
+    disaSecenekleriGuncelle();
     if ($("bosluklariGoster").getAttribute("aria-pressed") === "true") bosluklariCiz();
   } catch (e) {
     sonOzet = null;
@@ -755,22 +790,6 @@ $("taramaSifirla").addEventListener("click", async () => {
     referansCiz(await postJson(`referanslar/${aktifAlan}/tarama-sifirla`, {}));
     await ozetYukle();
   } catch (e) { mesaj(e.message, true); }
-});
-
-// ---- alan dışa aktarma ------------------------------------------------------------
-
-$("alanDetay").addEventListener("click", async (e) => {
-  const b = e.target.closest("button[data-alan-disa]");
-  if (!b || !aktifAlan) return;
-  if (!sonOzet) return mesaj("Alan özeti hesaplanamadı.", true);
-  const kapsam = document.querySelector("input[name=alanKapsam]:checked").value;
-  const keys = sonOzet[kapsam].keys;
-  if (!keys.length) return mesaj("Bu alanda dışa aktarılacak kayıtlı parsel yok.", true);
-  b.disabled = true;
-  try {
-    await indir({ keys, bicim: b.dataset.alanDisa, referansId: aktifAlan, sistem: $("alanSistem").value, dilim: "otomatik" });
-  } catch (err) { mesaj(err.message, true); }
-  finally { b.disabled = false; }
 });
 
 // ---- elle alan çizimi --------------------------------------------------------------

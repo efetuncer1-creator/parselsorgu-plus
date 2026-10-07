@@ -113,6 +113,9 @@ button[aria-pressed=true] { background: var(--secili); border-color: var(--secil
 .katmanlar .katman span:first-of-type { flex: 1; }
 
 /* Alan özeti */
+.yuva { display: contents; }
+.alan-secenekleri { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--radius); background: var(--vurgu-acik); }
+.sekme-dikey { flex-direction: column; gap: 4px; }
 .sinir-secim { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; font-size: 12px; color: var(--soluk); }
 .ozet-alan { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
 .ozet-izgara { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

@@ -60,9 +60,19 @@
         <ul id="liste" class="liste"></ul>
       </section>
 
-      <section class="kutu">
+      <!-- Dışa aktar iki sekmede ortak: açık sekmenin panelindeki yuvaya taşınır. -->
+      <div class="yuva" data-yuva="parsel">
+      <section class="kutu" id="bolumDisa">
         <h2>Dışa aktar</h2>
         <form id="disaForm" class="form">
+          <div id="alanSecenekleri" class="alan-secenekleri" hidden>
+            <div class="sekme sekme-dikey" role="radiogroup" aria-label="Hangi parseller">
+              <label><input type="radio" name="kapsam" value="secili" checked> Seçili parseller</label>
+              <label><input type="radio" name="kapsam" value="kesisen"> <span data-alan-adi></span> ile kesişenler</label>
+              <label><input type="radio" name="kapsam" value="icinde"> <span data-alan-adi></span> içindekiler</label>
+            </div>
+            <label class="secim"><input type="checkbox" id="alanSiniriEkle" checked> Alan sınırını ekle (KML) / alan içi m² sütunları (Excel)</label>
+          </div>
           <div class="sekme" role="radiogroup">
             <label><input type="radio" name="bicim" value="kml" checked> KML</label>
             <label><input type="radio" name="bicim" value="excel"> Excel</label>
@@ -85,10 +95,11 @@
           <button type="submit" class="ana" id="disaButon">Seçilenleri dışa aktar</button>
         </form>
       </section>
+      </div>
 
-      <section class="kutu">
+      <section class="kutu" id="bolumIce">
         <h2>İçe aktar</h2>
-        <p class="ipucu">Alan Yöneticisi ya da parselsorgu KML'leri, fav_list.json. Dosyaları haritaya sürükleyip bırakabilirsin.</p>
+        <p class="ipucu">Parsel KML'leri (Alan Yöneticisi, parselsorgu, bu uygulamanın çıktıları) ve fav_list.json listeye eklenir. Dosyaları haritaya sürükleyip de bırakabilirsin.</p>
         <div class="butonlar kucuk">
           <label class="dugme">Dosya seç<input type="file" id="dosyaSec" multiple accept=".kml,.kmz,.json,.geojson" hidden></label>
           <label class="dugme">Klasör seç<input type="file" id="klasorSec" webkitdirectory hidden></label>
@@ -148,22 +159,9 @@
         </div>
         <p id="taramaDurum" class="tarama-durum" hidden></p>
         <button type="button" id="taramaSifirla" class="baglanti" hidden>İşaretli boş noktaları sıfırla</button>
-
-        <h3>Dışa aktar</h3>
-        <div class="form">
-          <div class="sekme" role="radiogroup" aria-label="Hangi parseller">
-            <label><input type="radio" name="alanKapsam" value="kesisen" checked> Kesişenler</label>
-            <label><input type="radio" name="alanKapsam" value="icinde"> Sadece içindekiler</label>
-          </div>
-          <label>Excel koordinat sistemi
-            <select id="alanSistem"><option value="itrf96">ITRF96 3°</option><option value="ed50">ED50 3°</option></select>
-          </label>
-          <div class="butonlar">
-            <button type="button" data-alan-disa="kml" title="Parseller ve alan sınırı tek dosyada">KML (sınır dahil)</button>
-            <button type="button" data-alan-disa="excel" title="Her parselin alan içinde kalan m²'si ve oranıyla">Excel (alan içi m²)</button>
-          </div>
-        </div>
       </section>
+
+      <div class="yuva" data-yuva="alan"></div>
     </aside>
 
     <div class="harita-alan">
