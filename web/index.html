@@ -2,184 +2,317 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>efe-parselsorgu</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="ust">
-    <h1>efe-parselsorgu</h1>
-    <div class="sayac" id="sayac" title="Bugün bu bilgisayardan TKGM'ye atılan sorgu sayısı">TKGM sorgusu bugün: –</div>
-  </header>
+  <!-- İkonlar: Lucide (ISC lisansı) yollarından, currentColor ile çizilir. -->
+  <svg class="ikon-seti" aria-hidden="true" focusable="false">
+    <symbol id="i-parsel" viewBox="0 0 24 24"><path d="m12 8 6-3-6-3v10"/><path d="m8 11.99-5.5 3.14a1 1 0 0 0 0 1.74l8.5 4.86a2 2 0 0 0 2 0l8.5-4.86a1 1 0 0 0 0-1.74L16 12"/><path d="m6.49 12.85 11.02 6.3"/><path d="M17.51 12.85 6.5 19.15"/></symbol>
+    <symbol id="i-alan" viewBox="0 0 24 24"><path d="M5 6l12-2 3 10-9 6-7-5z" stroke-dasharray="3 2.4"/><circle cx="5" cy="6" r="1.9" fill="currentColor" stroke="none"/><circle cx="17" cy="4" r="1.9" fill="currentColor" stroke="none"/><circle cx="20" cy="14" r="1.9" fill="currentColor" stroke="none"/><circle cx="11" cy="20" r="1.9" fill="currentColor" stroke="none"/><circle cx="4" cy="15" r="1.9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-ara" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-hedef" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/></symbol>
+    <symbol id="i-arti" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-eksi" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-kapat" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-daha" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="19" cy="12" r="1.2" fill="currentColor"/><circle cx="5" cy="12" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-onay" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-uyari" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-bilgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-indir" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-yukle" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></symbol>
+    <symbol id="i-tablo" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M8 13h2M14 13h2M8 17h2M14 17h2"/></symbol>
+    <symbol id="i-harita" viewBox="0 0 24 24"><path d="M14.11 5.55a2 2 0 0 0 1.78 0l3.66-1.83A1 1 0 0 1 21 4.62v12.76a1 1 0 0 1-.55.9l-4.56 2.27a2 2 0 0 1-1.78 0l-4.22-2.1a2 2 0 0 0-1.78 0l-3.66 1.83A1 1 0 0 1 3 19.38V6.62a1 1 0 0 1 .55-.9l4.56-2.27a2 2 0 0 1 1.78 0z"/><path d="M15 5.76v15M9 3.24v15"/></symbol>
+    <symbol id="i-kalem" viewBox="0 0 24 24"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+    <symbol id="i-geri" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-yenile" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="i-oynat" viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"/></symbol>
+    <symbol id="i-dur" viewBox="0 0 24 24"><rect width="14" height="14" x="5" y="5" rx="2"/></symbol>
+    <symbol id="i-goz" viewBox="0 0 24 24"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-goz-kapali" viewBox="0 0 24 24"><path d="M10.73 5.08a10.74 10.74 0 0 1 11.2 6.57 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-1.44 2.49"/><path d="M14.08 14.16a3 3 0 0 1-4.24-4.24"/><path d="M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14"/><path d="m2 2 20 20"/></symbol>
+    <symbol id="i-klasor" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-odak" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></symbol>
+    <symbol id="i-dis" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+    <symbol id="i-hepsi" viewBox="0 0 24 24"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></symbol>
+    <symbol id="i-liste-cikar" viewBox="0 0 24 24"><path d="M11 12H3M16 6H3M16 18H3"/><path d="m19 10-4 4M15 10l4 4"/></symbol>
+    <symbol id="i-tarama" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol>
+  </svg>
 
-  <main class="duzen">
-    <nav class="sekmeler" role="tablist" aria-label="Sayfalar" aria-orientation="vertical">
-      <button type="button" role="tab" id="sekme-parsel" data-sekme="parsel" aria-controls="panel-parsel" aria-selected="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5l7-2 9 3-2 13-9 2-5-6z"/><path d="M11 3l-2 18M4 5l14 8"/></svg>
-        <span>Parsel<br>sorgu</span>
-      </button>
-      <button type="button" role="tab" id="sekme-alan" data-sekme="alan" aria-controls="panel-alan" aria-selected="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l12-2 3 10-9 6-7-5z" stroke-dasharray="3 2"/><circle cx="5" cy="6" r="1.8"/><circle cx="17" cy="4" r="1.8"/><circle cx="20" cy="14" r="1.8"/><circle cx="11" cy="20" r="1.8"/><circle cx="4" cy="15" r="1.8"/></svg>
-        <span>Alandan<br>tespit</span>
-      </button>
-    </nav>
+  <div id="harita" aria-label="Harita"></div>
 
-    <!-- ===================== Sekme 1: Parsel sorgu ===================== -->
-    <aside class="panel" id="panel-parsel" role="tabpanel" aria-labelledby="sekme-parsel">
-      <section class="kutu">
-        <h2>Sorgu</h2>
-        <form id="sorguForm" class="form">
-          <label>İl <select id="il" required><option value="">Yükle…</option></select></label>
-          <label>İlçe <select id="ilce" required disabled></select></label>
-          <label>Mahalle <select id="mahalle" required disabled></select></label>
-          <div class="ikili">
-            <label>Ada <input id="ada" inputmode="numeric" pattern="[0-9]+" required value="0" placeholder=" "></label>
-            <label>Parsel <input id="parsel" inputmode="numeric" pattern="[0-9]+" required placeholder=" "></label>
-          </div>
-          <label class="secim"><input type="checkbox" id="yenile"> Kayıtlı olsa da TKGM'den yeniden çek</label>
-          <div class="butonlar">
-            <button type="submit" class="ana">Sorgula</button>
-            <button type="button" id="haritaModu" aria-pressed="false">Haritadan sorgula</button>
-          </div>
-          <p class="ipucu">Daha önce sorgulanan parseller ve il/ilçe/mahalle listeleri önbellekten gelir; TKGM'ye tekrar sorgu atılmaz.</p>
-        </form>
-      </section>
+  <!-- Sekme çubuğu: dikey, yüzen cam -->
+  <nav class="sekmeler cam" role="tablist" aria-label="Sayfalar" aria-orientation="vertical">
+    <button type="button" role="tab" id="sekme-parsel" data-sekme="parsel" aria-controls="panel-parsel" aria-selected="true">
+      <svg class="ikon"><use href="#i-parsel"/></svg>
+      <span>Parsel</span>
+    </button>
+    <button type="button" role="tab" id="sekme-alan" data-sekme="alan" aria-controls="panel-alan" aria-selected="false">
+      <svg class="ikon"><use href="#i-alan"/></svg>
+      <span>Alan</span>
+    </button>
+  </nav>
 
-      <section class="kutu kutu-liste">
-        <div class="baslik-satir">
-          <h2>Parseller <span id="adet" class="rozet">0</span></h2>
-          <span id="seciliAdet" class="soluk"></span>
+  <!-- Çekmece: iki sayfanın içeriği -->
+  <div class="cekmece cam">
+    <header class="cekmece-ust">
+      <div class="marka">
+        <svg class="marka-isaret" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="9" class="marka-zemin"/>
+          <path d="M8 11.5 17 8l7 4.5-2.5 10L12 24 8 18.5z" class="marka-parsel"/>
+          <circle cx="17" cy="15" r="2.4" class="marka-nokta"/>
+        </svg>
+        <div>
+          <h1>efe-parselsorgu</h1>
+          <p id="sayfaAlt">Parsel sorgu</p>
         </div>
-        <input id="filtre" type="search" placeholder="Ara: mahalle, ada/parsel, nitelik…">
-        <div class="butonlar kucuk">
-          <button type="button" id="tumunuSec">Görünenleri seç</button>
-          <button type="button" id="secimiKaldir">Seçimi kaldır</button>
-          <button type="button" id="seciliSil" title="Seçilenleri bu oturumun listesinden çıkarır; tekrar sorgularsan sorgu harcanmadan gelir">Listeden çıkar</button>
-        </div>
-        <ul id="liste" class="liste"></ul>
-      </section>
-
-      <!-- Dışa aktar iki sekmede ortak: açık sekmenin panelindeki yuvaya taşınır. -->
-      <div class="yuva" data-yuva="parsel">
-      <section class="kutu" id="bolumDisa">
-        <h2>Dışa aktar</h2>
-        <form id="disaForm" class="form">
-          <div id="alanSecenekleri" class="alan-secenekleri" hidden>
-            <div class="sekme sekme-dikey" role="radiogroup" aria-label="Hangi parseller">
-              <label><input type="radio" name="kapsam" value="secili" checked> Seçili parseller</label>
-              <label><input type="radio" name="kapsam" value="kesisen"> <span data-alan-adi></span> ile kesişenler</label>
-              <label><input type="radio" name="kapsam" value="icinde"> <span data-alan-adi></span> içindekiler</label>
-            </div>
-            <label class="secim"><input type="checkbox" id="alanSiniriEkle" checked> Alan sınırını ekle (KML) / alan içi m² sütunları (Excel)</label>
-          </div>
-          <div class="sekme" role="radiogroup">
-            <label><input type="radio" name="bicim" value="kml" checked> KML</label>
-            <label><input type="radio" name="bicim" value="excel"> Excel</label>
-          </div>
-          <div data-bicim="kml">
-            <label class="secim"><input type="checkbox" id="ayriDosyalar"> Her parsel ayrı dosya (zip)</label>
-          </div>
-          <div data-bicim="excel" hidden class="ikili">
-            <label>Koordinat sistemi
-              <select id="sistem"><option value="itrf96">ITRF96 3°</option><option value="ed50">ED50 3°</option></select>
-            </label>
-            <label>Dilim (DOM)
-              <select id="dilim">
-                <option value="otomatik">Otomatik</option>
-                <option>27</option><option>30</option><option>33</option><option>36</option>
-                <option>39</option><option>42</option><option>45</option>
-              </select>
-            </label>
-          </div>
-          <button type="submit" class="ana" id="disaButon">Seçilenleri dışa aktar</button>
-        </form>
-      </section>
       </div>
+      <div class="sayac" id="sayac" role="status" title="Bugün bu bilgisayardan TKGM'ye atılan sorgu sayısı">
+        <span class="sayac-nokta" aria-hidden="true"></span><span id="sayacMetin">TKGM</span>
+      </div>
+    </header>
 
-      <section class="kutu" id="bolumIce">
-        <h2>İçe aktar</h2>
-        <p class="ipucu">Parsel KML'leri (Alan Yöneticisi, parselsorgu, bu uygulamanın çıktıları) ve fav_list.json listeye eklenir. Dosyaları haritaya sürükleyip de bırakabilirsin.</p>
-        <div class="butonlar kucuk">
-          <label class="dugme">Dosya seç<input type="file" id="dosyaSec" multiple accept=".kml,.kmz,.json,.geojson" hidden></label>
-          <label class="dugme">Klasör seç<input type="file" id="klasorSec" webkitdirectory hidden></label>
+    <div class="cekmece-govde">
+      <!-- ===================== Sayfa 1: Parsel sorgu ===================== -->
+      <section class="panel" id="panel-parsel" role="tabpanel" aria-labelledby="sekme-parsel">
+        <div class="kutu">
+          <form id="sorguForm" class="form" autocomplete="off">
+            <div class="grup">
+              <label class="satir-alan"><span>İl</span>
+                <select id="il" required><option value="">Seç</option></select>
+              </label>
+              <label class="satir-alan"><span>İlçe</span>
+                <select id="ilce" required disabled></select>
+              </label>
+              <label class="satir-alan"><span>Mahalle</span>
+                <select id="mahalle" required disabled></select>
+              </label>
+            </div>
+            <div class="ikili">
+              <label class="buyuk-alan"><span>Ada</span>
+                <input id="ada" inputmode="numeric" pattern="[0-9]+" required value="0" placeholder=" ">
+              </label>
+              <label class="buyuk-alan"><span>Parsel</span>
+                <input id="parsel" inputmode="numeric" pattern="[0-9]+" required placeholder=" ">
+              </label>
+            </div>
+            <div class="butonlar">
+              <button type="submit" class="dugme ana genis"><svg class="ikon"><use href="#i-ara"/></svg>Sorgula</button>
+              <button type="button" id="haritaModu" class="dugme ikincil" aria-pressed="false" title="Haritada bir parsele tıklayarak sorgula">
+                <svg class="ikon"><use href="#i-hedef"/></svg>Haritadan
+              </button>
+            </div>
+            <label class="anahtar">
+              <input type="checkbox" id="yenile" role="switch">
+              <span class="anahtar-izi" aria-hidden="true"></span>
+              <span>Önbelleği atla, TKGM'den yeniden çek</span>
+            </label>
+          </form>
         </div>
-      </section>
-    </aside>
 
-    <!-- ===================== Sekme 2: Alandan parsel tespiti ===================== -->
-    <aside class="panel" id="panel-alan" role="tabpanel" aria-labelledby="sekme-alan" hidden>
-      <section class="kutu">
-        <h2>Alan belirle</h2>
-        <div class="butonlar">
-          <label class="dugme">Sınır dosyası yükle<input type="file" id="referansSec" multiple accept=".kml,.kmz,.geojson,.json" hidden></label>
-          <button type="button" id="cizimBasla" aria-pressed="false">Haritada çiz</button>
-        </div>
-        <div id="cizimPanel" class="cizim-panel" hidden>
-          <p id="cizimDurum" class="cizim-durum">Haritaya tıklayarak alanın köşelerine pin koy.</p>
-          <div class="butonlar kucuk">
-            <button type="button" id="cizimGeri">Son pini geri al</button>
-            <button type="button" id="cizimBitir" class="ana" disabled>Alanı kapat</button>
-            <button type="button" id="cizimIptal">İptal</button>
+        <div class="kutu kutu-liste">
+          <div class="kutu-baslik">
+            <h2>Parseller <span id="adet" class="rozet">0</span></h2>
+            <span id="seciliAdet" class="ikincil-metin"></span>
           </div>
-          <p class="ipucu">Alanı kapatmak için ilk pine (sarı) tıkla, son noktada çift tıkla, Enter'a bas ya da "Alanı kapat"a bas. Pinler sürüklenebilir; Ctrl+Z son pini geri alır, Esc çizimi iptal eder.</p>
+          <div class="arama">
+            <svg class="ikon" aria-hidden="true"><use href="#i-ara"/></svg>
+            <input id="filtre" type="search" placeholder="Mahalle, ada/parsel, nitelik" aria-label="Parsellerde ara">
+          </div>
+          <div class="arac-cubugu">
+            <button type="button" id="tumunuSec" class="metin-dugme"><svg class="ikon"><use href="#i-hepsi"/></svg>Tümünü seç</button>
+            <button type="button" id="secimiKaldir" class="metin-dugme">Temizle</button>
+            <button type="button" id="seciliSil" class="metin-dugme" title="Seçilenleri bu oturumun listesinden çıkarır; tekrar sorgularsan sorgu harcanmadan gelir">
+              <svg class="ikon"><use href="#i-liste-cikar"/></svg>Listeden çıkar
+            </button>
+          </div>
+          <ul id="liste" class="liste"></ul>
         </div>
-        <p class="ipucu">OSB, plan sınırı ya da bütün proje (KML/KMZ). Katmanları ayrı ayrı açıp kapatabilirsin; hesaplarda sadece açık katmanlar kullanılır.</p>
+
+        <!-- Dışa aktar iki sayfada ortak: açık sayfanın yuvasına taşınır. -->
+        <div class="yuva" data-yuva="parsel">
+          <div class="kutu" id="bolumDisa">
+            <div class="kutu-baslik"><h2>Dışa aktar</h2></div>
+            <form id="disaForm" class="form">
+              <div id="alanSecenekleri" class="alan-secenekleri" hidden>
+                <div class="secenek-listesi" role="radiogroup" aria-label="Hangi parseller">
+                  <label class="secenek"><input type="radio" name="kapsam" value="secili" checked><span>Seçili parseller</span></label>
+                  <label class="secenek"><input type="radio" name="kapsam" value="kesisen"><span><span data-alan-adi></span> ile kesişenler</span></label>
+                  <label class="secenek"><input type="radio" name="kapsam" value="icinde"><span><span data-alan-adi></span> içindekiler</span></label>
+                </div>
+                <label class="anahtar">
+                  <input type="checkbox" id="alanSiniriEkle" role="switch" checked>
+                  <span class="anahtar-izi" aria-hidden="true"></span>
+                  <span>Alan sınırını ekle (KML) · alan içi m² (Excel)</span>
+                </label>
+              </div>
+              <div class="bolumlu" role="radiogroup" aria-label="Biçim">
+                <label><input type="radio" name="bicim" value="kml" checked><span><svg class="ikon"><use href="#i-harita"/></svg>KML</span></label>
+                <label><input type="radio" name="bicim" value="excel"><span><svg class="ikon"><use href="#i-tablo"/></svg>Excel</span></label>
+              </div>
+              <div data-bicim="kml">
+                <label class="anahtar">
+                  <input type="checkbox" id="ayriDosyalar" role="switch">
+                  <span class="anahtar-izi" aria-hidden="true"></span>
+                  <span>Her parsel ayrı dosya (zip)</span>
+                </label>
+              </div>
+              <div data-bicim="excel" hidden class="grup">
+                <label class="satir-alan"><span>Koordinat sistemi</span>
+                  <select id="sistem"><option value="itrf96">ITRF96 3°</option><option value="ed50">ED50 3°</option></select>
+                </label>
+                <label class="satir-alan"><span>Dilim (DOM)</span>
+                  <select id="dilim">
+                    <option value="otomatik">Otomatik</option>
+                    <option>27</option><option>30</option><option>33</option><option>36</option>
+                    <option>39</option><option>42</option><option>45</option>
+                  </select>
+                </label>
+              </div>
+              <button type="submit" class="dugme ana genis" id="disaButon"><svg class="ikon"><use href="#i-indir"/></svg><span id="disaButonMetin">Seçilenleri dışa aktar</span></button>
+            </form>
+          </div>
+        </div>
+
+        <div class="kutu birakma-kutusu" id="bolumIce">
+          <svg class="ikon ikon-buyuk" aria-hidden="true"><use href="#i-yukle"/></svg>
+          <div>
+            <h2>İçe aktar</h2>
+            <p class="ikincil-metin">Alan Yöneticisi ve parselsorgu KML'leri, fav_list.json. Haritaya sürükleyip de bırakabilirsin.</p>
+          </div>
+          <div class="butonlar">
+            <label class="dugme ikincil kucuk"><svg class="ikon"><use href="#i-yukle"/></svg>Dosya seç<input type="file" id="dosyaSec" multiple accept=".kml,.kmz,.json,.geojson" hidden></label>
+            <label class="dugme ikincil kucuk"><svg class="ikon"><use href="#i-klasor"/></svg>Klasör seç<input type="file" id="klasorSec" webkitdirectory hidden></label>
+          </div>
+        </div>
       </section>
 
-      <section class="kutu">
-        <h2>Alanlar</h2>
-        <ul id="referansListe" class="ref-liste"></ul>
-        <p id="alanYok" class="ipucu">Henüz alan yok. Sınır dosyası yükle ya da haritada çiz.</p>
+      <!-- ===================== Sayfa 2: Alandan parsel tespiti ===================== -->
+      <section class="panel" id="panel-alan" role="tabpanel" aria-labelledby="sekme-alan" hidden>
+        <div class="karo-izgara">
+          <label class="karo">
+            <svg class="ikon"><use href="#i-yukle"/></svg>
+            <b>Sınır dosyası</b>
+            <span>KML, KMZ ya da Netcad projesi</span>
+            <input type="file" id="referansSec" multiple accept=".kml,.kmz,.geojson,.json" hidden>
+          </label>
+          <button type="button" class="karo" id="cizimBasla" aria-pressed="false">
+            <svg class="ikon"><use href="#i-kalem"/></svg>
+            <b>Haritada çiz</b>
+            <span>Köşelere pin koyarak</span>
+          </button>
+        </div>
+
+        <div id="cizimPanel" class="kutu cizim-panel" hidden>
+          <p id="cizimDurum" class="cizim-durum">Haritaya tıklayarak alanın köşelerine pin koy.</p>
+          <div class="butonlar">
+            <button type="button" id="cizimBitir" class="dugme ana" disabled><svg class="ikon"><use href="#i-onay"/></svg>Alanı kapat</button>
+            <button type="button" id="cizimGeri" class="dugme ikincil" title="Son pini geri al (Ctrl+Z)"><svg class="ikon"><use href="#i-geri"/></svg>Geri al</button>
+            <button type="button" id="cizimIptal" class="dugme ikincil" title="Çizimi iptal et (Esc)">İptal</button>
+          </div>
+          <p class="ikincil-metin">İlk pine tıkla, son noktada çift tıkla ya da Enter'a bas. Pinler sürüklenebilir.</p>
+        </div>
+
+        <div class="kutu">
+          <div class="kutu-baslik"><h2>Alanlar</h2></div>
+          <ul id="referansListe" class="ref-liste"></ul>
+          <div id="alanYok" class="bos-durum">
+            <svg class="ikon ikon-buyuk" aria-hidden="true"><use href="#i-alan"/></svg>
+            <p>Henüz alan yok</p>
+            <span>OSB ya da plan sınırını yükle veya haritada çiz. Bütün bir proje dosyası da olur; katmanları ayrı ayrı açıp kapatabilirsin.</span>
+          </div>
+        </div>
+
+        <div class="kutu" id="alanDetay" hidden>
+          <div class="kutu-baslik">
+            <h2 id="alanBaslik">Seçili alan</h2>
+            <button type="button" id="ozetYenile" class="ikon-dugme" title="Özeti yeniden hesapla" aria-label="Özeti yenile"><svg class="ikon"><use href="#i-yenile"/></svg></button>
+          </div>
+          <label class="satir-alan sinir-secim"><span>Alan sınırı</span>
+            <select id="hesapKatmani" title="Hesaplarda (özet, seçim, tarama, dışa aktarma) kullanılacak katman"></select>
+          </label>
+          <div id="ozet" class="ozet"></div>
+
+          <div class="butonlar">
+            <button type="button" class="dugme ikincil" data-sec="icinde" title="Tamamı alanın içinde kalan parseller"><svg class="ikon"><use href="#i-hepsi"/></svg>İçindekileri seç</button>
+            <button type="button" class="dugme ikincil" data-sec="kesisen" title="Alana kısmen de olsa giren parseller">Kesişenleri seç</button>
+            <button type="button" class="dugme ikincil" id="bosluklariGoster" aria-pressed="false"><svg class="ikon"><use href="#i-goz"/></svg>Boşluklar</button>
+          </div>
+
+          <div class="tarama-kutusu">
+            <div class="tarama-ust">
+              <svg class="ikon" aria-hidden="true"><use href="#i-tarama"/></svg>
+              <div>
+                <h3>Boşlukları TKGM'den tara</h3>
+                <p class="ikincil-metin">En büyük boşluğun ortasından sorgu atılır. Yol ve dere gibi parsel çıkmayan yerler bir daha sorulmaz.</p>
+              </div>
+            </div>
+            <div class="tarama">
+              <label class="butce">En fazla <input id="taramaButce" type="number" min="1" max="200" value="10" aria-label="Sorgu bütçesi"> sorgu</label>
+              <button type="button" id="taramaBasla" class="dugme ana"><svg class="ikon"><use href="#i-oynat"/></svg>Başlat</button>
+              <button type="button" id="taramaDur" class="dugme ikincil" hidden><svg class="ikon"><use href="#i-dur"/></svg>Durdur</button>
+            </div>
+            <div id="taramaIlerleme" class="ilerleme" hidden><i></i></div>
+            <p id="taramaDurum" class="tarama-durum" hidden></p>
+            <button type="button" id="taramaSifirla" class="metin-dugme" hidden>İşaretli boş noktaları sıfırla</button>
+          </div>
+        </div>
+
+        <div class="yuva" data-yuva="alan"></div>
       </section>
-
-      <section class="kutu" id="alanDetay" hidden>
-        <div class="baslik-satir">
-          <h2 id="alanBaslik">Seçili alan</h2>
-          <button type="button" id="ozetYenile" class="kucuk-dugme" title="Özeti yeniden hesapla">Yenile</button>
-        </div>
-        <label class="sinir-secim">Alan sınırı
-          <select id="hesapKatmani" title="Hesaplarda (özet, seçim, tarama, dışa aktarma) kullanılacak katman"></select>
-        </label>
-        <div id="ozet" class="ozet"></div>
-
-        <h3>Parselleri seç</h3>
-        <div class="butonlar kucuk">
-          <button type="button" data-sec="icinde" title="Tamamı alanın içinde kalan kayıtlı parseller">İçindekileri seç</button>
-          <button type="button" data-sec="kesisen" title="Alana kısmen de olsa giren kayıtlı parseller">Kesişenleri seç</button>
-          <button type="button" id="bosluklariGoster" aria-pressed="false">Boşlukları göster</button>
-        </div>
-
-        <h3>Boşlukları TKGM'den tara</h3>
-        <p class="ipucu">Her adımda en büyük boşluğun ortasından bir sorgu atılır. Parsel çıkmayan yerler (yol, dere) işaretlenir ve bir daha sorulmaz.</p>
-        <div class="tarama">
-          <label>En fazla <input id="taramaButce" type="number" min="1" max="200" value="10"> sorgu</label>
-          <button type="button" id="taramaBasla" class="ana">Taramayı başlat</button>
-          <button type="button" id="taramaDur" hidden>Durdur</button>
-        </div>
-        <p id="taramaDurum" class="tarama-durum" hidden></p>
-        <button type="button" id="taramaSifirla" class="baglanti" hidden>İşaretli boş noktaları sıfırla</button>
-      </section>
-
-      <div class="yuva" data-yuva="alan"></div>
-    </aside>
-
-    <div class="harita-alan">
-      <div id="harita"></div>
-      <div id="birak" class="birak" hidden>Dosyaları bırak</div>
     </div>
-  </main>
+  </div>
+
+  <!-- Harita kontrolleri -->
+  <div class="harita-kontrolleri">
+    <div class="bolumlu cam altlik-secici" role="radiogroup" aria-label="Altlık harita">
+      <label><input type="radio" name="altlik" value="Uydu" checked><span>Uydu</span></label>
+      <label><input type="radio" name="altlik" value="OpenStreetMap"><span>Harita</span></label>
+      <label title="TKGM bu katmanı kendi sitesi dışına kapatmış olabilir"><input type="radio" name="altlik" value="TKGM Ortofoto"><span>TKGM</span></label>
+    </div>
+    <div class="dikey-kontrol cam">
+      <button type="button" id="yakinlas" aria-label="Yakınlaştır"><svg class="ikon"><use href="#i-arti"/></svg></button>
+      <button type="button" id="uzaklas" aria-label="Uzaklaştır"><svg class="ikon"><use href="#i-eksi"/></svg></button>
+    </div>
+    <button type="button" id="hepsiniGoster" class="tek-kontrol cam" aria-label="Bütün parselleri göster" title="Bütün parselleri ve alanları göster"><svg class="ikon"><use href="#i-odak"/></svg></button>
+  </div>
+
+  <!-- Seçim eylem çubuğu -->
+  <div id="seciliBar" class="secili-bar cam" role="region" aria-label="Seçim" hidden>
+    <div class="secili-ozet">
+      <b id="seciliBarSayi">0</b>
+      <span>parsel seçili</span>
+      <span class="secili-alan" id="seciliBarAlan"></span>
+    </div>
+    <span class="ayrac" aria-hidden="true"></span>
+    <button type="button" class="dugme seffaf" data-hizli="kml" title="Seçilenleri KML olarak indir"><svg class="ikon"><use href="#i-harita"/></svg>KML</button>
+    <button type="button" class="dugme seffaf" data-hizli="excel" title="Seçilenleri Excel olarak indir (dışa aktarma ayarlarındaki koordinat sistemiyle)"><svg class="ikon"><use href="#i-tablo"/></svg>Excel</button>
+    <button type="button" class="ikon-dugme" id="seciliBarTemizle" aria-label="Seçimi temizle" title="Seçimi temizle"><svg class="ikon"><use href="#i-kapat"/></svg></button>
+  </div>
+
+  <div id="birak" class="birak" hidden>
+    <div class="birak-icerik">
+      <svg class="ikon"><use href="#i-yukle"/></svg>
+      <b>Dosyaları bırak</b>
+      <span>Parsel KML'leri listeye, sınır dosyaları alan olarak eklenir</span>
+    </div>
+  </div>
 
   <div id="mesajlar" class="mesajlar" aria-live="polite"></div>
 
   <!-- Uygulama içi onay / ad sorma penceresi (tarayıcının prompt/confirm kutuları her yerde çalışmıyor) -->
-  <dialog id="diyalog" class="diyalog" aria-labelledby="diyalogMetin">
+  <dialog id="diyalog" class="diyalog cam" aria-labelledby="diyalogMetin">
     <form method="dialog">
       <p id="diyalogMetin"></p>
       <input id="diyalogGirdi" type="text" autocomplete="off" hidden>
       <div class="butonlar">
-        <button type="submit" value="iptal" formnovalidate>İptal</button>
-        <button type="submit" value="tamam" class="ana" id="diyalogTamam">Tamam</button>
+        <button type="submit" value="iptal" class="dugme ikincil" formnovalidate>Vazgeç</button>
+        <button type="submit" value="tamam" class="dugme ana" id="diyalogTamam">Tamam</button>
       </div>
     </form>
   </dialog>

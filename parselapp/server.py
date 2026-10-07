@@ -23,8 +23,8 @@ KOK = Path(__file__).resolve().parent.parent
 WEB = KOK / "web"
 VERI = KOK / "data" / "parseller.db"
 
-# Parsel kırmızısı ve seçim sarısından ayırt edilen referans renkleri, sırayla verilir.
-REFERANS_RENKLERI = ("#2b7bff", "#9b5de5", "#00b8d9", "#ff7a00", "#2ec4b6", "#e83e8c")
+# Alan renkleri: parsel sarısı, seçim mavisi ve boşluk kırmızısıyla karışmayanlar, sırayla verilir.
+REFERANS_RENKLERI = ("#bf5af2", "#64d2ff", "#ff9f0a", "#30d158", "#ff375f", "#ac8e68")
 
 
 def ozellik(p):

@@ -7,13 +7,35 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const trKucuk = (s) => String(s ?? "").replace(/I/g, "ı").replace(/İ/g, "i").toLocaleLowerCase("tr");
 const sayi = (n, basamak = 0) => Number(n || 0).toLocaleString("tr-TR", { minimumFractionDigits: basamak, maximumFractionDigits: basamak });
 const alanMetni = (m2) => `${sayi(m2)} m² · ${sayi(m2 / 1000, 1)} dönüm`;
+const ikon = (ad, sinif = "ikon") => `<svg class="${sinif}" aria-hidden="true"><use href="#i-${ad}"/></svg>`;
+// Renkler tek kaynaktan: style.css'teki token'lar.
+const token = (ad) => getComputedStyle(document.documentElement).getPropertyValue(ad).trim();
 
+// hata: true -> hata bildirimi; "basari" -> tamamlanan iş; yoksa bilgi.
 function mesaj(metin, hata = false) {
+  const tur = hata === true ? "hata" : hata === "basari" ? "basari" : "bilgi";
   const el = document.createElement("div");
-  el.className = "mesaj" + (hata ? " hata" : "");
-  el.textContent = metin;
-  $("mesajlar").append(el);
-  setTimeout(() => el.remove(), hata ? 8000 : 4000);
+  el.className = `mesaj cam ${tur}`;
+  el.setAttribute("role", tur === "hata" ? "alert" : "status");
+  el.innerHTML = ikon({ hata: "uyari", basari: "onay", bilgi: "bilgi" }[tur]);
+  el.append(Object.assign(document.createElement("span"), { textContent: metin }));
+  const kutu = $("mesajlar");
+  kutu.append(el);
+  while (kutu.children.length > 3) kutu.firstElementChild.remove();
+  setTimeout(() => {
+    el.classList.add("gidiyor");
+    setTimeout(() => el.remove(), 400);
+  }, tur === "hata" ? 7000 : 3600);
+}
+
+// Uzun süren işlerde düğmenin ikonu dönen yenile ikonuna çevrilir.
+function yukleniyor(buton, acik) {
+  const use = buton.querySelector("use");
+  buton.classList.toggle("yukleniyor", acik);
+  buton.disabled = acik;
+  if (!use) return;
+  if (acik) { buton.dataset.ikon = use.getAttribute("href"); use.setAttribute("href", "#i-yenile"); }
+  else if (buton.dataset.ikon) use.setAttribute("href", buton.dataset.ikon);
 }
 
 async function api(yol, secenek = {}) {
@@ -59,7 +81,7 @@ async function indir(govde) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-  mesaj(`${ad} indirildi.`);
+  mesaj(`${ad} indirildi.`, "basari");
 }
 
 // ---- durum ---------------------------------------------------------------------
@@ -76,7 +98,8 @@ const oturumKeys = () => [...durum.parseller.keys()];
 
 // ---- harita --------------------------------------------------------------------
 
-const harita = L.map("harita", { zoomControl: true, doubleClickZoom: true }).setView([39.0, 35.0], 6);
+const harita = L.map("harita", { zoomControl: false, doubleClickZoom: true }).setView([39.0, 35.0], 6);
+harita.attributionControl.setPrefix(false);
 const altlik = {
   Uydu: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
     maxZoom: 21, maxNativeZoom: 19, attribution: "© Esri, Maxar, Earthstar Geographics",
@@ -89,19 +112,39 @@ const altlik = {
     subdomains: "0123", maxZoom: 21, maxNativeZoom: 19, tms: true, attribution: "© TKGM",
   }),
 };
-altlik.Uydu.addTo(harita);
-L.control.layers(altlik).addTo(harita);
+let aktifAltlik = altlik.Uydu.addTo(harita);
+document.querySelectorAll("input[name=altlik]").forEach((r) => r.addEventListener("change", () => {
+  aktifAltlik.remove();
+  aktifAltlik = altlik[r.value].addTo(harita);
+  aktifAltlik.bringToBack();
+}));
+$("yakinlas").addEventListener("click", () => harita.zoomIn());
+$("uzaklas").addEventListener("click", () => harita.zoomOut());
+$("hepsiniGoster").addEventListener("click", () => {
+  const sinirlar = L.latLngBounds([]);
+  durum.katmanlar.forEach((k) => sinirlar.extend(k.getBounds()));
+  referanslar.forEach(({ veri }) => { if (veri.gorunur) sinirlar.extend(L.geoJSON(sinirFc(veri)).getBounds()); });
+  if (sinirlar.isValid()) harita.fitBounds(sinirlar, { padding: [40, 40], maxZoom: 18 });
+  else mesaj("Haritada gösterilecek parsel ya da alan yok.");
+});
 // Referanslar ve boşluklar parsellerin altında çizilir ve tıklamayı engellemez.
 harita.createPane("referans").style.zIndex = 350;
 harita.createPane("bosluk").style.zIndex = 360;
 const parselKatmani = L.featureGroup().addTo(harita);
 
-const STIL = { color: "#d7263d", weight: 2, fillOpacity: 0.08 };
-const STIL_SECILI = { color: "#f2b705", weight: 3, fillOpacity: 0.25 };
+const HR = {
+  parsel: token("--harita-parsel"), secili: token("--harita-secili"), aktif: token("--harita-aktif"),
+  bosluk: token("--harita-bosluk"), taranan: token("--harita-taranan"),
+  cizim: token("--harita-cizim"), cizimDolgu: token("--harita-cizim-dolgu"),
+};
+const STIL = { color: HR.parsel, weight: 1.5, opacity: 0.95, fillColor: HR.parsel, fillOpacity: 0.06 };
+const STIL_SECILI = { color: HR.secili, weight: 2.5, opacity: 1, fillColor: HR.secili, fillOpacity: 0.3 };
 
 function stilUygula(key) {
   const k = durum.katmanlar.get(key);
-  if (k) k.setStyle(durum.secili.has(key) ? STIL_SECILI : STIL);
+  if (!k) return;
+  const temel = durum.secili.has(key) ? STIL_SECILI : STIL;
+  k.setStyle(key === durum.aktif ? { ...temel, color: HR.aktif, weight: 3 } : temel);
 }
 
 function imlecGuncelle() {
@@ -109,13 +152,23 @@ function imlecGuncelle() {
 }
 
 function bilgiTablosu(p) {
+  const f = durum.parseller.get(p.key);
+  const nokta = f ? icNokta(f) : null;
   const satirlar = [
-    ["İl", p.il], ["İlçe", p.ilce], ["Mahalle", p.mahalle], ["Ada / Parsel", `${p.ada} / ${p.parsel}`],
-    ["Tapu alanı", p.alan ? `${p.alan} m²` : ""], ["Nitelik", p.nitelik], ["Mevkii", p.mevkii],
-    ["Pafta", p.pafta], ["Kaynak", p.kaynak === "tkgm" ? "TKGM" : p.kaynak.replace(/^dosya:/, "")],
+    ["Nitelik", p.nitelik], ["Mevkii", p.mevkii], ["Pafta", p.pafta], ["Zemin", p.zemin],
+    ["Kaynak", p.kaynak === "tkgm" ? "TKGM" : p.kaynak.replace(/^dosya:/, "")],
     ["Veri tarihi", (p.kaynak_tarih || "").slice(0, 10)],
-  ];
-  return `<table class="bilgi-tablo">${satirlar.map(([a, b]) => `<tr><td>${a}</td><td>${esc(b)}</td></tr>`).join("")}</table>`;
+  ].filter(([, deger]) => deger);
+  const harita = nokta
+    ? `<a class="disari" href="https://www.google.com/maps/search/?api=1&query=${nokta.lat.toFixed(6)},${nokta.lng.toFixed(6)}" target="_blank" rel="noopener">${ikon("dis")}Google Haritalar'da aç</a>`
+    : "";
+  return `<div class="bilgi-karti">
+    <div class="baslik">${esc(p.ada)} / ${esc(p.parsel)}</div>
+    <div class="yer">${esc(p.mahalle)} · ${esc(p.ilce)}, ${esc(p.il)}</div>
+    <div class="tapu"><b>${p.alan ? esc(p.alan) : "Bilinmiyor"}</b><span>m² tapu alanı</span></div>
+    <dl>${satirlar.map(([a, b]) => `<dt>${a}</dt><dd>${esc(b)}</dd>`).join("")}</dl>
+    ${harita}
+  </div>`;
 }
 
 function katmanEkle(f) {
@@ -175,13 +228,13 @@ function menuGoster(key) {
   menuIsareti = L.marker(icNokta(f), {
     icon: L.divIcon({
       className: "parsel-menu-ikon",
-      html: `<button type="button" class="parsel-menu" title="Parsel bilgisi" aria-label="${esc(p.ada)}/${esc(p.parsel)} bilgisi">⋯</button>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
+      html: `<button type="button" class="parsel-menu" title="Parsel bilgisi" aria-label="${esc(p.ada)}/${esc(p.parsel)} bilgisi">${ikon("daha")}</button>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
     }),
     keyboard: false,
   }).addTo(harita);
-  menuIsareti.bindPopup(() => bilgiTablosu(p), { offset: [0, -10] });
+  menuIsareti.bindPopup(() => bilgiTablosu(p), { offset: [0, -12], maxWidth: 280, minWidth: 264 });
 }
 
 // ---- sekmeler ------------------------------------------------------------------
@@ -190,6 +243,7 @@ function sekmeAc(ad) {
   document.querySelectorAll("[role=tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.sekme === ad));
   $("panel-parsel").hidden = ad !== "parsel";
   $("panel-alan").hidden = ad !== "alan";
+  $("sayfaAlt").textContent = ad === "alan" ? "Alandan parsel tespiti" : "Parsel sorgu";
   const yuva = document.querySelector(`.yuva[data-yuva="${ad}"]`);
   yuva.append($("bolumDisa"));
   disaSecenekleriGuncelle();
@@ -219,18 +273,42 @@ function listeCiz() {
   $("adet").textContent = durum.parseller.size;
   $("seciliAdet").textContent = durum.secili.size ? `${durum.secili.size} seçili` : "";
   disaSecenekleriGuncelle();
+  seciliBarGuncelle();
   if (!liste.length) {
-    ul.innerHTML = `<li class="bos">${durum.parseller.size ? "Eşleşen parsel yok" : "Henüz parsel yok. Sorgula ya da dosya içe aktar."}</li>`;
+    ul.innerHTML = durum.parseller.size
+      ? `<li class="bos"><div class="bos-durum">${ikon("ara", "ikon ikon-buyuk")}<p>Eşleşen parsel yok</p><span>Aramayı kısalt ya da başka bir kelime dene.</span></div></li>`
+      : `<li class="bos"><div class="bos-durum">${ikon("parsel", "ikon ikon-buyuk")}<p>Henüz parsel yok</p><span>Ada ve parselle sorgula, haritadan seç ya da KML dosyasını haritaya bırak.</span></div></li>`;
     return;
   }
   ul.innerHTML = liste.map((f) => {
     const p = f.properties;
     return `<li data-key="${esc(p.key)}" class="${durum.aktif === p.key ? "aktif" : ""}">
-      <input type="checkbox" ${durum.secili.has(p.key) ? "checked" : ""} aria-label="Seç">
-      <div><div class="ad">${esc(p.mahalle)} ${esc(p.ada)}/${esc(p.parsel)}</div>
-      <div class="alt">${esc(p.il)} / ${esc(p.ilce)} · ${esc(p.alan || "?")} m² · ${esc(p.nitelik || "")}</div></div></li>`;
+      <input type="checkbox" class="kutucuk" ${durum.secili.has(p.key) ? "checked" : ""} aria-label="${esc(p.ada)}/${esc(p.parsel)} seç">
+      <div class="metin-blok"><div class="ad">${esc(p.mahalle)} <b>${esc(p.ada)}/${esc(p.parsel)}</b></div>
+      <div class="alt">${esc(p.nitelik || "Nitelik yok")} · ${esc(p.ilce)}, ${esc(p.il)}</div></div>
+      <div class="metraj">${p.alan ? esc(p.alan) : "?"}<small>m²</small></div></li>`;
   }).join("");
 }
+
+// Seçim eylem çubuğu: seçim varken haritanın altında belirir.
+function seciliBarGuncelle() {
+  const n = durum.secili.size;
+  $("seciliBar").hidden = n === 0;
+  if (!n) return;
+  $("seciliBarSayi").textContent = n;
+  const toplam = [...durum.secili].reduce((t, k) => t + (durum.parseller.get(k)?.properties.alan_m2 || 0), 0);
+  $("seciliBarAlan").textContent = toplam ? `${sayi(toplam)} m²` : "";
+}
+
+$("seciliBar").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-hizli]");
+  if (!b || !durum.secili.size) return;
+  yukleniyor(b, true);
+  try { await indir({ keys: [...durum.secili], bicim: b.dataset.hizli, sistem: $("sistem").value, dilim: $("dilim").value }); }
+  catch (err) { mesaj(err.message, true); }
+  finally { yukleniyor(b, false); }
+});
+$("seciliBarTemizle").addEventListener("click", () => $("secimiKaldir").click());
 
 function seciliDegistir(key, deger) {
   const sec = deger ?? !durum.secili.has(key);
@@ -240,7 +318,10 @@ function seciliDegistir(key, deger) {
 }
 
 function aktifYap(key, yaklas = true) {
+  const onceki = durum.aktif;
   durum.aktif = key;
+  if (onceki && onceki !== key) stilUygula(onceki);
+  stilUygula(key);
   const k = durum.katmanlar.get(key);
   if (k && yaklas) harita.fitBounds(k.getBounds(), { maxZoom: 18, padding: [40, 40] });
   menuGoster(key);
@@ -296,15 +377,18 @@ function parselEkle(f, tkgmden, { yaklas = true, sessiz = false } = {}) {
   if (yaklas) aktifYap(f.properties.key);
   if (!sessiz) {
     mesaj(tkgmden ? `${f.properties.ada}/${f.properties.parsel} TKGM'den alındı.`
-                  : `${f.properties.ada}/${f.properties.parsel} kayıttan getirildi (sorgu harcanmadı).`);
+                  : `${f.properties.ada}/${f.properties.parsel} önbellekten geldi, sorgu harcanmadı.`, "basari");
   }
 }
 
 async function sayacGuncelle() {
   try {
     const s = await api("sayac");
-    $("sayac").textContent = `TKGM sorgusu bugün: ${s.toplam}` + (s.limit_hatasi ? " · limit doldu" : "");
+    $("sayacMetin").textContent = s.limit_hatasi ? `Limit doldu · ${s.toplam}` : `Bugün ${s.toplam} sorgu`;
     $("sayac").classList.toggle("uyari", s.limit_hatasi > 0);
+    $("sayac").title = s.limit_hatasi
+      ? "TKGM bugünkü sorgu limitini doldurdu. Önbellekteki parseller yine de gelir."
+      : `Bugün bu bilgisayardan TKGM'ye ${s.toplam} sorgu atıldı.`;
   } catch { /* sayaç önemli değil */ }
 }
 
@@ -350,7 +434,7 @@ $("ilce").addEventListener("change", async () => {
 $("sorguForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const buton = e.submitter;
-  buton.disabled = true;
+  yukleniyor(buton, true);
   try {
     const r = await postJson("sorgu", {
       mahalleId: Number($("mahalle").value), ada: $("ada").value.trim(), parsel: $("parsel").value.trim(),
@@ -358,7 +442,7 @@ $("sorguForm").addEventListener("submit", async (e) => {
     });
     parselEkle(r.parsel, r.tkgmdenGeldi);
   } catch (err) { mesaj(err.message, true); }
-  finally { buton.disabled = false; sayacGuncelle(); }
+  finally { yukleniyor(buton, false); sayacGuncelle(); }
 });
 
 function sorguModu(acik) {
@@ -406,7 +490,7 @@ function disaSecenekleriGuncelle() {
   }
   const n = disaKeys().length;
   const ne = { secili: "Seçilenleri", kesisen: "Kesişenleri", icinde: "İçindekileri" }[kapsam()];
-  $("disaButon").textContent = n ? `${ne} dışa aktar (${n})` : `${ne} dışa aktar`;
+  $("disaButonMetin").textContent = n ? `${ne} dışa aktar (${n})` : `${ne} dışa aktar`;
 }
 
 document.querySelectorAll("input[name=kapsam]").forEach((r) => r.addEventListener("change", disaSecenekleriGuncelle));
@@ -422,10 +506,10 @@ $("disaForm").addEventListener("submit", async (e) => {
   const govde = { keys, bicim: bicim(), ayriDosyalar: $("ayriDosyalar").checked, sistem: $("sistem").value, dilim: $("dilim").value };
   if (alanli && $("alanSiniriEkle").checked) govde.referansId = aktifAlan;
   const buton = $("disaButon");
-  buton.disabled = true;
+  yukleniyor(buton, true);
   try { await indir(govde); }
   catch (err) { mesaj(err.message, true); }
-  finally { buton.disabled = false; }
+  finally { yukleniyor(buton, false); }
 });
 
 // ---- içe aktar -----------------------------------------------------------------
@@ -460,7 +544,7 @@ async function dosyalariAktar(dosyalar) {
   const onceki = durum.parseller.size;
   await oturumaEkle([...keys]);
   if (aktifAlan) ozetYukle();
-  if (keys.size) mesaj(`${uygun.length - hata - bosDosyalar.length} dosyadan ${keys.size} parsel listeye eklendi (${durum.parseller.size - onceki} yeni).`);
+  if (keys.size) mesaj(`${uygun.length - hata - bosDosyalar.length} dosyadan ${keys.size} parsel listeye eklendi (${durum.parseller.size - onceki} yeni).`, "basari");
   if (bosDosyalar.length && alanSekmesinde()) {
     await referansEkle(bosDosyalar);
   } else if (bosDosyalar.length) {
@@ -530,32 +614,41 @@ function katmanListesi(r) {
   const gizli = new Set(r.gizli || []);
   const satirlar = [...sayac].map(([ad, n]) => `
         <label class="katman"><input type="checkbox" data-is="katman" data-katman="${esc(ad)}" ${gizli.has(ad) ? "" : "checked"}>
-          <span>${esc(ad || "(klasörsüz)")}</span><span class="soluk">${n}</span></label>`).join("");
+          <span>${esc(ad || "(klasörsüz)")}</span><span class="say">${n}</span></label>`).join("");
   return `<details class="katmanlar"><summary>Katmanlar (${sayac.size - gizli.size}/${sayac.size} açık)</summary>${satirlar}</details>`;
 }
 
 function referansListeCiz() {
   $("alanYok").hidden = referanslar.size > 0;
-  $("referansListe").innerHTML = [...referanslar.values()].map(({ veri: r }) => `
+  $("referansListe").innerHTML = [...referanslar.values()].map(({ veri: r }) => {
+    const n = r.geojson.features.length;
+    const alt = r.hesap_katmani ? `Sınır: ${r.hesap_katmani}` : `${n} nesne`;
+    return `
     <li data-id="${r.id}" class="${r.id === aktifAlan ? "aktif" : ""}">
       <div class="ref-ust">
-        <input type="checkbox" data-is="gorunur" ${r.gorunur ? "checked" : ""} title="Haritada göster/gizle" aria-label="Görünür">
-        <input type="color" data-is="renk" value="${esc(r.renk)}" title="Renk" aria-label="Renk">
-        <button type="button" class="ad" data-is="sec" title="Bu alanla çalış">${esc(r.ad)}</button>
-        <button type="button" class="sil" data-is="sil" title="Alanı kaldır" aria-label="Kaldır">×</button>
+        <label class="renk-secici" style="background:${esc(r.renk)}" title="Rengi değiştir"><input type="color" data-is="renk" value="${esc(r.renk)}" aria-label="${esc(r.ad)} rengi"></label>
+        <button type="button" class="ad" data-is="sec" title="Bu alanla çalış">${esc(r.ad)}<small>${esc(alt)}</small></button>
+        <label class="ikon-dugme gorunur-anahtar" title="Haritada göster ya da gizle">
+          <input type="checkbox" data-is="gorunur" ${r.gorunur ? "checked" : ""} aria-label="${esc(r.ad)} haritada görünsün">${ikon("goz", "ikon acik")}${ikon("goz-kapali", "ikon kapali")}
+        </label>
+        <button type="button" class="ikon-dugme" data-is="sil" title="Alanı kaldır" aria-label="${esc(r.ad)} alanını kaldır">${ikon("kapat")}</button>
       </div>
       ${katmanListesi(r)}
-    </li>`).join("");
+    </li>`;
+  }).join("");
+}
+
+// Sınır katmanı seçiliyse sadece o; pafta indeksi gibi büyük katmanlar haritayı uzaklaştırmasın.
+function sinirFc(veri) {
+  const hesap = veri.hesap_katmani;
+  return hesap == null ? veri.geojson
+    : { type: "FeatureCollection", features: veri.geojson.features.filter((f) => katmanAdi(f) === hesap) };
 }
 
 function alanaYaklas(id) {
   const ref = referanslar.get(id);
   if (!ref) return;
-  // Sınır katmanı seçiliyse ona yaklaş; pafta indeksi gibi büyük katmanlar haritayı uzaklaştırmasın.
-  const hesap = ref.veri.hesap_katmani;
-  const fc = hesap == null ? ref.veri.geojson
-    : { type: "FeatureCollection", features: ref.veri.geojson.features.filter((f) => katmanAdi(f) === hesap) };
-  const b = L.geoJSON(fc).getBounds();
+  const b = L.geoJSON(sinirFc(ref.veri)).getBounds();
   if (b.isValid()) harita.fitBounds(b, { padding: [30, 30] });
 }
 
@@ -604,7 +697,7 @@ async function referansEkle(dosyalar) {
       son = r.id;
       mesaj(r.hesap_katmani
         ? `"${r.ad}" eklendi. Alan sınırı olarak "${r.hesap_katmani}" katmanı seçildi; gerekirse değiştirebilirsin.`
-        : `"${r.ad}" alan olarak eklendi.`);
+        : `"${r.ad}" alan olarak eklendi.`, "basari");
     } catch (e) { mesaj(e.message, true); }
   }
   referansListeCiz();
@@ -663,7 +756,7 @@ async function ozetYukle() {
     if ($("bosluklariGoster").getAttribute("aria-pressed") === "true") bosluklariCiz();
   } catch (e) {
     sonOzet = null;
-    $("ozet").innerHTML = `<p class="hata-metin">${esc(e.message)}</p>`;
+    $("ozet").innerHTML = `<p class="hata-metin">${ikon("uyari")}<span>${esc(e.message)}</span></p>`;
   }
 }
 
@@ -675,15 +768,15 @@ function ozetCiz(o) {
       <span class="n-deger">${n.adet} · ${sayi(n.alan_ici_m2)} m²</span></li>`).join("");
   const taranan = referanslar.get(aktifAlan)?.veri.taranan?.length || 0;
   $("ozet").innerHTML = `
-    <div class="ozet-alan">${alanMetni(o.alan_m2)}</div>
+    <div class="ozet-alan"><b>${sayi(o.alan_m2)} m²</b><span>${sayi(o.alan_m2 / 1000, 1)} dönüm · ${sayi(o.alan_m2 / 10000, 2)} ha</span></div>
     <div class="ozet-izgara">
       <div><b>${o.icinde.adet}</b><span>parsel tamamen içinde</span><small>${sayi(o.icinde.tapu_m2)} m² tapu</small></div>
       <div><b>${o.kesisen.adet}</b><span>parsel kesişiyor</span><small>${sayi(o.kesisen.alan_ici_m2)} m² alan içinde</small></div>
     </div>
-    <div class="kaplama" title="Alanın kayıtlı parsellerle kaplanan kısmı">
-      <div class="kaplama-ust"><span>Kayıtlı parsellerle kaplı</span><b>%${sayi(yuzde, 1)}</b></div>
-      <div class="kaplama-cubuk"><i style="width:${Math.min(100, yuzde)}%"></i></div>
-      <small>${o.bosluk.adet ? `${o.bosluk.adet} boşluk · ${sayi(o.bosluk.m2)} m² henüz sorgulanmamış` : "Sorgulanmaya değer boşluk yok"}${taranan ? ` · ${taranan} boş nokta işaretli` : ""}</small>
+    <div class="kaplama">
+      <div class="kaplama-ust"><span>Listedeki parsellerle kaplı</span><b>%${sayi(yuzde, 1)}</b></div>
+      <div class="kaplama-cubuk" role="img" aria-label="Alanın yüzde ${sayi(yuzde, 1)} kısmı kaplı"><i style="width:${Math.min(100, yuzde)}%"></i></div>
+      <small>${o.bosluk.adet ? `<span class="bosluk-imi" aria-hidden="true"></span>${o.bosluk.adet} boşluk · ${sayi(o.bosluk.m2)} m² sorgulanmamış` : "Sorgulanmaya değer boşluk yok"}${taranan ? ` · ${taranan} boş nokta işaretli` : ""}</small>
     </div>
     ${nitelikler ? `<ul class="nitelikler">${nitelikler}</ul>` : ""}`;
   $("taramaSifirla").hidden = !taranan;
@@ -699,7 +792,7 @@ $("alanDetay").addEventListener("click", (e) => {
   listeCiz();
   const ne = b.dataset.sec === "icinde" ? "tamamen içinde kalan" : "alanla kesişen";
   mesaj(keys.length ? `${ne} ${keys.length} parsel seçildi.`
-                    : `Bu alanda ${ne} kayıtlı parsel yok. Boşlukları tarayabilir ya da parsel içe aktarabilirsin.`, !keys.length);
+                    : `Bu alanda ${ne} parsel yok. Boşlukları tarayabilir ya da parsel içe aktarabilirsin.`, keys.length ? "basari" : true);
 });
 
 // ---- boşluklar --------------------------------------------------------------------
@@ -717,10 +810,10 @@ function bosluklariCiz() {
   const grup = L.featureGroup();
   L.geoJSON(sonOzet.bosluk.geojson, {
     pane: "bosluk", interactive: false,
-    style: { color: "#ff7a00", weight: 2, dashArray: "4 4", fillColor: "#ff7a00", fillOpacity: 0.35 },
+    style: { color: HR.bosluk, weight: 1.5, dashArray: "4 4", fillColor: HR.bosluk, fillOpacity: 0.14 },
   }).addTo(grup);
   for (const [lon, lat, r] of referanslar.get(aktifAlan)?.veri.taranan || []) {
-    L.circle([lat, lon], { radius: r, pane: "bosluk", interactive: false, color: "#8a8f8c", weight: 1, dashArray: "2 3", fillOpacity: 0.25 }).addTo(grup);
+    L.circle([lat, lon], { radius: r, pane: "bosluk", interactive: false, color: HR.taranan, weight: 1, dashArray: "2 3", fillColor: HR.taranan, fillOpacity: 0.25 }).addTo(grup);
   }
   bosluKatmani = grup.addTo(harita);
 }
@@ -754,6 +847,9 @@ $("taramaBasla").addEventListener("click", async () => {
   $("taramaBasla").hidden = true;
   $("taramaDur").hidden = false;
   $("bosluklariGoster").setAttribute("aria-pressed", "true");
+  const ilerleme = $("taramaIlerleme");
+  ilerleme.hidden = false;
+  ilerleme.firstElementChild.style.width = "0%";
   let harcanan = 0, bulunan = 0, bos = 0, adim = 0, son = "";
   try {
     while (harcanan < butce && !tarama.dur && adim < butce * 3) {
@@ -761,6 +857,7 @@ $("taramaBasla").addEventListener("click", async () => {
       taramaDurumYaz(`Taranıyor… ${harcanan}/${butce} sorgu · ${bulunan} parsel bulundu · ${bos} boş nokta`);
       const r = await postJson(`referanslar/${id}/tara`, { keys: oturumKeys() });
       if (r.sorgu) harcanan++;
+      ilerleme.firstElementChild.style.width = `${(100 * harcanan) / butce}%`;
       if (r.durum === "bitti") { son = "Sorgulanmaya değer boşluk kalmadı."; break; }
       if (r.durum === "bulundu") { bulunan++; parselEkle(r.parsel, r.sorgu, { yaklas: false, sessiz: true }); }
       else bos++;
@@ -769,6 +866,7 @@ $("taramaBasla").addEventListener("click", async () => {
       sayacGuncelle();
     }
     if (!son) son = tarama.dur ? "Durduruldu." : `${butce} sorgu sınırına ulaşıldı.`;
+    if (son.startsWith("Sorgulanmaya")) ilerleme.firstElementChild.style.width = "100%";
   } catch (e) {
     son = e.durum === 429 ? "TKGM günlük limiti doldu, tarama durdu." : `Hata: ${e.message}`;
     mesaj(son, true);
@@ -800,8 +898,8 @@ function cizimSekliGuncelle() {
   cizim.sekil?.remove();
   const noktalar = cizim.pinler.map((m) => m.getLatLng());
   cizim.sekil = noktalar.length >= 3
-    ? L.polygon(noktalar, { color: "#2b7bff", weight: 2, dashArray: "6 4", fillOpacity: 0.12, interactive: false })
-    : L.polyline(noktalar, { color: "#2b7bff", weight: 2, dashArray: "6 4", interactive: false });
+    ? L.polygon(noktalar, { color: HR.cizim, weight: 2, dashArray: "6 5", fillColor: HR.cizimDolgu, fillOpacity: 0.18, interactive: false })
+    : L.polyline(noktalar, { color: HR.cizim, weight: 2, dashArray: "6 5", interactive: false });
   cizim.sekil.addTo(harita);
   cizim.pinler.forEach((m, i) => m.setIcon(pinIkonu(i)));
   $("cizimBitir").disabled = noktalar.length < 3;
@@ -815,8 +913,8 @@ function pinIkonu(i) {
   return L.divIcon({
     className: "cizim-pin-ikon",
     html: `<span class="cizim-pin${kapatilabilir ? " ilk" : ""}" title="${kapatilabilir ? "Alanı kapat" : `Pin ${i + 1}`}">${i + 1}</span>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   });
 }
 
@@ -874,7 +972,7 @@ async function cizimBitir() {
     cizimIptal();
     referansCiz(r);
     alanSec(r.id, false);
-    mesaj(`"${r.ad}" alanı oluşturuldu.`);
+    mesaj(`"${r.ad}" alanı oluşturuldu.`, "basari");
   } catch (e) { mesaj(e.message, true); }
 }
 
@@ -894,6 +992,7 @@ $("cizimBitir").addEventListener("click", cizimBitir);
 $("cizimIptal").addEventListener("click", cizimIptal);
 
 document.addEventListener("keydown", (e) => {
+  if (durum.mod === "sorgu" && e.key === "Escape") return sorguModu(false);
   if (durum.mod !== "cizim" || e.target.matches("input, select, textarea")) return;
   if (e.key === "Escape") cizimIptal();
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); cizimGeriAl(); }
