@@ -183,6 +183,21 @@ class SinirKatmaniTest(unittest.TestCase):
             st._db.close()
 
 
+class OturumTemizligiTest(unittest.TestCase):
+    def test_yeni_oturum_baska_sekmenin_alanini_silmez(self):
+        with tempfile.TemporaryDirectory() as d:
+            st = Store(Path(d) / "t.db")
+            fc = referans.cizimden([[31.40, 41.20], [31.41, 41.20], [31.41, 41.21]])
+            taze = st.referans_ekle("Açık sekme", "#000000", fc)
+            eski = st.referans_ekle("Unutulmuş", "#000000", fc)
+            st._db.execute("UPDATE referanslar SET son_erisim='2020-01-01T00:00:00' WHERE id=?", (eski,))
+            st._db.commit()
+            self.assertEqual(st.referanslari_temizle(), 1)
+            self.assertIsNotNone(st.referans(taze))
+            self.assertIsNone(st.referans(eski))
+            st._db.close()
+
+
 class CizimTest(unittest.TestCase):
     def test_cizim(self):
         fc = referans.cizimden([[31.40, 41.20], [31.41, 41.20], [31.41, 41.21]], "Deneme")

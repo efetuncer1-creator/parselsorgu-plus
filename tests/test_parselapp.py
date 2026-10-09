@@ -38,6 +38,18 @@ class YardimciTest(unittest.TestCase):
         self.assertEqual(parse_alan("3.158.004,18"), 3158004.18)
         self.assertEqual(parse_alan("500"), 500.0)
         self.assertIsNone(parse_alan(""))
+        # Haritadan (koordinatla) sorgu İngilizce biçim döndürüyor
+        self.assertEqual(parse_alan("29,636.19"), 29636.19)
+        self.assertEqual(parse_alan("1,234,567.5"), 1234567.5)
+        self.assertEqual(parse_alan("578,84"), 578.84)
+        self.assertEqual(parse_alan("578.84"), 578.84)
+        self.assertEqual(parse_alan("3.158.004"), 3158004.0)
+
+    def test_turkce_siralama(self):
+        from parselapp.util import tr_sira
+        iller = ["Zonguldak", "Çankırı", "İzmir", "Ağrı", "Isparta", "Şanlıurfa", "Ordu", "Ödemiş", "Uşak", "Ünye", "Cide"]
+        self.assertEqual(sorted(iller, key=tr_sira),
+                         ["Ağrı", "Cide", "Çankırı", "Isparta", "İzmir", "Ordu", "Ödemiş", "Şanlıurfa", "Uşak", "Ünye", "Zonguldak"])
 
     def test_anahtar_turkce(self):
         self.assertEqual(parcel_key("İSTANBUL", "Büyükçekmece", "  Türkoba ", 0, "53"),

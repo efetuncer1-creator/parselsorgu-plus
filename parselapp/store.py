@@ -7,12 +7,12 @@ saklanır: [poligon][halka][nokta] = [boylam, enlem].
 import json
 import sqlite3
 import threading
-from datetime import datetime, date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from shapely.geometry import Point, Polygon
 
-from .util import parcel_key, parse_alan
+from .util import fmt_alan, parcel_key, parse_alan
 
 ALANLAR = ("il", "ilce", "mahalle", "ada", "parsel", "il_id", "ilce_id", "mahalle_id",
            "alan", "nitelik", "mevkii", "pafta", "zemin")
@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS referanslar (
     taranan  TEXT NOT NULL DEFAULT '[]',   -- taramada parsel çıkmayan noktalar [[boylam, enlem, yarıçap_m]]
     hesap_katmani TEXT,                    -- alan hesabında kullanılan tek katman (NULL: tüm açık katmanlar)
     geojson  TEXT NOT NULL,
-    eklenme  TEXT NOT NULL
+    eklenme  TEXT NOT NULL,
+    son_erisim TEXT                        -- son kullanım; eski oturumların alanları buna göre temizlenir
 );
 CREATE TABLE IF NOT EXISTS sorgu_kaydi (
     zaman   TEXT NOT NULL,
@@ -75,6 +76,9 @@ class Store:
                 self._db.execute(f"ALTER TABLE referanslar ADD COLUMN {kolon} TEXT NOT NULL DEFAULT '[]'")
         if "hesap_katmani" not in kolonlar:
             self._db.execute("ALTER TABLE referanslar ADD COLUMN hesap_katmani TEXT")
+        if "son_erisim" not in kolonlar:
+            self._db.execute("ALTER TABLE referanslar ADD COLUMN son_erisim TEXT")
+            self._db.execute("UPDATE referanslar SET son_erisim = eklenme")
         self._db.commit()
 
     # ---- parseller -------------------------------------------------------
@@ -112,6 +116,8 @@ class Store:
                         degerler[a] = eski[a]
                 degerler["eklenme"] = eski["eklenme"]
             degerler["alan_m2"] = parse_alan(degerler["alan"])
+            if degerler["alan_m2"] is not None:
+                degerler["alan"] = fmt_alan(degerler["alan_m2"])  # TKGM iki biçim kullanıyor; tek biçimde sakla
             kolonlar = ", ".join(degerler)
             yer = ", ".join(f":{k}" for k in degerler)
             self._db.execute(f"INSERT OR REPLACE INTO parseller ({kolonlar}) VALUES ({yer})", degerler)
@@ -124,6 +130,8 @@ class Store:
                  if eski[a] in (None, "") and kayit.get(a) not in (None, "")}
         if "alan" in eksik:
             eksik["alan_m2"] = parse_alan(eksik["alan"])
+            if eksik["alan_m2"] is not None:
+                eksik["alan"] = fmt_alan(eksik["alan_m2"])
         if eksik:
             atama = ", ".join(f"{a}=:{a}" for a in eksik)
             self._db.execute(f"UPDATE parseller SET {atama} WHERE key=:key", eksik | {"key": eski["key"]})
@@ -186,8 +194,8 @@ class Store:
     def referans_ekle(self, ad, renk, geojson, hesap_katmani=None):
         with self._lock:
             cur = self._db.execute(
-                "INSERT INTO referanslar (ad, renk, gorunur, geojson, eklenme, hesap_katmani) VALUES (?,?,1,?,?,?)",
-                (ad, renk, json.dumps(geojson, ensure_ascii=False), _simdi(), hesap_katmani))
+                "INSERT INTO referanslar (ad, renk, gorunur, geojson, eklenme, hesap_katmani, son_erisim) VALUES (?,?,1,?,?,?,?)",
+                (ad, renk, json.dumps(geojson, ensure_ascii=False), _simdi(), hesap_katmani, _simdi()))
             self._db.commit()
             return cur.lastrowid
 
@@ -195,7 +203,12 @@ class Store:
         rows = self._db.execute("SELECT * FROM referanslar ORDER BY id").fetchall()
         return [_referans(r) for r in rows]
 
-    def referans(self, ref_id):
+    def referans(self, ref_id, dokun=False):
+        """dokun=True: bir sekme bu alanı kullanıyor, son erişimi güncelle (temizlikten korunur)."""
+        if dokun:
+            with self._lock:
+                self._db.execute("UPDATE referanslar SET son_erisim=? WHERE id=?", (_simdi(), ref_id))
+                self._db.commit()
         r = self._db.execute("SELECT * FROM referanslar WHERE id=?", (ref_id,)).fetchone()
         return _referans(r) if r else None
 
@@ -225,9 +238,12 @@ class Store:
             self._db.execute("UPDATE referanslar SET taranan='[]' WHERE id=?", (ref_id,))
             self._db.commit()
 
-    def referanslari_temizle(self):
+    def referanslari_temizle(self, saat=24):
+        """Uzun süredir kullanılmayan alanları siler. Hepsini silmez: başka bir sekmede açık
+        oturum varsa onun alanları kalmalı (her sekme zaten sadece kendi eklediklerini gösterir)."""
+        sinir = (datetime.now() - timedelta(hours=saat)).isoformat(timespec="seconds")
         with self._lock:
-            n = self._db.execute("DELETE FROM referanslar").rowcount
+            n = self._db.execute("DELETE FROM referanslar WHERE COALESCE(son_erisim, eklenme) < ?", (sinir,)).rowcount
             self._db.commit()
             return n
 

@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>efe-parselsorgu</title>
+  <title>Parsel Sorgu +</title>
+  <link rel="icon" id="favicon" type="image/svg+xml" href="marka/isaret.svg">
   <meta name="color-scheme" content="light dark">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,8 +42,14 @@
     <symbol id="i-dis" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
     <symbol id="i-hepsi" viewBox="0 0 24 24"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></symbol>
     <symbol id="i-liste-cikar" viewBox="0 0 24 24"><path d="M11 12H3M16 6H3M16 18H3"/><path d="m19 10-4 4M15 10l4 4"/></symbol>
+    <symbol id="i-etiket" viewBox="0 0 24 24"><path d="M12 13v8M12 3v3"/><path d="M18 6a2 2 0 0 1 1.39.56l2.3 2.22a1 1 0 0 1 0 1.44l-2.3 2.22A2 2 0 0 1 18 13H6a2 2 0 0 1-1.39-.56l-2.3-2.22a1 1 0 0 1 0-1.44l2.3-2.22A2 2 0 0 1 6 6z"/></symbol>
+    <symbol id="i-asagi" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol>
+    <symbol id="i-tik" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="i-tarama" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol>
   </svg>
+
+  <!-- Alan tarama desenleri (app.js taramaDeseni ekler) -->
+  <svg class="ikon-seti" aria-hidden="true" focusable="false"><defs id="desenler"></defs></svg>
 
   <div id="harita" aria-label="Harita"></div>
 
@@ -61,14 +68,16 @@
   <!-- Çekmece: iki sayfanın içeriği -->
   <div class="cekmece cam">
     <header class="cekmece-ust">
-      <div class="marka">
-        <svg class="marka-isaret" viewBox="0 0 32 32" aria-hidden="true">
-          <rect width="32" height="32" rx="9" class="marka-zemin"/>
-          <path d="M8 11.5 17 8l7 4.5-2.5 10L12 24 8 18.5z" class="marka-parsel"/>
-          <circle cx="17" cy="15" r="2.4" class="marka-nokta"/>
+      <!-- Marka: işaret (artı = parsel köşe noktası) ve elle çizilmiş yazı. Kaynak: araclar/marka_uret.py.
+           Sarı nokta, uygulama çalışırken nabız gibi atar. -->
+      <div class="marka" id="marka">
+        <svg class="marka-isaret" viewBox="0 0 216 216" aria-hidden="true">
+          <rect class="isaret-zemin" width="216" height="216" rx="52"/>
+          <g class="isaret-arti"><rect x="92" y="40" width="32" height="136"/><rect x="40" y="92" width="136" height="32"/></g>
+          <rect class="isaret-nokta" x="92" y="92" width="32" height="32"/>
         </svg>
         <div>
-          <h1>efe-parselsorgu</h1>
+          <h1><span class="sr-only">Parsel Sorgu +</span><svg class="kelime" viewBox="0 0 670 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="22"><g transform="translate(0 0)"><path d="M11 100V11H22A20 20 0 0 1 22 51H11" stroke-linejoin="miter"/></g><g transform="translate(60 0)"><path d="M11 100V26A15 15 0 0 1 41 26V100M11 64H41"/></g><g transform="translate(120 0)"><path d="M11 100V11H22A20 20 0 0 1 22 51H11M24 51L42 100" stroke-linejoin="miter"/></g><g transform="translate(180 0)"><path d="M41 27C41 16 34 11 26 11C17 11 11 17 11 27C11 39 20 44 26 47C33 51 41 57 41 72C41 84 34 89 26 89C17 89 11 83 11 73"/></g><g transform="translate(240 0)"><path d="M44 11H11V89H44M11 50H38" stroke-linejoin="miter"/></g><g transform="translate(292 0)"><path d="M11 0V89H44" stroke-linejoin="miter"/></g><g transform="translate(378 0)"><path d="M41 27C41 16 34 11 26 11C17 11 11 17 11 27C11 39 20 44 26 47C33 51 41 57 41 72C41 84 34 89 26 89C17 89 11 83 11 73"/></g><g transform="translate(438 0)"><rect x="11" y="11" width="30" height="78" rx="15"/></g><g transform="translate(498 0)"><path d="M11 100V11H22A20 20 0 0 1 22 51H11M24 51L42 100" stroke-linejoin="miter"/></g><g transform="translate(558 0)"><path d="M41 30V26A15 15 0 0 0 11 26V74A15 15 0 0 0 41 74V54H27" stroke-linejoin="miter"/></g><g transform="translate(618 0)"><path d="M11 0V74A15 15 0 0 0 41 74V0"/></g></g></svg></h1>
           <p id="sayfaAlt">Parsel sorgu</p>
         </div>
       </div>
@@ -83,15 +92,21 @@
         <div class="kutu">
           <form id="sorguForm" class="form" autocomplete="off">
             <div class="grup">
-              <label class="satir-alan"><span>İl</span>
-                <select id="il" required><option value="">Seç</option></select>
-              </label>
-              <label class="satir-alan"><span>İlçe</span>
-                <select id="ilce" required disabled></select>
-              </label>
-              <label class="satir-alan"><span>Mahalle</span>
-                <select id="mahalle" required disabled></select>
-              </label>
+              <div class="satir-alan secici">
+                <span id="il-etiket">İl</span>
+                <button type="button" class="secici-dugme bos" id="il-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="il-etiket il-dugme"><span class="secici-deger">Seç</span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+                <select id="il" class="gizli-secim" tabindex="-1" aria-hidden="true"><option value="">Seç</option></select>
+              </div>
+              <div class="satir-alan secici">
+                <span id="ilce-etiket">İlçe</span>
+                <button type="button" class="secici-dugme bos" id="ilce-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="ilce-etiket ilce-dugme" disabled><span class="secici-deger">Seç</span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+                <select id="ilce" class="gizli-secim" tabindex="-1" aria-hidden="true" disabled></select>
+              </div>
+              <div class="satir-alan secici">
+                <span id="mahalle-etiket">Mahalle</span>
+                <button type="button" class="secici-dugme bos" id="mahalle-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="mahalle-etiket mahalle-dugme" disabled><span class="secici-deger">Seç</span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+                <select id="mahalle" class="gizli-secim" tabindex="-1" aria-hidden="true" disabled></select>
+              </div>
             </div>
             <div class="ikili">
               <label class="buyuk-alan"><span>Ada</span>
@@ -107,11 +122,6 @@
                 <svg class="ikon"><use href="#i-hedef"/></svg>Haritadan
               </button>
             </div>
-            <label class="anahtar">
-              <input type="checkbox" id="yenile" role="switch">
-              <span class="anahtar-izi" aria-hidden="true"></span>
-              <span>Önbelleği atla, TKGM'den yeniden çek</span>
-            </label>
           </form>
         </div>
 
@@ -163,16 +173,18 @@
                 </label>
               </div>
               <div data-bicim="excel" hidden class="grup">
-                <label class="satir-alan"><span>Koordinat sistemi</span>
-                  <select id="sistem"><option value="itrf96">ITRF96 3°</option><option value="ed50">ED50 3°</option></select>
-                </label>
-                <label class="satir-alan"><span>Dilim (DOM)</span>
-                  <select id="dilim">
+                <div class="satir-alan secici"><span id="sistem-etiket">Koordinat sistemi</span>
+                  <button type="button" class="secici-dugme" id="sistem-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sistem-etiket sistem-dugme"><span class="secici-deger"></span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+                  <select id="sistem" class="gizli-secim" tabindex="-1" aria-hidden="true"><option value="itrf96">ITRF96 3°</option><option value="ed50">ED50 3°</option></select>
+                </div>
+                <div class="satir-alan secici"><span id="dilim-etiket">Dilim (DOM)</span>
+                  <button type="button" class="secici-dugme" id="dilim-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="dilim-etiket dilim-dugme"><span class="secici-deger"></span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+                  <select id="dilim" class="gizli-secim" tabindex="-1" aria-hidden="true">
                     <option value="otomatik">Otomatik</option>
                     <option>27</option><option>30</option><option>33</option><option>36</option>
                     <option>39</option><option>42</option><option>45</option>
                   </select>
-                </label>
+                </div>
               </div>
               <button type="submit" class="dugme ana genis" id="disaButon"><svg class="ikon"><use href="#i-indir"/></svg><span id="disaButonMetin">Seçilenleri dışa aktar</span></button>
             </form>
@@ -233,9 +245,10 @@
             <h2 id="alanBaslik">Seçili alan</h2>
             <button type="button" id="ozetYenile" class="ikon-dugme" title="Özeti yeniden hesapla" aria-label="Özeti yenile"><svg class="ikon"><use href="#i-yenile"/></svg></button>
           </div>
-          <label class="satir-alan sinir-secim"><span>Alan sınırı</span>
-            <select id="hesapKatmani" title="Hesaplarda (özet, seçim, tarama, dışa aktarma) kullanılacak katman"></select>
-          </label>
+          <div class="satir-alan secici sinir-secim" title="Hesaplarda (özet, seçim, tarama, dışa aktarma) kullanılacak katman"><span id="hesapKatmani-etiket">Alan sınırı</span>
+            <button type="button" class="secici-dugme" id="hesapKatmani-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="hesapKatmani-etiket hesapKatmani-dugme"><span class="secici-deger"></span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+            <select id="hesapKatmani" class="gizli-secim" tabindex="-1" aria-hidden="true"></select>
+          </div>
           <div id="ozet" class="ozet"></div>
 
           <div class="butonlar">
@@ -273,8 +286,8 @@
     <div class="bolumlu cam altlik-secici" role="radiogroup" aria-label="Altlık harita">
       <label><input type="radio" name="altlik" value="Uydu" checked><span>Uydu</span></label>
       <label><input type="radio" name="altlik" value="OpenStreetMap"><span>Harita</span></label>
-      <label title="TKGM bu katmanı kendi sitesi dışına kapatmış olabilir"><input type="radio" name="altlik" value="TKGM Ortofoto"><span>TKGM</span></label>
     </div>
+    <button type="button" id="etiketler" class="tek-kontrol cam" aria-pressed="true" aria-label="Yer adları ve yollar" title="Yer adları, sınırlar ve yollar"><svg class="ikon"><use href="#i-etiket"/></svg></button>
     <div class="dikey-kontrol cam">
       <button type="button" id="yakinlas" aria-label="Yakınlaştır"><svg class="ikon"><use href="#i-arti"/></svg></button>
       <button type="button" id="uzaklas" aria-label="Uzaklaştır"><svg class="ikon"><use href="#i-eksi"/></svg></button>
@@ -289,9 +302,6 @@
       <span>parsel seçili</span>
       <span class="secili-alan" id="seciliBarAlan"></span>
     </div>
-    <span class="ayrac" aria-hidden="true"></span>
-    <button type="button" class="dugme seffaf" data-hizli="kml" title="Seçilenleri KML olarak indir"><svg class="ikon"><use href="#i-harita"/></svg>KML</button>
-    <button type="button" class="dugme seffaf" data-hizli="excel" title="Seçilenleri Excel olarak indir (dışa aktarma ayarlarındaki koordinat sistemiyle)"><svg class="ikon"><use href="#i-tablo"/></svg>Excel</button>
     <button type="button" class="ikon-dugme" id="seciliBarTemizle" aria-label="Seçimi temizle" title="Seçimi temizle"><svg class="ikon"><use href="#i-kapat"/></svg></button>
   </div>
 
@@ -304,6 +314,16 @@
   </div>
 
   <div id="mesajlar" class="mesajlar" aria-live="polite"></div>
+
+  <!-- İl / ilçe / mahalle için aranabilir liste (tarayıcının kendi açılır listesi yerine) -->
+  <div id="seciciPanel" class="secici-panel cam" hidden>
+    <div class="arama">
+      <svg class="ikon" aria-hidden="true"><use href="#i-ara"/></svg>
+      <input id="seciciAra" type="search" placeholder="Yazarak ara" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="seciciListe" aria-autocomplete="list" aria-label="Listede ara">
+    </div>
+    <ul id="seciciListe" role="listbox" tabindex="-1" aria-label="Seçenekler"></ul>
+    <p id="seciciBos" class="secici-bos" hidden>Eşleşen sonuç yok</p>
+  </div>
 
   <!-- Uygulama içi onay / ad sorma penceresi (tarayıcının prompt/confirm kutuları her yerde çalışmıyor) -->
   <dialog id="diyalog" class="diyalog cam" aria-labelledby="diyalogMetin">

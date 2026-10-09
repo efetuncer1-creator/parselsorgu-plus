@@ -1,1 +1,1 @@
-"""efe-parselsorgu: TKGM parsel sorgulama ve dışa aktarma."""
+"""Parsel Sorgu +: TKGM parsel sorgulama, alandan parsel tespiti ve dışa aktarma."""

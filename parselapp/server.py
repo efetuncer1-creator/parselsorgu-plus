@@ -7,6 +7,7 @@ Sadece 127.0.0.1'i dinler; ağdaki başka cihazlar erişemez.
 import argparse
 import json
 import mimetypes
+import os
 import threading
 import webbrowser
 from http import HTTPStatus
@@ -114,7 +115,7 @@ class Uygulama:
         raise Hata(HTTPStatus.NOT_FOUND, "Bilinmeyen adres")
 
     def _referans_al(self, ref_id):
-        r = self.store.referans(int(ref_id))
+        r = self.store.referans(int(ref_id), dokun=True)
         if not r:
             raise Hata(HTTPStatus.NOT_FOUND, "Referans bulunamadı.")
         return r
@@ -244,16 +245,29 @@ def isleyici(uygulama):
     return Isleyici
 
 
+class Sunucu(ThreadingHTTPServer):
+    # Windows'ta SO_REUSEADDR aynı portu ikinci bir sunucunun da açmasına izin veriyor; o zaman
+    # istekler eski ve yeni sunucu arasında bölünür (9 Ekim 2026'da bir alanın silinmesine yol açtı).
+    allow_reuse_address = os.name != "nt"
+
+
 def main():
-    ap = argparse.ArgumentParser(description="efe-parselsorgu yerel sunucusu")
+    ap = argparse.ArgumentParser(description="Parsel Sorgu + yerel sunucusu")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--veri", default=str(VERI), help="SQLite dosyası")
     ap.add_argument("--tarayici-acma", action="store_true", help="Tarayıcıyı otomatik açma")
     a = ap.parse_args()
 
-    sunucu = ThreadingHTTPServer(("127.0.0.1", a.port), isleyici(Uygulama(Store(a.veri))))
     adres = f"http://127.0.0.1:{a.port}/"
-    print(f"efe-parselsorgu çalışıyor: {adres}  (kapatmak için Ctrl+C)")
+    try:
+        sunucu = Sunucu(("127.0.0.1", a.port), isleyici(Uygulama(Store(a.veri))))
+    except OSError:
+        # Uygulama zaten açık: ikinci sunucu başlatma, açık olanı tarayıcıda göster.
+        print(f"Parsel Sorgu + zaten çalışıyor: {adres}")
+        if not a.tarayici_acma:
+            webbrowser.open(adres)
+        return
+    print(f"Parsel Sorgu + çalışıyor: {adres}  (kapatmak için Ctrl+C)")
     if not a.tarayici_acma:
         threading.Timer(0.8, webbrowser.open, (adres,)).start()
     try:

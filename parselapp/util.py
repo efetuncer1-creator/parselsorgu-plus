@@ -14,6 +14,14 @@ def norm(s):
     return re.sub(r"\s+", " ", tr_lower(s)).strip()
 
 
+_ALFABE = {h: i for i, h in enumerate("abcçdefgğhıijklmnoöprsştuüvwxyz")}
+
+
+def tr_sira(s):
+    """Türkçe alfabe sırasına göre sıralama anahtarı (Çankırı, Ç'den sonra; İzmir, I'dan sonra)."""
+    return [_ALFABE.get(h, 100 + ord(h)) for h in norm(s)]
+
+
 def parcel_key(il, ilce, mahalle, ada, parsel):
     """Bir parselin kayıttaki benzersiz anahtarı.
 
@@ -23,7 +31,12 @@ def parcel_key(il, ilce, mahalle, ada, parsel):
 
 
 def parse_alan(text):
-    """TKGM alan metnini sayıya çevirir: "4.598,40" -> 4598.4. Çözülemezse None."""
+    """TKGM alan metnini sayıya çevirir. Çözülemezse None.
+
+    TKGM iki biçim kullanıyor: ada/parsel sorgusu Türkçe ("4.598,40"), haritadan (koordinatla)
+    sorgu İngilizce ("29,636.19"). Kural: son ayırıcıdan sonra 1-2 hane varsa o ondalık
+    ayırıcıdır, diğerleri binliktir; 3 hane varsa binlik ayırıcıdır ("3.158.004").
+    """
     if text is None:
         return None
     if isinstance(text, (int, float)):
@@ -31,8 +44,11 @@ def parse_alan(text):
     t = str(text).strip().replace(" ", "")
     if not t:
         return None
-    if "," in t:
-        t = t.replace(".", "").replace(",", ".")
+    son = max(t.rfind(","), t.rfind("."))
+    if son >= 0:
+        tam, kesir = t[:son], t[son + 1:]
+        tam = tam.replace(",", "").replace(".", "")
+        t = f"{tam}.{kesir}" if len(kesir) in (1, 2) else tam + kesir
     try:
         return float(t)
     except ValueError:

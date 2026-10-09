@@ -1,4 +1,11 @@
-# efe-parselsorgu
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="web/marka/logo-koyu.svg">
+    <img src="web/marka/logo.svg" alt="Parsel Sorgu +" width="360">
+  </picture>
+</p>
+
+# Parsel Sorgu +
 
 TKGM parsel sorgulama ve dışa aktarma aracı. [parselsorgu.tkgm.gov.tr](https://parselsorgu.tkgm.gov.tr/)'nin kullandığı servisten parsel bilgisi ve sınırlarını çeker, kaydeder; KML (Google Earth) ve Excel olarak dışa aktarır.
 

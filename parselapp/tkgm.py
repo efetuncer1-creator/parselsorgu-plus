@@ -15,15 +15,16 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .importers import geometri_coz, tkgm_ozellik
+from .util import tr_sira
 
 API = "https://cbsapi.tkgm.gov.tr/megsiswebapi.v3.1/api"
 BEKLEME_SN = 1.5  # ardışık istekler arasında en az bu kadar beklenir
 
+# Uygulama kendini olduğu gibi tanıtır; parselsorgu sitesi gibi görünmeye gerek yok
+# (9 Ekim 2026'da Referer/Origin olmadan da cevap verdiği doğrulandı).
 _BASLIKLAR = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*",
-    "Referer": "https://parselsorgu.tkgm.gov.tr/",
-    "Origin": "https://parselsorgu.tkgm.gov.tr",
+    "User-Agent": "ParselSorgu+/0.1 (yerel parsel sorgu araci)",
+    "Accept": "application/json",
 }
 
 
@@ -69,7 +70,7 @@ class Tkgm:
                 self._son = time.monotonic()
         self.store.sorgu_yaz(adres, r.status_code)
         if r.status_code == 403 and "limit" in r.text.lower():
-            raise LimitAsildi("TKGM günlük sorgu limiti doldu. Yarın tekrar deneyin.")
+            raise LimitAsildi("TKGM günlük sorgu limiti aşıldı.")
         if r.status_code == 404 or not r.text.strip() or r.text.strip() == "null":
             raise Bulunamadi("Parsel bulunamadı.")
         if r.status_code != 200:
@@ -89,7 +90,7 @@ class Tkgm:
         veri = self._get(yol)
         liste = sorted(
             ({"id": f["properties"]["id"], "ad": f["properties"]["text"]} for f in veri.get("features", [])),
-            key=lambda x: x["ad"])
+            key=lambda x: tr_sira(x["ad"]))
         self.store.idari_kaydet(tur, ust_id, liste)
         return liste
 

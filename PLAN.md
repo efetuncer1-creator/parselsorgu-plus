@@ -99,7 +99,7 @@ efe-parselsorgu/
 - Mevcut KML'lerden 1.070 benzersiz parsel kayda alındı, TKGM'ye hiç sorgu atılmadı.
 - 21 otomatik test geçiyor.
 - Aşama 1'in kodu da yazıldı (il/ilçe/mahalle seçimi, ada/parsel ve haritadan sorgu), ama gerçek TKGM ile denenmedi.
-- **Yarın ilk iş:** gerçek TKGM testi (il listesi, bir parsel sorgusu, haritadan bir sorgu) ve TKGM ortofoto katmanı. Bugün ortofoto servisi her karo için boş görüntü döndürdü; şimdilik varsayılan altlık Esri uydu görüntüsü.
+- ~~**Yarın ilk iş:** gerçek TKGM testi~~ (9 Ekim'de yapıldı, aşağıya bkz.) (il listesi, bir parsel sorgusu, haritadan bir sorgu) ve TKGM ortofoto katmanı. Bugün ortofoto servisi her karo için boş görüntü döndürdü; şimdilik varsayılan altlık Esri uydu görüntüsü.
 
 ### Eklenenler (7 Ekim 2026, öğleden sonra)
 - [x] Liste varsayılan olarak boş; gerçek KML'ler `test-kml/` klasöründe, isteyince içe aktarılır.
@@ -116,13 +116,30 @@ efe-parselsorgu/
 - [x] Boşlukları göster; **boşlukları TKGM'den tara** (kullanıcının verdiği sorgu bütçesiyle, en büyük boşluğun iç teğet çember merkezinden; parsel çıkmayan noktalar işaretlenir; 12 m'den dar / 100 m²'den küçük artıklar sorgulanmaz).
 - [x] Alan dışa aktarma: KML'e sınır klasörü, Excel'e "alan içinde m²" ve oran sütunları.
 - Tarama gerçek TKGM ile henüz denenmedi (limit); sahte cevaplarla test edildi.
-- Not: "efe-parselsorgu" geçici isim; gerçek isim tasarım aşamasında verilecek.
+- İsim: **Parsel Sorgu +** (9 Ekim 2026). Logo: mavi artı = parsel köşe noktası, sarı merkez = parsel rengi; harfler elle çizildi (araclar/marka_uret.py).
 
 ### Oturum ve önbellek (7 Ekim 2026, akşam)
 - [x] Sayfa açılışı/yenileme = yeni oturum: parsel listesi, harita ve alanlar boş başlar.
 - [x] Parseller arka planda önbellekte kalır (data/parseller.db); yeni oturumda tekrar sorgulanınca/haritadan tıklanınca/taramada TKGM'ye gidilmeden gelir. "Listeden çıkar" sadece oturumdan çıkarır.
 - [x] Alan özeti, seçim ve tarama sadece oturumdaki parsellerle çalışır; tarama önbellekteki parselleri sorgu harcamadan oturuma ekler.
 - [x] Tarayıcının prompt/confirm kutuları gömülü tarayıcıda "iptal" sayıldığı için alan kapanmıyordu → uygulama içi pencere. Alan çift tıklamayla ve Enter ile de kapanır.
+
+### Canlı TKGM testi ve düzeltmeler (9 Ekim 2026)
+- [x] Canlı test: il/ilçe/mahalle listeleri, ada/parsel sorgusu, haritadan sorgu, önbellek ve boşluk tarama gerçek TKGM ile çalışıyor (10 sorgu).
+- [x] Hata: haritadan (koordinatla) sorgu alanı İngilizce biçimde döndürüyor ("29,636.19"); çözücü iki biçimi de okuyor, alan metni Türkçe biçimde saklanıyor, önbellekteki 112 kayıt düzeltildi.
+- [x] TKGM servisi parselsorgu'nun Referer/Origin başlıkları olmadan da cevap veriyor; uygulama artık kendi adıyla istek atıyor.
+- [x] İl/ilçe/mahalle Türkçe alfabe sırasında; yazarak aranabilen liste, seçince sonraki liste açılır.
+- [x] Uydu üstüne açılıp kapanan yer adları/sınırlar/yollar katmanı (Esri Reference).
+- [x] Yakın zoomda "Map data not yet available" yerine bir üst seviyenin görüntüsü büyütülür (blankTile=false + yedek karo).
+- [x] TKGM ortofoto seçeneği kaldırıldı: karoları her istekte boş geliyor, dış kullanıma kapalı.
+- [x] Seçim çubuğundan KML/Excel düğmeleri kaldırıldı; limit dolunca sayaçta sadece "Limit doldu" ve alttan "TKGM günlük sorgu limiti aşıldı." uyarısı.
+
+### Açılır listeler, tarama deseni, sunucu (9 Ekim 2026, öğleden sonra)
+- [x] Koordinat sistemi, dilim ve alan sınırı da uygulamanın kendi listesine geçti (tarayıcı listesi Windows koyu temada okunmuyordu); aşağıda yer yoksa yukarı açılır.
+- [x] Yakın zoom hızlandı: bölgede görüntünün bittiği seviye öğrenilir, sonraki karolar doğrudan oradan istenir (zoom 20'de 12 karo için ~24 yerine 13 istek).
+- [x] Alanların içi çapraz çizgili (SVG deseni), seçili alanın çizgileri daha belirgin.
+- [x] "Önbelleği atla" anahtarı "Her zaman güncel halini TKGM'den al" oldu, açıklamasıyla.
+- [x] Hata: Windows'ta iki sunucu aynı portu açabiliyordu, istekler eski koda gidiyordu ve yeni oturum bir alanı sildi. Artık ikinci başlatma "zaten çalışıyor" deyip çıkar; yeni oturum sadece 24 saattir kullanılmayan alanları temizler. Silinen alan aynı numarayla geri yüklendi.
 
 ## 4. Test planı
 - **Veri olmadan:** içe aktarma, çıktılar ve harita ekranı mevcut KML'ler ve önbellekteki cevaplarla test edilir.

@@ -14,6 +14,7 @@ const token = (ad) => getComputedStyle(document.documentElement).getPropertyValu
 // hata: true -> hata bildirimi; "basari" -> tamamlanan iş; yoksa bilgi.
 function mesaj(metin, hata = false) {
   const tur = hata === true ? "hata" : hata === "basari" ? "basari" : "bilgi";
+  if ([...$("mesajlar").children].some((m) => m.textContent === metin && !m.classList.contains("gidiyor"))) return;
   const el = document.createElement("div");
   el.className = `mesaj cam ${tur}`;
   el.setAttribute("role", tur === "hata" ? "alert" : "status");
@@ -38,7 +39,21 @@ function yukleniyor(buton, acik) {
   else if (buton.dataset.ikon) use.setAttribute("href", buton.dataset.ikon);
 }
 
+// Bir istek 250 ms'den uzun sürerse markadaki köşe noktası nabız gibi atar (kısa istekler yanıp sönmesin).
+let surenIstek = 0, mesgulZamanlayici = null;
+function mesgul(degisim) {
+  surenIstek += degisim;
+  clearTimeout(mesgulZamanlayici);
+  if (surenIstek > 0) mesgulZamanlayici = setTimeout(() => $("marka").classList.add("calisiyor"), 250);
+  else $("marka").classList.remove("calisiyor");
+}
+
 async function api(yol, secenek = {}) {
+  mesgul(1);
+  try { return await apiIstek(yol, secenek); } finally { mesgul(-1); }
+}
+
+async function apiIstek(yol, secenek) {
   const r = await fetch("/api/" + yol, secenek);
   const tur = r.headers.get("Content-Type") || "";
   if (!tur.includes("application/json")) {
@@ -100,24 +115,86 @@ const oturumKeys = () => [...durum.parseller.keys()];
 
 const harita = L.map("harita", { zoomControl: false, doubleClickZoom: true }).setView([39.0, 35.0], 6);
 harita.attributionControl.setPrefix(false);
+// Bir seviyede görüntü yoksa (Esri o zaman "Map data not yet available" görseli gönderir;
+// blankTile=false ile 404 döner) bir üst seviyedeki karonun ilgili parçası büyütülerek gösterilir.
+// Bölgede hangi seviyeye kadar görüntü olduğu öğrenilir (yaklaşık 2,4 km'lik bölgeler); aynı bölgedeki
+// sonraki karolar doğrudan çalışan seviyeden istenir, her karo için önce "yok" cevabı beklenmez.
+const BOLGE_Z = 14;
+const YedekliKaro = L.TileLayer.extend({
+  createTile(koord, bitti) {
+    const kap = document.createElement("div");
+    const img = document.createElement("img");
+    img.alt = "";
+    img.setAttribute("role", "presentation");
+    img.style.cssText = "position:absolute;max-width:none;";
+    kap.style.overflow = "hidden";
+    kap.append(img);
+    const boyut = this.getTileSize().x;
+    this._bolgeEnIyi ??= new Map();
+    const kayma = Math.max(0, koord.z - BOLGE_Z);
+    const bolge = `${koord.x >> kayma}/${koord.y >> kayma}`;
+    const bilinen = this._bolgeEnIyi.get(bolge);
+    let fark = bilinen != null ? Math.max(0, koord.z - bilinen) : 0;
+    img.addEventListener("load", () => {
+      if (fark > 0) this._bolgeEnIyi.set(bolge, Math.min(this._bolgeEnIyi.get(bolge) ?? 99, koord.z - fark));
+    });
+    const yukle = () => {
+      const k = 2 ** fark;
+      const ust = { x: Math.floor(koord.x / k), y: Math.floor(koord.y / k), z: koord.z - fark };
+      img.style.width = img.style.height = `${boyut * k}px`;
+      img.style.left = `${-(koord.x % k) * boyut}px`;
+      img.style.top = `${-(koord.y % k) * boyut}px`;
+      img.src = L.Util.template(this._url, L.extend({ s: this._getSubdomain(ust) }, this.options, ust));
+    };
+    img.onload = () => bitti(null, kap);
+    img.onerror = () => {
+      if (fark < 5 && koord.z - fark > 2) { fark++; yukle(); } else bitti(new Error("karo yok"), kap);
+    };
+    yukle();
+    return kap;
+  },
+});
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
 const altlik = {
-  Uydu: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  Uydu: new YedekliKaro(`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}?blankTile=false`, {
     maxZoom: 21, maxNativeZoom: 19, attribution: "© Esri, Maxar, Earthstar Geographics",
   }),
   OpenStreetMap: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 21, maxNativeZoom: 19, attribution: "© OpenStreetMap",
   }),
-  // TKGM karoları TMS düzeninde (y ters). TKGM bunları kendi sitesi dışına kapatmış (CORP), çoğunlukla yüklenmez.
-  "TKGM Ortofoto": L.tileLayer("https://ortofotoapi{s}.tkgm.gov.tr/api/tms/1.0.0/TKGM:ortofoto_3857/{z}/{x}/{y}.png", {
-    subdomains: "0123", maxZoom: 21, maxNativeZoom: 19, tms: true, attribution: "© TKGM",
-  }),
 };
+// TKGM ortofotosu kaldırıldı: TKGM karoları kendi sitesi dışına kapatmış, her istekte boş görüntü döndürüyor
+// (7 ve 9 Ekim 2026'da doğrulandı).
+
+// Uydu üstüne yer adları, sınırlar ve yollar (OSM'de bunlar zaten var).
+harita.createPane("etiket").style.zIndex = 250;
+harita.getPane("etiket").style.pointerEvents = "none";
+const etiketler = L.layerGroup([
+  new YedekliKaro(`${ESRI}/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}?blankTile=false`, { pane: "etiket", maxZoom: 21, maxNativeZoom: 19, opacity: 0.85 }),
+  new YedekliKaro(`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}?blankTile=false`, { pane: "etiket", maxZoom: 21, maxNativeZoom: 19 }),
+]);
+let etiketAcik = true;
+try { etiketAcik = localStorage.getItem("etiketler") !== "0"; } catch { /* varsayılan açık */ }
+
 let aktifAltlik = altlik.Uydu.addTo(harita);
+function etiketleriGuncelle() {
+  const uydu = aktifAltlik === altlik.Uydu;
+  $("etiketler").disabled = !uydu;
+  $("etiketler").setAttribute("aria-pressed", uydu && etiketAcik);
+  if (uydu && etiketAcik) etiketler.addTo(harita); else etiketler.remove();
+}
 document.querySelectorAll("input[name=altlik]").forEach((r) => r.addEventListener("change", () => {
   aktifAltlik.remove();
   aktifAltlik = altlik[r.value].addTo(harita);
   aktifAltlik.bringToBack();
+  etiketleriGuncelle();
 }));
+$("etiketler").addEventListener("click", () => {
+  etiketAcik = !etiketAcik;
+  try { localStorage.setItem("etiketler", etiketAcik ? "1" : "0"); } catch { /* tercih saklanamazsa önemli değil */ }
+  etiketleriGuncelle();
+});
+etiketleriGuncelle();
 $("yakinlas").addEventListener("click", () => harita.zoomIn());
 $("uzaklas").addEventListener("click", () => harita.zoomOut());
 $("hepsiniGoster").addEventListener("click", () => {
@@ -160,14 +237,17 @@ function bilgiTablosu(p) {
     ["Veri tarihi", (p.kaynak_tarih || "").slice(0, 10)],
   ].filter(([, deger]) => deger);
   const harita = nokta
-    ? `<a class="disari" href="https://www.google.com/maps/search/?api=1&query=${nokta.lat.toFixed(6)},${nokta.lng.toFixed(6)}" target="_blank" rel="noopener">${ikon("dis")}Google Haritalar'da aç</a>`
+    ? `<a class="disari" href="https://www.google.com/maps/search/?api=1&query=${nokta.lat.toFixed(6)},${nokta.lng.toFixed(6)}" target="_blank" rel="noopener">${ikon("dis")}Google Haritalar</a>`
     : "";
   return `<div class="bilgi-karti">
     <div class="baslik">${esc(p.ada)} / ${esc(p.parsel)}</div>
     <div class="yer">${esc(p.mahalle)} · ${esc(p.ilce)}, ${esc(p.il)}</div>
     <div class="tapu"><b>${p.alan ? esc(p.alan) : "Bilinmiyor"}</b><span>m² tapu alanı</span></div>
     <dl>${satirlar.map(([a, b]) => `<dt>${a}</dt><dd>${esc(b)}</dd>`).join("")}</dl>
-    ${harita}
+    <div class="kart-eylemleri">
+      ${harita}
+      <button type="button" class="disari" data-guncelle="${esc(p.key)}" title="Parselin TKGM'deki güncel halini al (1 sorgu harcar)" aria-label="TKGM'den güncelle, 1 sorgu harcar">${ikon("yenile")}Güncelle</button>
+    </div>
   </div>`;
 }
 
@@ -237,6 +317,51 @@ function menuGoster(key) {
   menuIsareti.bindPopup(() => bilgiTablosu(p), { offset: [0, -12], maxWidth: 280, minWidth: 264 });
 }
 
+// ---- tek parseli TKGM'den güncelleme (bilgi kartındaki düğme) -----------------------
+// Parseller normalde önbellekten gelir; TKGM'deki hali değişmiş olabilecek bir parsel (ifraz, tevhit,
+// nitelik değişikliği) buradan tek sorguyla yenilenir.
+
+harita.on("popupopen", (e) => {
+  const b = e.popup.getElement()?.querySelector("[data-guncelle]");
+  b?.addEventListener("click", () => parselGuncelle(b.dataset.guncelle, b));
+});
+
+async function parselGuncelle(key, buton) {
+  const f = durum.parseller.get(key);
+  if (!f) return;
+  const p = f.properties;
+  yukleniyor(buton, true);
+  try {
+    let r;
+    if (p.mahalle_id) {
+      r = await postJson("sorgu", { mahalleId: p.mahalle_id, ada: p.ada, parsel: p.parsel, yenile: true });
+    } else {
+      // Dosyadan gelen parselde mahalle kimliği olmayabilir: parselin içindeki noktadan sorulur.
+      const n = icNokta(f);
+      r = await postJson("sorgu-nokta", { enlem: n.lat, boylam: n.lng, yenile: true });
+    }
+    const yeni = r.parsel;
+    if (yeni.properties.key !== key) {
+      parselEkle(yeni, true);
+      mesaj(`Bu noktada artık ${yeni.properties.ada}/${yeni.properties.parsel} var. ${p.ada}/${p.parsel} ifraz ya da tevhit görmüş olabilir.`, true);
+      return;
+    }
+    durum.parseller.set(key, yeni);
+    katmanEkle(yeni);
+    aktifYap(key, false);
+    menuIsareti?.openPopup();
+    const fark = [["tapu alanı", p.alan, yeni.properties.alan], ["nitelik", p.nitelik, yeni.properties.nitelik]]
+      .filter(([, eski, simdi]) => (eski || "") !== (simdi || ""))
+      .map(([ad, eski, simdi]) => `${ad} ${eski || "boş"} → ${simdi || "boş"}`);
+    mesaj(fark.length ? `${p.ada}/${p.parsel} güncellendi: ${fark.join(", ")}.` : `${p.ada}/${p.parsel} TKGM'deki haliyle aynı.`, "basari");
+  } catch (err) {
+    mesaj(err.durum === 404 ? `${p.ada}/${p.parsel} TKGM'de artık yok. İfraz ya da tevhit görmüş olabilir.` : err.message, true);
+    yukleniyor(buton, false);
+  } finally {
+    sayacGuncelle();
+  }
+}
+
 // ---- sekmeler ------------------------------------------------------------------
 
 function sekmeAc(ad) {
@@ -300,14 +425,6 @@ function seciliBarGuncelle() {
   $("seciliBarAlan").textContent = toplam ? `${sayi(toplam)} m²` : "";
 }
 
-$("seciliBar").addEventListener("click", async (e) => {
-  const b = e.target.closest("button[data-hizli]");
-  if (!b || !durum.secili.size) return;
-  yukleniyor(b, true);
-  try { await indir({ keys: [...durum.secili], bicim: b.dataset.hizli, sistem: $("sistem").value, dilim: $("dilim").value }); }
-  catch (err) { mesaj(err.message, true); }
-  finally { yukleniyor(b, false); }
-});
 $("seciliBarTemizle").addEventListener("click", () => $("secimiKaldir").click());
 
 function seciliDegistir(key, deger) {
@@ -381,11 +498,27 @@ function parselEkle(f, tkgmden, { yaklas = true, sessiz = false } = {}) {
   }
 }
 
+const LIMIT_METNI = "TKGM günlük sorgu limiti aşıldı.";
+
+// Sekmedeki ikon: limit dolunca köşe noktası kırmızı olur, başka sekmedeyken de görünür.
+let faviconLimit = null;
+function faviconGuncelle(limit) {
+  if (faviconLimit === limit) return;
+  faviconLimit = limit;
+  const nokta = token(limit ? "--harita-bosluk" : "--harita-parsel");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 216"><rect width="216" height="216" rx="52" fill="${token("--vurgu")}"/>` +
+    `<g fill="${token("--metin-ters")}"><rect x="88" y="36" width="40" height="144"/><rect x="36" y="88" width="144" height="40"/></g>` +
+    `<rect x="${limit ? 80 : 88}" y="${limit ? 80 : 88}" width="${limit ? 56 : 40}" height="${limit ? 56 : 40}" fill="${nokta}"/></svg>`;
+  $("favicon").href = "data:image/svg+xml," + encodeURIComponent(svg);
+}
+
 async function sayacGuncelle() {
   try {
     const s = await api("sayac");
-    $("sayacMetin").textContent = s.limit_hatasi ? `Limit doldu · ${s.toplam}` : `Bugün ${s.toplam} sorgu`;
+    $("sayacMetin").textContent = s.limit_hatasi ? "Limit doldu" : `Bugün ${s.toplam} sorgu`;
+    if (s.limit_hatasi) mesaj(LIMIT_METNI, true);
     $("sayac").classList.toggle("uyari", s.limit_hatasi > 0);
+    faviconGuncelle(s.limit_hatasi > 0);
     $("sayac").title = s.limit_hatasi
       ? "TKGM bugünkü sorgu limitini doldurdu. Önbellekteki parseller yine de gelir."
       : `Bugün bu bilgisayardan TKGM'ye ${s.toplam} sorgu atıldı.`;
@@ -429,16 +562,154 @@ $("ilce").addEventListener("change", async () => {
   catch (e) { mesaj(e.message, true); } finally { sayacGuncelle(); }
 });
 
+// ---- uygulamanın kendi açılır listeleri ---------------------------------------------
+// Asıl değer gizli <select>'lerde durur (yükleme ve change akışı aynen çalışır); düğme ve panel
+// sadece görünüm ve seçim içindir. Tarayıcının kendi listesi Windows'ta koyu temada okunmuyordu.
+// Uzun listelerde (il/ilçe/mahalle) yazarak arama vardır; kısa listelerde arama kutusu gizlenir.
+
+const SECICILER = ["il", "ilce", "mahalle"];
+const TUM_SECICILER = [...SECICILER, "sistem", "dilim", "hesapKatmani"];
+const secici = { acik: null, aktif: 0, gorunen: [], sonraki: null, odak: null };
+
+function seciciEsitle(ad) {
+  const sel = $(ad), dugme = $(`${ad}-dugme`);
+  const opt = sel.selectedOptions[0];
+  const dolu = !!(opt && opt.value);
+  dugme.disabled = sel.disabled;
+  dugme.classList.toggle("bos", !dolu);
+  dugme.querySelector(".secici-deger").textContent = dolu ? opt.textContent : sel.disabled ? "" : "Seç";
+  // İl seçilince ilçe listesi, ilçe seçilince mahalle listesi gelir gelmez açılır.
+  if (secici.sonraki === ad && !sel.disabled && sel.options.length > 1) {
+    secici.sonraki = null;
+    seciciAc(ad);
+  }
+}
+
+function vurgula(metin, q) {
+  if (!q) return esc(metin);
+  const i = trKucuk(metin).indexOf(q);
+  if (i < 0) return esc(metin);
+  return `${esc(metin.slice(0, i))}<mark>${esc(metin.slice(i, i + q.length))}</mark>${esc(metin.slice(i + q.length))}`;
+}
+
+function seciciListele() {
+  const sel = $(secici.acik);
+  const q = trKucuk($("seciciAra").value.trim());
+  secici.gorunen = [...sel.options].filter((o) => o.value && (!q || trKucuk(o.textContent).includes(q)));
+  // Aramada baştan eşleşenler öne gelir ("elma" -> Elmadağ, sonra Kızılelma)
+  if (q) secici.gorunen.sort((a, b) => trKucuk(b.textContent).startsWith(q) - trKucuk(a.textContent).startsWith(q));
+  const i = secici.gorunen.findIndex((o) => o.value === sel.value);
+  secici.aktif = i >= 0 && !q ? i : 0;
+  $("seciciListe").innerHTML = secici.gorunen.map((o, n) => `
+    <li role="option" id="secenek-${n}" data-n="${n}" aria-selected="${o.value === sel.value}" class="${n === secici.aktif ? "aktif" : ""}">
+      <span>${vurgula(o.textContent, q)}</span>${o.value === sel.value ? ikon("tik") : ""}</li>`).join("");
+  $("seciciBos").hidden = secici.gorunen.length > 0;
+  seciciAktifGoster();
+}
+
+function seciciAktifGoster() {
+  const li = $(`secenek-${secici.aktif}`);
+  $("seciciListe").querySelectorAll("li.aktif").forEach((x) => x.classList.remove("aktif"));
+  if (!li) return secici.odak?.removeAttribute("aria-activedescendant");
+  li.classList.add("aktif");
+  li.scrollIntoView({ block: "nearest" });
+  secici.odak?.setAttribute("aria-activedescendant", li.id);
+}
+
+async function seciciAc(ad) {
+  if (secici.acik === ad) return seciciKapat();
+  seciciKapat(false);
+  if (ad === "il") await illeriYukle();
+  if ($(ad).disabled) return;
+  secici.acik = ad;
+  const aramali = SECICILER.includes(ad) || $(ad).options.length > 8;
+  const panel = $("seciciPanel");
+  $("seciciAra").closest(".arama").hidden = !aramali;
+  $("seciciAra").value = "";
+  seciciListele();
+  // Aşağıda yer yoksa yukarı doğru aç (sayfanın altındaki koordinat sistemi, dilim gibi listeler).
+  const satir = $(`${ad}-dugme`).closest(".satir-alan").getBoundingClientRect();
+  const gerekli = Math.min(320, secici.gorunen.length * 36 + (aramali ? 56 : 16));
+  const asagi = innerHeight - satir.bottom - 18, yukari = satir.top - 18;
+  const yukariAc = asagi < gerekli && yukari > asagi;
+  panel.style.left = `${satir.left}px`;
+  panel.style.width = `${satir.width}px`;
+  panel.style.top = yukariAc ? "auto" : `${satir.bottom + 6}px`;
+  panel.style.bottom = yukariAc ? `${innerHeight - satir.top + 6}px` : "auto";
+  panel.style.maxHeight = `${Math.max(160, yukariAc ? yukari : asagi)}px`;
+  panel.hidden = false;
+  $(`${ad}-dugme`).setAttribute("aria-expanded", "true");
+  secici.odak = aramali ? $("seciciAra") : $("seciciListe");
+  secici.odak.focus();
+  seciciAktifGoster();
+}
+
+function seciciKapat(odakGeri = true) {
+  if (!secici.acik) return;
+  const dugme = $(`${secici.acik}-dugme`);
+  dugme.setAttribute("aria-expanded", "false");
+  $("seciciPanel").hidden = true;
+  secici.acik = null;
+  if (odakGeri) dugme.focus();
+}
+
+function seciciSec(n) {
+  const o = secici.gorunen[n];
+  if (!o) return;
+  const ad = secici.acik;
+  const sel = $(ad);
+  seciciKapat(false);
+  if (sel.value !== o.value) {
+    sel.value = o.value;
+    secici.sonraki = { il: "ilce", ilce: "mahalle" }[ad] || null;
+    sel.dispatchEvent(new Event("change"));
+  }
+  seciciEsitle(ad);
+  if (ad === "mahalle") { $("ada").focus(); $("ada").select(); }
+  else if (!secici.sonraki) $(`${ad}-dugme`).focus();
+}
+
+TUM_SECICILER.forEach((ad) => {
+  new MutationObserver(() => seciciEsitle(ad)).observe($(ad), { childList: true, attributes: true, attributeFilter: ["disabled"] });
+  $(ad).addEventListener("change", () => seciciEsitle(ad));
+  $(`${ad}-dugme`).addEventListener("click", () => seciciAc(ad));
+  seciciEsitle(ad);
+});
+
+$("seciciAra").addEventListener("input", seciciListele);
+$("seciciPanel").addEventListener("keydown", (e) => {
+  const son = secici.gorunen.length - 1;
+  if (e.key === "ArrowDown") { e.preventDefault(); secici.aktif = Math.min(son, secici.aktif + 1); seciciAktifGoster(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); secici.aktif = Math.max(0, secici.aktif - 1); seciciAktifGoster(); }
+  else if (e.key === "Enter") { e.preventDefault(); seciciSec(secici.aktif); }
+  else if (e.key === "Escape") { e.preventDefault(); seciciKapat(); }
+  else if (e.key === "Tab") seciciKapat(false);
+});
+$("seciciListe").addEventListener("mousedown", (e) => e.preventDefault()); // arama kutusu odağı kaybetmesin
+$("seciciListe").addEventListener("click", (e) => {
+  const li = e.target.closest("li[data-n]");
+  if (li) seciciSec(Number(li.dataset.n));
+});
+document.addEventListener("mousedown", (e) => {
+  if (secici.acik && !e.target.closest("#seciciPanel, .secici-dugme")) seciciKapat(false);
+});
+document.querySelector(".cekmece-govde").addEventListener("scroll", () => seciciKapat(false), { passive: true });
+addEventListener("resize", () => seciciKapat(false));
+
 // ---- sorgu ---------------------------------------------------------------------
 
 $("sorguForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const eksik = SECICILER.find((ad) => !$(ad).value);
+  if (eksik) {
+    mesaj({ il: "Önce il seç.", ilce: "Önce ilçe seç.", mahalle: "Önce mahalle seç." }[eksik], true);
+    return seciciAc(eksik);
+  }
   const buton = e.submitter;
   yukleniyor(buton, true);
   try {
     const r = await postJson("sorgu", {
       mahalleId: Number($("mahalle").value), ada: $("ada").value.trim(), parsel: $("parsel").value.trim(),
-      yenile: $("yenile").checked,
     });
     parselEkle(r.parsel, r.tkgmdenGeldi);
   } catch (err) { mesaj(err.message, true); }
@@ -458,7 +729,7 @@ harita.on("click", async (e) => {
   if (durum.mod === "cizim") return cizimPinEkle(e.latlng);
   if (durum.mod !== "sorgu") return;
   try {
-    const r = await postJson("sorgu-nokta", { enlem: e.latlng.lat, boylam: e.latlng.lng, yenile: $("yenile").checked });
+    const r = await postJson("sorgu-nokta", { enlem: e.latlng.lat, boylam: e.latlng.lng });
     parselEkle(r.parsel, r.tkgmdenGeldi);
   } catch (err) { mesaj(err.message, true); }
   finally { sayacGuncelle(); }
@@ -581,6 +852,27 @@ let sonOzet = null;
 
 const katmanAdi = (f) => (f.properties && f.properties.katman) || "";
 
+// Alanların içi çapraz çizgili taranır. Desen her renk ve yoğunluk için bir kez oluşturulur ve
+// sayfadaki gizli SVG'ye eklenir; Leaflet'in SVG yolları ona url(#...) ile başvurur.
+function taramaDeseni(renk, aktif) {
+  const id = `tarama-${renk.replace(/[^0-9a-z]/gi, "")}${aktif ? "-aktif" : ""}`;
+  if (!document.getElementById(id)) {
+    const NS = "http://www.w3.org/2000/svg";
+    const desen = document.createElementNS(NS, "pattern");
+    desen.id = id;
+    desen.setAttribute("patternUnits", "userSpaceOnUse");
+    desen.setAttribute("width", "9");
+    desen.setAttribute("height", "9");
+    desen.setAttribute("patternTransform", "rotate(45)");
+    const cizgi = document.createElementNS(NS, "line");
+    Object.entries({ x1: 0, y1: 0, x2: 0, y2: 9, stroke: renk, "stroke-width": aktif ? 2.4 : 1.6, "stroke-opacity": aktif ? 0.75 : 0.55 })
+      .forEach(([k, v]) => cizgi.setAttribute(k, v));
+    desen.append(cizgi);
+    $("desenler").append(desen);
+  }
+  return `url(#${id})`;
+}
+
 function referansKatmani(r) {
   const gizli = new Set(r.gizli || []);
   const aktif = r.id === aktifAlan;
@@ -593,7 +885,7 @@ function referansKatmani(r) {
     style: (f) => {
       const sinir = hesap == null || katmanAdi(f) === hesap;
       return sinir
-        ? { color: r.renk, weight: aktif ? 4 : 3, dashArray: "8 6", fillColor: r.renk, fillOpacity: aktif ? 0.16 : 0.08 }
+        ? { color: r.renk, weight: aktif ? 4 : 3, dashArray: "8 6", fillColor: taramaDeseni(r.renk, aktif), fillOpacity: 1 }
         : { color: r.renk, weight: 1, opacity: 0.7, fillOpacity: 0 };
     },
     pointToLayer: (_, latlng) => L.circleMarker(latlng, { pane: "referans", radius: 5, color: r.renk, fillOpacity: 0.8, interactive: false }),
@@ -672,7 +964,7 @@ const ALANLI = new Set(["Polygon", "MultiPolygon", "LineString", "MultiLineStrin
 function sinirSecimiDoldur(r) {
   const katmanlar = [...new Set(r.geojson.features.filter((f) => ALANLI.has(f.geometry.type)).map(katmanAdi))];
   const sec = $("hesapKatmani");
-  $("hesapKatmani").closest("label").hidden = katmanlar.length < 2 && !r.hesap_katmani;
+  $("hesapKatmani").closest(".satir-alan").hidden = katmanlar.length < 2 && !r.hesap_katmani;
   sec.innerHTML = `<option value="*">Tüm açık katmanlar</option>` +
     katmanlar.map((k) => `<option value="${esc(k)}">${esc(k || "(klasörsüz)")}</option>`).join("");
   sec.value = r.hesap_katmani ?? "*";
@@ -869,7 +1161,7 @@ $("taramaBasla").addEventListener("click", async () => {
     if (son.startsWith("Sorgulanmaya")) ilerleme.firstElementChild.style.width = "100%";
   } catch (e) {
     son = e.durum === 429 ? "TKGM günlük limiti doldu, tarama durdu." : `Hata: ${e.message}`;
-    mesaj(son, true);
+    mesaj(e.durum === 429 ? LIMIT_METNI : son, true);
   } finally {
     tarama.calisiyor = false;
     $("taramaBasla").hidden = false;
