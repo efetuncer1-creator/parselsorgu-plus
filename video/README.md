@@ -1,6 +1,6 @@
 # Tanıtım videosu
 
-`index.html` bir [HyperFrames](https://www.npmjs.com/package/hyperframes) kompozisyonudur (1920×1080, 39,6 sn zaman çizelgesi). Bitmiş video: [parsel-sorgu-tanitim.mp4](parsel-sorgu-tanitim.mp4) (~29 sn).
+`index.html` bir [HyperFrames](https://www.npmjs.com/package/hyperframes) kompozisyonudur (1920×1080, 39,6 sn zaman çizelgesi). Bitmiş video: [parsel-sorgu-tanitim.mp4](parsel-sorgu-tanitim.mp4) (~33 sn).
 
 Açılıştaki dalış, `assets/dalis/` içindeki 12 uydu plakasından (yakınlaştırma 4–15, hepsi aynı noktaya ortalı) kurulur; ince plaka kaba olanın üstünde yumuşak kenarlı bir pencere olarak belirip büyür. Uygulama ekranları `site/assets`'ten gelir; fontlar (Anton, Inter, SIL OFL) `fonts/` içinde yereldir, render internete bağlı değildir.
 

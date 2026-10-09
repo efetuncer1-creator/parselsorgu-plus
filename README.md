@@ -21,7 +21,7 @@ TKGM parsel sorgulama ve dışa aktarma aracı. [parselsorgu.tkgm.gov.tr](https:
 
 [![Parsel Sorgu + tanıtım videosu](site/assets/tanitim-afis.jpg)](https://parselsorgu-plus.vercel.app/#tanitim)
 
-Görsele tıklayınca sitede oynatılır · [MP4 dosyası](video/parsel-sorgu-tanitim.mp4) (29 sn, 1920×1080) · Kaynağı: [`video/`](video/)
+Görsele tıklayınca sitede oynatılır · [MP4 dosyası](video/parsel-sorgu-tanitim.mp4) (33 sn, 1920×1080) · Kaynağı: [`video/`](video/)
 
 ## İndir (Windows 10/11)
 
