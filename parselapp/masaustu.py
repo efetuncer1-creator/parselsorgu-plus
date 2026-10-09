@@ -1,8 +1,8 @@
 """Masaüstü başlatıcısı: sunucuyu arka planda açar, uygulamayı kendi penceresinde gösterir.
 
-Pencere, Windows 10/11'de hazır bulunan Edge'in uygulama modudur (adres çubuğu ve sekme yok).
-Edge'e ayrı bir profil klasörü verildiği için pencere kapanınca Edge süreci de biter; o zaman
-sunucu da kapatılır. Edge bulunamazsa varsayılan tarayıcıda açılır.
+Pencere, Chrome'un (yoksa her Windows 10/11'de hazır gelen Edge'in) uygulama modudur: adres
+çubuğu ve sekme yok. Tarayıcıya ayrı bir profil klasörü verildiği için pencere kapanınca tarayıcı
+süreci de biter; o zaman sunucu da kapatılır. İkisi de bulunamazsa varsayılan tarayıcıda açılır.
 
 Kurulum paketinin giriş noktası budur (packaging/ParselSorgu.spec).
 """
@@ -24,16 +24,20 @@ PORT = int(os.environ.get("PARSELSORGU_PORT", "8765"))  # deneme için değişti
 ADRES = f"http://127.0.0.1:{PORT}/"
 
 
-def edge_bul():
-    adaylar = [
-        Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Microsoft/Edge/Application/msedge.exe",
-        Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Microsoft/Edge/Application/msedge.exe",
-        Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft/Edge/Application/msedge.exe",
-    ]
-    for aday in adaylar:
-        if aday.is_file():
-            return str(aday)
-    return shutil.which("msedge")
+def tarayici_bul():
+    """Uygulama penceresini açacak tarayıcı: (ad, exe yolu). Önce Chrome; yoksa her Windows 10/11'de
+    hazır gelen Edge. İkisi de yoksa (None, None)."""
+    kokler = [Path(os.environ.get("ProgramFiles", r"C:\Program Files")),
+              Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")),
+              Path(os.environ.get("LOCALAPPDATA", ""))]
+    for ad, alt_yol, komut in (("chrome", "Google/Chrome/Application/chrome.exe", "chrome"),
+                               ("edge", "Microsoft/Edge/Application/msedge.exe", "msedge")):
+        for kok in kokler:
+            if (kok / alt_yol).is_file():
+                return ad, str(kok / alt_yol)
+        if shutil.which(komut):
+            return ad, shutil.which(komut)
+    return None, None
 
 
 def calisiyor_mu():
@@ -46,16 +50,18 @@ def calisiyor_mu():
 
 
 def pencere_ac():
-    """Uygulama penceresini açar; pencere kapanana kadar bekler. Edge yoksa False döner."""
-    edge = edge_bul()
-    if not edge:
+    """Uygulama penceresini açar; pencere kapanana kadar bekler. Uygun tarayıcı yoksa False döner."""
+    ad, exe = tarayici_bul()
+    if not exe:
         return False
-    profil = server.VERI_KLASORU / "pencere"
+    # Ayrı profil: pencere kapanınca süreç biter, kullanıcının kendi tarayıcısına dokunulmaz.
+    # Chrome ve Edge aynı profil klasörünü paylaşamaz.
+    profil = server.VERI_KLASORU / f"pencere-{ad}"
     profil.mkdir(parents=True, exist_ok=True)
     # Edge yeni profilde Windows hesabıyla kendiliğinden oturum açıp kullanıcının eklentilerini
     # eşitliyordu (bir eklentinin karşılama sayfası ayrı pencerede açıldı). Eşitleme ve eklentiler
-    # kapalı; arka plan modu da kapalı ki pencere kapanınca Edge süreci gerçekten bitsin.
-    komut = [edge, f"--app={ADRES}", f"--user-data-dir={profil}", "--window-size=1440,920",
+    # kapalı; arka plan modu da kapalı ki pencere kapanınca tarayıcı süreci gerçekten bitsin.
+    komut = [exe, f"--app={ADRES}", f"--user-data-dir={profil}", "--window-size=1440,920",
              "--no-first-run", "--no-default-browser-check", "--disable-sync", "--disable-extensions",
              "--disable-background-mode", "--disable-features=Translate"]
     bayrak = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -70,7 +76,7 @@ def main():
         sunucu = server.Sunucu(("127.0.0.1", PORT), server.isleyici(server.Uygulama(Store(server.VERI))))
         threading.Thread(target=sunucu.serve_forever, daemon=True).start()
     if not pencere_ac():
-        # Edge yok: varsayılan tarayıcı. Sunucu açık kalmalı; pencerenin kapandığı anlaşılamaz.
+        # Chrome da Edge de yok: varsayılan tarayıcı. Sunucu açık kalmalı; pencerenin kapandığı anlaşılamaz.
         webbrowser.open(ADRES)
         if sahip:
             try:

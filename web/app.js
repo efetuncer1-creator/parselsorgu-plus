@@ -705,6 +705,11 @@ $("sorguForm").addEventListener("submit", async (e) => {
     mesaj({ il: "Önce il seç.", ilce: "Önce ilçe seç.", mahalle: "Önce mahalle seç." }[eksik], true);
     return seciciAc(eksik);
   }
+  for (const [kutu, ad] of [[$("ada"), "Ada"], [$("parsel"), "Parsel"]]) {
+    const deger = kutu.value.trim();
+    const hata = !deger ? `${ad} numarasını yaz.` : /^\d+$/.test(deger) ? null : `${ad} için yalnızca rakam yaz.`;
+    if (hata) return alanHatasi(kutu, hata);
+  }
   const buton = e.submitter;
   yukleniyor(buton, true);
   try {
@@ -905,9 +910,9 @@ function katmanListesi(r) {
   if (sayac.size < 2) return "";
   const gizli = new Set(r.gizli || []);
   const satirlar = [...sayac].map(([ad, n]) => `
-        <label class="katman"><input type="checkbox" data-is="katman" data-katman="${esc(ad)}" ${gizli.has(ad) ? "" : "checked"}>
+        <label class="katman"><input type="checkbox" class="kutucuk" data-is="katman" data-katman="${esc(ad)}" ${gizli.has(ad) ? "" : "checked"}>
           <span>${esc(ad || "(klasörsüz)")}</span><span class="say">${n}</span></label>`).join("");
-  return `<details class="katmanlar"><summary>Katmanlar (${sayac.size - gizli.size}/${sayac.size} açık)</summary>${satirlar}</details>`;
+  return `<details class="katmanlar"><summary>${ikon("ok")}Katmanlar (${sayac.size - gizli.size}/${sayac.size} açık)</summary>${satirlar}</details>`;
 }
 
 function referansListeCiz() {
@@ -918,7 +923,7 @@ function referansListeCiz() {
     return `
     <li data-id="${r.id}" class="${r.id === aktifAlan ? "aktif" : ""}">
       <div class="ref-ust">
-        <label class="renk-secici" style="background:${esc(r.renk)}" title="Rengi değiştir"><input type="color" data-is="renk" value="${esc(r.renk)}" aria-label="${esc(r.ad)} rengi"></label>
+        <button type="button" class="renk-secici" data-is="renk" style="background:${esc(r.renk)}" title="Rengi değiştir" aria-label="${esc(r.ad)} rengi" aria-haspopup="true" aria-expanded="false"></button>
         <button type="button" class="ad" data-is="sec" title="Bu alanla çalış">${esc(r.ad)}<small>${esc(alt)}</small></button>
         <label class="ikon-dugme gorunur-anahtar" title="Haritada göster ya da gizle">
           <input type="checkbox" data-is="gorunur" ${r.gorunur ? "checked" : ""} aria-label="${esc(r.ad)} haritada görünsün">${ikon("goz", "ikon acik")}${ikon("goz-kapali", "ikon kapali")}
@@ -1003,12 +1008,12 @@ $("referansSec").addEventListener("change", (e) => { referansEkle([...e.target.f
 $("referansListe").addEventListener("change", async (e) => {
   const id = Number(e.target.closest("li")?.dataset.id);
   const is = e.target.dataset.is;
-  if (!id || !["gorunur", "renk", "katman"].includes(is)) return;
+  if (!id || !["gorunur", "katman"].includes(is)) return;
   let govde;
   if (is === "katman") {
     const li = e.target.closest("li");
     govde = { gizli: [...li.querySelectorAll("input[data-is=katman]:not(:checked)")].map((x) => x.dataset.katman) };
-  } else govde = is === "gorunur" ? { gorunur: e.target.checked } : { renk: e.target.value };
+  } else govde = { gorunur: e.target.checked };
   try {
     referansCiz(await postJson(`referanslar/${id}/guncelle`, govde));
     // Katman özetini (açık/toplam) güncelle ama açık olan katman listesini kapatma
@@ -1025,6 +1030,7 @@ $("referansListe").addEventListener("click", async (e) => {
   const id = Number(buton.closest("li").dataset.id);
   const ref = referanslar.get(id);
   if (buton.dataset.is === "sec") return id === aktifAlan ? alanaYaklas(id) : alanSec(id);
+  if (buton.dataset.is === "renk") return renkPaletiAc(buton, id);
   if (buton.dataset.is !== "sil") return;
   if (!(await onayla(`"${ref.veri.ad}" alanı kaldırılsın mı? Dosyanın kendisi silinmez, parseller listede kalır.`, "Kaldır"))) return;
   try {
@@ -1175,6 +1181,10 @@ $("taramaBasla").addEventListener("click", async () => {
 });
 
 $("taramaDur").addEventListener("click", () => { tarama.dur = true; });
+$("taramaButce").addEventListener("input", (e) => { e.target.value = e.target.value.replace(/\D/g, ""); });
+$("taramaButce").addEventListener("change", (e) => {
+  e.target.value = Math.max(1, Math.min(200, Number(e.target.value) || 10));
+});
 
 $("taramaSifirla").addEventListener("click", async () => {
   if (!aktifAlan || !(await onayla("Parsel çıkmadığı için işaretlenen noktalar sıfırlansın mı? Sonraki taramada bu noktalar tekrar sorgulanır.", "Sıfırla"))) return;
@@ -1293,6 +1303,157 @@ document.addEventListener("keydown", (e) => {
   // preventDefault: yoksa aynı Enter, açılan ad penceresindeki kutuya da gidip pencereyi hemen kapatıyor.
   else if (e.key === "Enter") { e.preventDefault(); cizimBitir(); }
 });
+
+// ---- ipucu: tarayıcının title kutusu yerine ---------------------------------------
+// title'lar ilk üzerine gelişte data-ipucu'ya taşınır (yoksa tarayıcının kendi kutusu da çıkar).
+
+const ipucu = { el: $("ipucu"), hedef: null, zaman: 0, hata: false };
+
+function ipucuGoster(hedef, metin, { hata = false } = {}) {
+  const el = ipucu.el;
+  clearTimeout(ipucu.zaman);
+  ipucu.hedef = hedef;
+  ipucu.hata = hata;
+  el.classList.toggle("hata", hata);
+  el.setAttribute("role", hata ? "alert" : "tooltip");
+  el.innerHTML = hata ? ikon("uyari") : "";
+  el.append(Object.assign(document.createElement("span"), { textContent: metin }));
+  el.hidden = false;
+  const r = hedef.getBoundingClientRect(), b = el.getBoundingClientRect();
+  const pay = parseFloat(token("--b-2"));
+  const ust = r.top - b.height - pay;
+  el.style.top = `${ust < pay ? r.bottom + pay : ust}px`;
+  el.style.left = `${Math.min(Math.max(pay, r.left + r.width / 2 - b.width / 2), innerWidth - b.width - pay)}px`;
+}
+
+function ipucuGizle() {
+  clearTimeout(ipucu.zaman);
+  ipucu.el.hidden = true;
+  ipucu.hedef = null;
+  ipucu.hata = false;
+}
+
+function ipucuMetni(el) {
+  const baslik = el.getAttribute("title");
+  if (baslik !== null) {
+    el.removeAttribute("title");
+    el.dataset.ipucu = baslik;
+    if (!el.hasAttribute("aria-label") && !el.textContent.trim()) el.setAttribute("aria-label", baslik);
+  }
+  return el.dataset.ipucu;
+}
+
+document.addEventListener("pointerover", (e) => {
+  if (e.pointerType !== "mouse" || ipucu.hata) return;
+  const el = e.target.closest?.("[title], [data-ipucu]");
+  if (!el || el === ipucu.hedef) return;
+  const metin = ipucuMetni(el);
+  clearTimeout(ipucu.zaman);
+  if (metin) ipucu.zaman = setTimeout(() => ipucuGoster(el, metin), 450);
+});
+document.addEventListener("pointerout", (e) => {
+  if (ipucu.hata) return;
+  const el = e.target.closest?.("[data-ipucu]");
+  if (el && !el.contains(e.relatedTarget)) ipucuGizle();
+});
+document.addEventListener("focusin", (e) => {
+  const el = e.target.closest?.("[title], [data-ipucu]");
+  if (ipucu.hata || !el?.matches(":focus-visible")) return;
+  const metin = ipucuMetni(el);
+  if (metin) ipucuGoster(el, metin);
+});
+document.addEventListener("focusout", () => { if (!ipucu.hata) ipucuGizle(); });
+document.addEventListener("pointerdown", () => { if (!ipucu.hata) ipucuGizle(); }, true);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !ipucu.hata) ipucuGizle(); });
+addEventListener("scroll", ipucuGizle, { capture: true, passive: true });
+addEventListener("resize", ipucuGizle);
+
+// Form alanı hatası (tarayıcının "Lütfen bu alanı doldurun" balonu yerine). Yazınca ya da çıkınca kalkar.
+function alanHatasi(kutu, metin) {
+  kutu.setAttribute("aria-invalid", "true");
+  kutu.focus();
+  kutu.select?.();
+  ipucuGoster(kutu, metin, { hata: true });
+  const bitir = () => {
+    kutu.removeAttribute("aria-invalid");
+    if (ipucu.hedef === kutu) ipucuGizle();
+    kutu.removeEventListener("input", bitir);
+    kutu.removeEventListener("blur", bitir);
+  };
+  kutu.addEventListener("input", bitir);
+  kutu.addEventListener("blur", bitir);
+}
+
+// ---- arama kutularının temizle düğmesi ----------------------------------------------
+
+document.querySelectorAll(".arama-temizle").forEach((b) => b.addEventListener("click", () => {
+  const kutu = b.parentElement.querySelector("input");
+  kutu.value = "";
+  kutu.dispatchEvent(new Event("input", { bubbles: true }));
+  kutu.focus();
+}));
+
+// ---- alan rengi paleti: tarayıcının renk seçicisi yerine ----------------------------
+
+const ALAN_RENKLERI = [["--alan-renk-1", "Mor"], ["--alan-renk-2", "Camgöbeği"], ["--alan-renk-3", "Turuncu"],
+  ["--alan-renk-4", "Yeşil"], ["--alan-renk-5", "Pembe"], ["--alan-renk-6", "Kahve"], ["--alan-renk-7", "Çivit"],
+  ["--alan-renk-8", "Nane"]];
+const renkPaleti = { id: null, dugme: null };
+
+function renkPaletiAc(dugme, id) {
+  if (renkPaleti.id === id) return renkPaletiKapat();
+  renkPaletiKapat(false);
+  const panel = $("renkPaleti");
+  const mevcut = referanslar.get(id).veri.renk.toLowerCase();
+  panel.innerHTML = ALAN_RENKLERI.map(([ad, isim]) => {
+    const renk = token(ad);
+    return `<button type="button" data-renk="${renk}" style="background:${renk}" aria-label="${isim}" data-ipucu="${isim}" aria-pressed="${renk.toLowerCase() === mevcut}"></button>`;
+  }).join("");
+  renkPaleti.id = id;
+  renkPaleti.dugme = dugme;
+  panel.hidden = false;
+  const r = dugme.getBoundingClientRect(), b = panel.getBoundingClientRect();
+  const pay = parseFloat(token("--b-2"));
+  const ust = r.bottom + pay;
+  panel.style.top = `${ust + b.height > innerHeight - pay ? r.top - b.height - pay : ust}px`;
+  panel.style.left = `${Math.min(Math.max(pay, r.left - pay), innerWidth - b.width - pay)}px`;
+  dugme.setAttribute("aria-expanded", "true");
+  (panel.querySelector("[aria-pressed=true]") || panel.firstElementChild).focus();
+}
+
+function renkPaletiKapat(odakGeri = true) {
+  if (renkPaleti.id === null) return;
+  $("renkPaleti").hidden = true;
+  const dugme = renkPaleti.dugme;
+  renkPaleti.id = renkPaleti.dugme = null;
+  if (!dugme.isConnected) return;
+  dugme.setAttribute("aria-expanded", "false");
+  if (odakGeri) dugme.focus();
+}
+
+$("renkPaleti").addEventListener("click", async (e) => {
+  const secilen = e.target.closest("button[data-renk]");
+  if (!secilen) return;
+  const id = renkPaleti.id;
+  renkPaletiKapat(false);
+  try {
+    referansCiz(await postJson(`referanslar/${id}/guncelle`, { renk: secilen.dataset.renk }));
+    referansListeCiz();
+    document.querySelector(`#referansListe li[data-id="${id}"] [data-is=renk]`)?.focus();
+  } catch (err) { mesaj(err.message, true); }
+});
+$("renkPaleti").addEventListener("keydown", (e) => {
+  const dugmeler = [...$("renkPaleti").children];
+  const i = dugmeler.indexOf(document.activeElement);
+  const adim = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 4, ArrowUp: -4 }[e.key];
+  if (e.key === "Escape") { e.preventDefault(); renkPaletiKapat(); }
+  else if (adim && i >= 0) { e.preventDefault(); dugmeler[Math.min(dugmeler.length - 1, Math.max(0, i + adim))].focus(); }
+});
+document.addEventListener("pointerdown", (e) => {
+  if (renkPaleti.id !== null && !e.target.closest("#renkPaleti, [data-is=renk]")) renkPaletiKapat(false);
+});
+document.querySelector(".cekmece-govde").addEventListener("scroll", () => renkPaletiKapat(false), { passive: true });
+addEventListener("resize", () => renkPaletiKapat(false));
 
 // ---- başlangıç -----------------------------------------------------------------
 

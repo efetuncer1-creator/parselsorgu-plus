@@ -47,6 +47,7 @@
     <symbol id="i-liste-cikar" viewBox="0 0 24 24"><path d="M11 12H3M16 6H3M16 18H3"/><path d="m19 10-4 4M15 10l4 4"/></symbol>
     <symbol id="i-etiket" viewBox="0 0 24 24"><path d="M12 13v8M12 3v3"/><path d="M18 6a2 2 0 0 1 1.39.56l2.3 2.22a1 1 0 0 1 0 1.44l-2.3 2.22A2 2 0 0 1 18 13H6a2 2 0 0 1-1.39-.56l-2.3-2.22a1 1 0 0 1 0-1.44l2.3-2.22A2 2 0 0 1 6 6z"/></symbol>
     <symbol id="i-asagi" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-tik" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="i-tarama" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol>
   </svg>
@@ -94,7 +95,7 @@
       <!-- ===================== Sayfa 1: Parsel sorgu ===================== -->
       <section class="panel" id="panel-parsel" role="tabpanel" aria-labelledby="sekme-parsel">
         <div class="kutu">
-          <form id="sorguForm" class="form" autocomplete="off">
+          <form id="sorguForm" class="form" autocomplete="off" novalidate>
             <div class="grup">
               <div class="satir-alan secici">
                 <span id="il-etiket">İl</span>
@@ -114,10 +115,10 @@
             </div>
             <div class="ikili">
               <label class="buyuk-alan"><span>Ada</span>
-                <input id="ada" inputmode="numeric" pattern="[0-9]+" required value="0" placeholder=" ">
+                <input id="ada" inputmode="numeric" pattern="[0-9]+" required value="0" placeholder=" " spellcheck="false">
               </label>
               <label class="buyuk-alan"><span>Parsel</span>
-                <input id="parsel" inputmode="numeric" pattern="[0-9]+" required placeholder=" ">
+                <input id="parsel" inputmode="numeric" pattern="[0-9]+" required placeholder=" " spellcheck="false">
               </label>
             </div>
             <div class="butonlar">
@@ -136,7 +137,8 @@
           </div>
           <div class="arama">
             <svg class="ikon" aria-hidden="true"><use href="#i-ara"/></svg>
-            <input id="filtre" type="search" placeholder="Mahalle, ada/parsel, nitelik" aria-label="Parsellerde ara">
+            <input id="filtre" type="search" placeholder="Mahalle, ada/parsel, nitelik" aria-label="Parsellerde ara" autocomplete="off" spellcheck="false">
+            <button type="button" class="arama-temizle" tabindex="-1" aria-label="Aramayı temizle"><svg class="ikon"><use href="#i-kapat"/></svg></button>
           </div>
           <div class="arac-cubugu">
             <button type="button" id="tumunuSec" class="metin-dugme"><svg class="ikon"><use href="#i-hepsi"/></svg>Tümünü seç</button>
@@ -270,7 +272,7 @@
               </div>
             </div>
             <div class="tarama">
-              <label class="butce">En fazla <input id="taramaButce" type="number" min="1" max="200" value="10" aria-label="Sorgu bütçesi"> sorgu</label>
+              <label class="butce">En fazla <input id="taramaButce" inputmode="numeric" maxlength="3" value="10" autocomplete="off" spellcheck="false" aria-label="Sorgu bütçesi, 1 ile 200 arası"> sorgu</label>
               <button type="button" id="taramaBasla" class="dugme ana"><svg class="ikon"><use href="#i-oynat"/></svg>Başlat</button>
               <button type="button" id="taramaDur" class="dugme ikincil" hidden><svg class="ikon"><use href="#i-dur"/></svg>Durdur</button>
             </div>
@@ -323,17 +325,22 @@
   <div id="seciciPanel" class="secici-panel cam" hidden>
     <div class="arama">
       <svg class="ikon" aria-hidden="true"><use href="#i-ara"/></svg>
-      <input id="seciciAra" type="search" placeholder="Yazarak ara" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="seciciListe" aria-autocomplete="list" aria-label="Listede ara">
+      <input id="seciciAra" type="search" placeholder="Yazarak ara" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="seciciListe" aria-autocomplete="list" aria-label="Listede ara" spellcheck="false">
+      <button type="button" class="arama-temizle" tabindex="-1" aria-label="Aramayı temizle"><svg class="ikon"><use href="#i-kapat"/></svg></button>
     </div>
     <ul id="seciciListe" role="listbox" tabindex="-1" aria-label="Seçenekler"></ul>
     <p id="seciciBos" class="secici-bos" hidden>Eşleşen sonuç yok</p>
   </div>
 
   <!-- Uygulama içi onay / ad sorma penceresi (tarayıcının prompt/confirm kutuları her yerde çalışmıyor) -->
+  <!-- Tarayıcının title kutusu ve renk seçicisi tasarıma uymadığı için kendi bileşenlerimiz -->
+  <div id="ipucu" class="ipucu cam" hidden></div>
+  <div id="renkPaleti" class="renk-paleti cam" role="group" aria-label="Alan rengi" hidden></div>
+
   <dialog id="diyalog" class="diyalog cam" aria-labelledby="diyalogMetin">
     <form method="dialog">
       <p id="diyalogMetin"></p>
-      <input id="diyalogGirdi" type="text" autocomplete="off" hidden>
+      <input id="diyalogGirdi" type="text" autocomplete="off" spellcheck="false" hidden>
       <div class="butonlar">
         <button type="button" class="dugme ikincil" id="diyalogIptal">Vazgeç</button>
         <button type="submit" value="tamam" class="dugme ana" id="diyalogTamam">Tamam</button>
