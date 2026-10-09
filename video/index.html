@@ -292,7 +292,7 @@
     tl.to("#acilis-sahne", { opacity: 0, duration: 0.4, ease: "power2.in" }, 4.0);
     tl.fromTo("#acilis-hale", { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.6, ease: "power2.out" }, 0.1);
     tl.fromTo("#acilis-isaret", { scale: 0.3, rotation: -90, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 1.0, ease: "back.out(1.6)" }, 0.2);
-    tl.fromTo("#acilis-isaret", { filter: "drop-shadow(0 0 0px rgba(255,214,10,0))" }, { filter: "drop-shadow(0 0 60px rgba(255,214,10,.85))", duration: 0.6, ease: "power2.out" }, 1.0);
+    tl.fromTo("#acilis-isaret", { filter: "drop-shadow(0 0 0px rgba(255,214,10,0))" }, { filter: "drop-shadow(0 0 60px rgba(255,214,10,.85))", duration: 0.6, ease: "power2.out", immediateRender: false }, 1.0);
     tl.to("#acilis-isaret", { filter: "drop-shadow(0 0 0px rgba(255,214,10,0))", duration: 1.0, ease: "power2.in" }, 1.7);
     tl.fromTo("#acilis-kelime", { clipPath: "inset(0% 50% 0% 50%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 1.2, ease: "power3.inOut" }, 1.1);
     tl.fromTo("#acilis-alt", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 2.2);

@@ -15,6 +15,8 @@ TKGM parsel sorgulama ve dışa aktarma aracı. [parselsorgu.tkgm.gov.tr](https:
 - **Alandan parsel tespiti:** OSB/plan sınırını (KML/KMZ, çok katmanlı Netcad projesi dahil) yükle ya da haritada pinle çiz; içindeki/kesişen parselleri seç, kaplanmamış boşlukları gör ve sorgu bütçesiyle TKGM'den tara; sınırla birlikte KML'e, alan içi m²'leriyle Excel'e aktar.
 - Excel çıktısında köşe koordinatları **ITRF96 3°** (TUREF, EPSG:5253–5259) ya da **ED50 3°** (EPSG:2319–2325) olarak verilir. Y = sağa, X = yukarı.
 
+**Tanıtım sitesi:** https://parselsorgu-plus.vercel.app
+
 ## İndir (Windows 10/11)
 
 **[Son sürümü indir](https://github.com/efetuncer1-creator/parselsorgu-plus/releases/latest)** → `ParselSorguPlus-Kurulum-x.y.z.exe`
