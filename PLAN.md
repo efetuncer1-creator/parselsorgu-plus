@@ -141,6 +141,16 @@ efe-parselsorgu/
 - [x] "Önbelleği atla" anahtarı "Her zaman güncel halini TKGM'den al" oldu, açıklamasıyla.
 - [x] Hata: Windows'ta iki sunucu aynı portu açabiliyordu, istekler eski koda gidiyordu ve yeni oturum bir alanı sildi. Artık ikinci başlatma "zaten çalışıyor" deyip çıkar; yeni oturum sadece 24 saattir kullanılmayan alanları temizler. Silinen alan aynı numarayla geri yüklendi.
 
+### Paylaşım: kurulum, GitHub, site, video (9 Ekim 2026, akşam)
+- [x] Masaüstü uygulaması: `parselapp/masaustu.py` sunucuyu açar, Chrome'u (yoksa Edge'i) ayrı profille uygulama penceresi olarak açar; pencere kapanınca sunucu da kapanır. Eşitleme, eklentiler ve arka plan modu kapalı (Edge yeni profilde Windows hesabıyla oturum açıp eklenti indiriyordu).
+- [x] Kurulum dosyası: PyInstaller (`packaging/ParselSorgu.spec`) + Inno Setup (`packaging/kurulum.iss`). `v*` etiketi gönderilince GitHub Actions (`.github/workflows/surum.yml`) test edip derler ve Releases'a ekler. Veri `%LOCALAPPDATA%\ParselSorguPlus`'ta.
+- [x] Açık depo: github.com/efetuncer1-creator/parselsorgu-plus, ilk sürüm v0.1.0.
+- [x] Kapsamlı test: 51 birim testi, 52 API kontrolü, arayüz baştan sona. Bulunan hatalar: ad penceresinde Enter iptal ediyordu, çizimi bitiren Enter pencereyi anında kapatıyordu, seçici satırının sadece küçük bir kısmı tıklanıyordu, alan değişince eski tarama sonucu kalıyordu, açık temada altlık seçici okunmuyordu.
+- [x] TKGM'nin ı/i hatası: anahtarda ı ile i aynı sayılır, adlar idari listelerden düzeltilir, aynı yerin yazımları birleştirilir (tek seferlik veritabanı geçişi). TKGM'nin hiç doğru vermediği adlar (ör. "Altindağ") düzeltilemiyor.
+- [x] Tarayıcıya ait öğeler (doğrulama balonu, title ipuçları, renk seçici, arama "x"i, sayı okları, katman işaret kutuları) uygulamanın kendi bileşenleriyle değişti.
+- [x] Tanıtım sitesi (`site/`, Vercel: parselsorgu-plus.vercel.app). Görüntüler Konya/Çumra'da çizilen bir alanın uygulamanın kendi taramasıyla (40 sorgu, 38 parsel) doldurulmasıyla alındı; kullanıcının iş verisi kullanılmadı.
+- [x] Tanıtım videosu (`video/`, HyperFrames, 35 sn, 1920×1080).
+
 ## 4. Test planı
 - **Veri olmadan:** içe aktarma, çıktılar ve harita ekranı mevcut KML'ler ve önbellekteki cevaplarla test edilir.
 - **Dışa aktarma kontrolü:** çıkan KML'ler Google Earth'te, DXF'ler Netcad/AutoCAD'de açılır. Alanlar tapu alanıyla karşılaştırılır.

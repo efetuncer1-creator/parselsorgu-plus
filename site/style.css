@@ -227,6 +227,12 @@ html.lenis, html.lenis body { height: auto; }
 .rx-card--dik img { aspect-ratio: 390 / 844; }
 .rx-card figcaption { margin-top: var(--rx-space-150); font-size: var(--rx-font-size-body-sm); color: var(--rx-text-muted); }
 
+/* ---------- promo video ---------- */
+.rx-film { padding: var(--rx-space-1600) var(--rx-gutter); background: var(--rx-bg-layer-0); text-align: center; }
+.rx-film > * { max-width: calc(1280px * var(--rx-scale)); margin-inline: auto; }
+.rx-film__cerceve { margin-top: var(--rx-space-500); overflow: hidden; border-radius: var(--rx-radius-xl); border: var(--rx-border-width) solid var(--rx-border-decorative); box-shadow: var(--rx-shadow-xl); }
+.rx-film video { width: 100%; height: auto; aspect-ratio: 16 / 9; background: var(--rx-bg-page); }
+
 /* ---------- why ---------- */
 .rx-neden { padding: var(--rx-space-1600) var(--rx-gutter); background: var(--rx-bg-layer-0); }
 .rx-neden > * { max-width: var(--rx-content-max); margin-inline: auto; }
