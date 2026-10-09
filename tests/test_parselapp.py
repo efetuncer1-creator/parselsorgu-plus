@@ -50,6 +50,7 @@ class YardimciTest(unittest.TestCase):
         iller = ["Zonguldak", "Çankırı", "İzmir", "Ağrı", "Isparta", "Şanlıurfa", "Ordu", "Ödemiş", "Uşak", "Ünye", "Cide"]
         self.assertEqual(sorted(iller, key=tr_sira),
                          ["Ağrı", "Cide", "Çankırı", "Isparta", "İzmir", "Ordu", "Ödemiş", "Şanlıurfa", "Uşak", "Ünye", "Zonguldak"])
+        self.assertEqual(sorted(["Apasaraycık Köyü", "Apa Köyü"], key=tr_sira), ["Apa Köyü", "Apasaraycık Köyü"])
 
     def test_anahtar_turkce(self):
         self.assertEqual(parcel_key("İSTANBUL", "Büyükçekmece", "  Türkoba ", 0, "53"),

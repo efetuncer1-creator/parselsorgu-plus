@@ -19,7 +19,8 @@ _ALFABE = {h: i for i, h in enumerate("abcçdefgğhıijklmnoöprsştuüvwxyz")}
 
 def tr_sira(s):
     """Türkçe alfabe sırasına göre sıralama anahtarı (Çankırı, Ç'den sonra; İzmir, I'dan sonra)."""
-    return [_ALFABE.get(h, 100 + ord(h)) for h in norm(s)]
+    # Boşluk her harften önce gelir: "Apa Köyü", "Apasaraycık Köyü"nden önce.
+    return [-1 if h == " " else _ALFABE.get(h, 100 + ord(h)) for h in norm(s)]
 
 
 def katla(s):

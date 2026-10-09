@@ -86,7 +86,7 @@ class Tkgm:
         if not yenile:
             kayitli = self.store.idari_al(tur, ust_id)
             if kayitli is not None:
-                return kayitli
+                return sorted(kayitli, key=lambda x: tr_sira(x["ad"]))  # eski kayıtlar eski kuralla sıralı
         veri = self._get(yol)
         liste = sorted(
             ({"id": f["properties"]["id"], "ad": f["properties"]["text"]} for f in veri.get("features", [])),
