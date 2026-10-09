@@ -79,6 +79,8 @@ function diyalogAc(metin, { girdi = null, tamam = "Tamam" } = {}) {
   if (girdi !== null) kutu.select();
   return new Promise((coz) => d.addEventListener("close", () => coz(d.returnValue === "tamam"), { once: true }));
 }
+// Vazgeç "submit" olsaydı, kutuda Enter'a basınca formun ilk düğmesi olarak o çalışır, girilen ad kaybolurdu.
+$("diyalogIptal").addEventListener("click", () => $("diyalog").close("iptal"));
 const onayla = (metin, tamam = "Tamam") => diyalogAc(metin, { tamam });
 async function adSor(metin, varsayilan) {
   return (await diyalogAc(metin, { girdi: varsayilan, tamam: "Kaydet" })) ? $("diyalogGirdi").value : null;
@@ -512,17 +514,15 @@ function faviconGuncelle(limit) {
   $("favicon").href = "data:image/svg+xml," + encodeURIComponent(svg);
 }
 
+// Sorgu sayısı gösterilmez: TKGM limitin kaç olduğunu söylemiyor ve aynı bağlantıdan sitede yapılan
+// sorgular sayılamıyor. Sadece limit dolduğunda etiket, bildirim ve kırmızı sekme ikonu gösterilir.
 async function sayacGuncelle() {
   try {
-    const s = await api("sayac");
-    $("sayacMetin").textContent = s.limit_hatasi ? "Limit doldu" : `Bugün ${s.toplam} sorgu`;
-    if (s.limit_hatasi) mesaj(LIMIT_METNI, true);
-    $("sayac").classList.toggle("uyari", s.limit_hatasi > 0);
-    faviconGuncelle(s.limit_hatasi > 0);
-    $("sayac").title = s.limit_hatasi
-      ? "TKGM bugünkü sorgu limitini doldurdu. Önbellekteki parseller yine de gelir."
-      : `Bugün bu bilgisayardan TKGM'ye ${s.toplam} sorgu atıldı.`;
-  } catch { /* sayaç önemli değil */ }
+    const limit = (await api("sayac")).limit_hatasi > 0;
+    $("sayac").hidden = !limit;
+    faviconGuncelle(limit);
+    if (limit) mesaj(LIMIT_METNI, true);
+  } catch { /* limit bilgisi alınamazsa önemli değil */ }
 }
 
 // ---- idari listeler ------------------------------------------------------------
@@ -950,6 +950,8 @@ function alanSec(id, yaklas = true) {
   for (const k of [onceki, id]) if (k && referanslar.has(k)) referansCiz(referanslar.get(k).veri);
   referansListeCiz();
   bosluklariTemizle();
+  // Önceki alanın tarama sonucu yeni alanda kalmasın.
+  if (id !== onceki && !tarama.calisiyor) $("taramaDurum").hidden = $("taramaIlerleme").hidden = true;
   $("alanDetay").hidden = !id;
   disaSecenekleriGuncelle();
   if (!id) return;
@@ -1288,7 +1290,8 @@ document.addEventListener("keydown", (e) => {
   if (durum.mod !== "cizim" || e.target.matches("input, select, textarea")) return;
   if (e.key === "Escape") cizimIptal();
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); cizimGeriAl(); }
-  else if (e.key === "Enter") cizimBitir();
+  // preventDefault: yoksa aynı Enter, açılan ad penceresindeki kutuya da gidip pencereyi hemen kapatıyor.
+  else if (e.key === "Enter") { e.preventDefault(); cizimBitir(); }
 });
 
 // ---- başlangıç -----------------------------------------------------------------

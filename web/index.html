@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Parsel Sorgu +</title>
   <link rel="icon" id="favicon" type="image/svg+xml" href="marka/isaret.svg">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="marka/ikon-192.png">
+  <meta name="theme-color" content="#0062d6">
   <meta name="color-scheme" content="light dark">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -81,8 +84,9 @@
           <p id="sayfaAlt">Parsel sorgu</p>
         </div>
       </div>
-      <div class="sayac" id="sayac" role="status" title="Bugün bu bilgisayardan TKGM'ye atılan sorgu sayısı">
-        <span class="sayac-nokta" aria-hidden="true"></span><span id="sayacMetin">TKGM</span>
+      <!-- Sadece TKGM günlük limiti dolunca görünür (bildirim kaybolur, bu kalır). -->
+      <div class="sayac uyari" id="sayac" role="status" title="TKGM bugünkü sorgu limitini doldurdu. Daha önce sorgulanan parseller yine önbellekten gelir." hidden>
+        <span class="sayac-nokta" aria-hidden="true"></span><span>Limit doldu</span>
       </div>
     </header>
 
@@ -331,7 +335,7 @@
       <p id="diyalogMetin"></p>
       <input id="diyalogGirdi" type="text" autocomplete="off" hidden>
       <div class="butonlar">
-        <button type="submit" value="iptal" class="dugme ikincil" formnovalidate>Vazgeç</button>
+        <button type="button" class="dugme ikincil" id="diyalogIptal">Vazgeç</button>
         <button type="submit" value="tamam" class="dugme ana" id="diyalogTamam">Tamam</button>
       </div>
     </form>

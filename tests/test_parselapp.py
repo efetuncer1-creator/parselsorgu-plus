@@ -54,6 +54,18 @@ class YardimciTest(unittest.TestCase):
     def test_anahtar_turkce(self):
         self.assertEqual(parcel_key("İSTANBUL", "Büyükçekmece", "  Türkoba ", 0, "53"),
                          parcel_key("istanbul", "büyükçekmece", "türkoba", "0", 53))
+        # TKGM bazen ı'yı i'ye çevirerek veriyor; aynı parsel tek anahtar
+        self.assertEqual(parcel_key("Ağrı", "Doğubayazıt", "Atabakan", 1, 2),
+                         parcel_key("Ağri", "Doğubayazit", "ATABAKAN", 1, 2))
+
+    def test_iyi_yazim(self):
+        from parselapp.util import iyi_yazim
+        self.assertEqual(iyi_yazim("Kirşehir", "Kırşehir"), "Kırşehir")
+        self.assertEqual(iyi_yazim("Kırşehir", "Kirşehir"), "Kırşehir")
+        self.assertEqual(iyi_yazim("Ilgaz", "İlgaz"), "Ilgaz")
+        self.assertEqual(iyi_yazim("Akçaali", "Akçaali-Merkez"), "Akçaali")  # başka ad: dokunma
+        self.assertEqual(iyi_yazim("Ankara", None), "Ankara")
+        self.assertEqual(iyi_yazim(None, "Ankara"), "Ankara")
 
 
 class IceAktarmaTest(GeciciStore):
@@ -103,6 +115,45 @@ class IceAktarmaTest(GeciciStore):
         p = self.store.bul_id(100, "12", "7")
         self.assertEqual(p["nitelik"], "Yeni")  # ezilmedi
         self.assertEqual(p["zemin"], "Ana Taşınmaz")  # ama boşluk dolduruldu
+
+    def test_turkce_yazim_farki_tek_kayit(self):
+        kayit = {"il": "Ağri", "ilce": "Doğubayazit", "mahalle": "Atabakan", "ada": "1", "parsel": "2",
+                 "alan": "100", "geometri": [[[[30, 40], [30.001, 40], [30.001, 40.001], [30, 40]]]]}
+        self.store.kaydet(kayit, "tkgm")
+        self.assertEqual(self.store.kaydet(kayit | {"il": "Ağrı", "ilce": "Doğubayazıt"}, "dosya:a.kml"), "atlandi")
+        hepsi = self.store.listele()
+        self.assertEqual(len(hepsi), 1)
+        self.assertEqual((hepsi[0]["il"], hepsi[0]["ilce"]), ("Ağrı", "Doğubayazıt"))
+        self.assertEqual(hepsi[0]["kaynak"], "tkgm")
+
+    def test_ayni_yerin_yazimlari_birlesir(self):
+        geo = [[[[30, 40], [30.001, 40], [30.001, 40.001], [30, 40]]]]
+        self.store.kaydet({"il": "Ağri", "ilce": "Doğubayazit", "mahalle": "Atabakan", "ada": "1", "parsel": "1",
+                           "geometri": geo}, "dosya:eski.kml")
+        ice_aktar_sonrasi = {"il": "Ağrı", "ilce": "Doğubayazıt", "mahalle": "Atabakan", "ada": "1", "parsel": "2",
+                             "geometri": geo}
+        self.store.kaydet(ice_aktar_sonrasi, "dosya:yeni.kml")
+        self.store.yazimlari_birlestir()
+        self.assertEqual({(p["il"], p["ilce"]) for p in self.store.listele()}, {("Ağrı", "Doğubayazıt")})
+
+    def test_eski_anahtarlar_yenilenir(self):
+        import sqlite3
+        db = Path(self.klasor.name) / "eski.db"
+        Store(db)._db.close()
+        c = sqlite3.connect(db)
+        geo = json.dumps([[[[30, 40], [30.001, 40], [30.001, 40.001], [30, 40]]]])
+        for key, il, kaynak, tarih in (("ağri|x|y|1|2", "Ağri", "tkgm", "2026-10-01"),
+                                       ("ağrı|x|y|1|2", "Ağrı", "dosya:a.kml", "2026-10-05")):
+            c.execute("INSERT INTO parseller (key, il, ilce, mahalle, ada, parsel, mahalle_id, geometri, kaynak,"
+                      " kaynak_tarih, eklenme) VALUES (?,?,'X','Y','1','2',?,?,?,?,?)",
+                      (key, il, 7 if kaynak == "tkgm" else None, geo, kaynak, tarih, tarih))
+        c.execute("PRAGMA user_version = 0"); c.commit(); c.close()
+        s = Store(db)
+        hepsi = s.listele()
+        s._db.close()
+        self.assertEqual(len(hepsi), 1)
+        p = hepsi[0]
+        self.assertEqual((p["key"], p["il"], p["kaynak"], p["mahalle_id"]), ("ağri|x|y|1|2", "Ağrı", "tkgm", 7))
 
     def test_tkgm_verisi_dosyayla_ezilmez(self):
         kayit = dosya_oku("fav_list.json", oku("fav_list.json"))[0]
@@ -315,6 +366,25 @@ class TkgmTest(GeciciStore):
         t = Tkgm(self.store, _SahteOturum([_Cevap(200, "null")]))
         with self.assertRaises(Bulunamadi):
             t.parsel(100, 1, 999)
+
+    def test_adlar_idari_listeden_duzeltilir(self):
+        cevap = self._parsel_cevabi()
+        cevap["properties"] = cevap["properties"] | {"ilAd": "Kirşehir", "ilId": 62}
+        self.store.idari_kaydet("il", 0, [{"id": 62, "ad": "Kırşehir"}])
+        t = Tkgm(self.store, _SahteOturum([_Cevap(200, cevap)]))
+        p, _ = t.parsel(100, 12, 7)
+        self.assertEqual(p["il"], "Kırşehir")
+
+    def test_liste_gelince_kayitli_adlar_duzelir(self):
+        cevap = self._parsel_cevabi()
+        cevap["properties"] = cevap["properties"] | {"mahalleAd": "Sinanli"}
+        liste = {"type": "FeatureCollection", "features": [
+            {"type": "Feature", "geometry": None, "properties": {"text": "Sinanlı", "id": 100}}]}
+        t = Tkgm(self.store, _SahteOturum([_Cevap(200, cevap), _Cevap(200, liste)]))
+        p, _ = t.parsel(100, 12, 7)
+        self.assertEqual(p["mahalle"], "Sinanli")
+        t.mahalleler(10)
+        self.assertEqual(self.store.bul_id(100, "12", "7")["mahalle"], "Sinanlı")
 
     def test_idari_liste_kaydedilir(self):
         cevap = {"type": "FeatureCollection", "features": [

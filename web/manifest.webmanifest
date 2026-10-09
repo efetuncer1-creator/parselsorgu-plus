@@ -1,0 +1,14 @@
+{
+  "name": "Parsel Sorgu +",
+  "short_name": "Parsel Sorgu +",
+  "description": "TKGM parsel sorgu, alandan parsel tespiti, KML ve Excel dışa aktarma",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0e10",
+  "theme_color": "#0062d6",
+  "icons": [
+    { "src": "marka/ikon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "marka/ikon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "marka/isaret.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

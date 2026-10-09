@@ -1,0 +1,54 @@
+# Sürüm: "v0.1.0" gibi bir etiket gönderilince Windows'ta paket ve kurulum dosyası derlenir,
+# GitHub Releases'a eklenir. Tanıtım sitesindeki indirme bağlantısı en son sürümü gösterir.
+name: Sürüm
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bağımlılıklar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Testler
+        run: python -m unittest -v
+
+      - name: Paket (PyInstaller)
+        run: pyinstaller packaging/ParselSorgu.spec --noconfirm
+
+      - name: Kurulum dosyası (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $surum = "${{ github.ref_name }}".TrimStart("v")
+          if (-not $surum -or $surum -notmatch '^\d') { $surum = "0.0.0" }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DSurum=$surum" packaging\kurulum.iss
+
+      - name: Sürüme ekle
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/ParselSorguPlus-Kurulum-*.exe
+          generate_release_notes: true
+
+      - name: Derleme çıktısı (elle çalıştırmada)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: kurulum
+          path: dist/ParselSorguPlus-Kurulum-*.exe

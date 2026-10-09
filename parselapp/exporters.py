@@ -235,7 +235,7 @@ def excel(parseller, sistem="itrf96", dilim="otomatik", alan_ici=None, alan_adi=
                  p["kaynak_tarih"][:10]]
         if alan_ici is not None:
             ic, oran = alan_ici.get(p["key"], (0.0, 0.0))
-            satir += [round(ic, 2), oran]
+            satir += [round(ic, 2), round(oran, 4)]
         ws.append(satir)
         ws.cell(row=i + 1, column=7).number_format = "#,##0.00"
         if alan_ici is not None:

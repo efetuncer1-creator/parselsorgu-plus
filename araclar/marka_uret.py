@@ -75,6 +75,36 @@ def yaz(ad, icerik):
     print("yazıldı:", ad)
 
 
+def ikon_png(boyut):
+    """Uygulama işaretinin piksel görüntüsü (Pillow). Kenarlar için 4 kat büyük çizip küçültülür."""
+    from PIL import Image, ImageDraw
+    k = 4
+    b = boyut * k
+    olcek = b / 216
+    kalinlik = 40 if boyut <= 32 else 32  # küçük boyutta optik kalınlık
+    a = (108 - kalinlik / 2) * olcek
+    img = Image.new("RGBA", (b, b), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([0, 0, b - 1, b - 1], radius=52 * olcek, fill=MAVI)
+    d.rectangle([a, 40 * olcek, a + kalinlik * olcek, 176 * olcek], fill="#ffffff")
+    d.rectangle([40 * olcek, a, 176 * olcek, a + kalinlik * olcek], fill="#ffffff")
+    d.rectangle([a, a, a + kalinlik * olcek, a + kalinlik * olcek], fill=SARI)
+    return img.resize((boyut, boyut), Image.LANCZOS)
+
+
+def ikonlar():
+    """Windows simgesi (.ico, 16-256) ve web için PNG'ler."""
+    boyutlar = [16, 24, 32, 48, 64, 128, 256]
+    resimler = [ikon_png(n) for n in boyutlar]
+    ico = KLASOR.parent.parent / "packaging" / "ParselSorgu.ico"
+    ico.parent.mkdir(exist_ok=True)
+    resimler[-1].save(ico, format="ICO", sizes=[(n, n) for n in boyutlar], append_images=resimler[:-1])
+    print("yazıldı:", ico.relative_to(KLASOR.parent.parent))
+    for n in (192, 512):
+        ikon_png(n).save(KLASOR / f"ikon-{n}.png")
+        print(f"yazıldı: ikon-{n}.png")
+
+
 if __name__ == "__main__":
     yaz("logo.svg", kilit(MAVI, MUREKKEP))
     yaz("logo-koyu.svg", kilit(MAVI_KOYU, BEYAZ))
@@ -83,3 +113,4 @@ if __name__ == "__main__":
     tek, g = kelime("PARSEL SORGU")
     yaz("kelime.svg", f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {g} 100" role="img" aria-label="Parsel Sorgu +">'
                       f'<g fill="none" stroke="currentColor" stroke-width="22">{tek}</g></svg>\n')
+    ikonlar()

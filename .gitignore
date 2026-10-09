@@ -10,3 +10,7 @@ __pycache__/
 *.pyc
 .venv/
 .claude/settings.local.json
+
+# Kurulum paketi derleme çıktıları
+dist/
+build/

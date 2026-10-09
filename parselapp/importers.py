@@ -209,6 +209,7 @@ def ice_aktar(store, ad, icerik, tarih=None):
         key = parcel_key(kayit["il"], kayit["ilce"], kayit["mahalle"], kayit["ada"], kayit["parsel"])
         if key not in keys:
             keys.append(key)
+    store.yazimlari_birlestir()
     return sayac | {"keys": keys}
 
 

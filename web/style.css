@@ -213,9 +213,11 @@ button { cursor: pointer; }
 }
 
 /* ---- Çekmece ------------------------------------------------------------- */
+/* Yükseklik içeriğe göre: içerik azsa kısa, çoğaldıkça uzar; ekrana sığmazsa içi kayar. */
 .cekmece {
   position: fixed; z-index: 1000;
-  top: var(--kenar); bottom: var(--kenar);
+  top: var(--kenar);
+  max-height: calc(100dvh - var(--kenar) * 2);
   left: calc(var(--kenar) + var(--sekme-genislik) + var(--b-2));
   width: var(--cekmece-genislik);
   display: flex; flex-direction: column;
@@ -263,7 +265,7 @@ button { cursor: pointer; }
 .sayac.uyari .sayac-nokta { background: var(--tehlike); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tehlike) 22%, transparent); }
 
 .cekmece-govde {
-  flex: 1; overflow-y: auto; overscroll-behavior: contain;
+  flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
   padding: var(--b-1) var(--b-2-5) var(--b-3);
   /* Kaydırma kenarı efekti: içerik üst ve alt kenarda yumuşakça kaybolur */
   /* ds-allow-hardcode: maske değeri (renk değil); #000 = tam görünür */
@@ -329,6 +331,9 @@ select { color-scheme: light dark; }
   color: var(--metin); font: var(--t-vurgulu);
   transition: background var(--sure-hizli) var(--yay);
 }
+/* Satır bir seçim kutusu gibi görünüyor: tıklama alanı bütün satır olsun ("İl" yazısı dahil). */
+.secici-dugme::before { content: ""; position: absolute; inset: 0; }
+.secici-dugme:not(:disabled) { cursor: pointer; }
 .secici-dugme .secici-deger { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .secici-dugme .ikon { width: var(--ikon-xs); height: var(--ikon-xs); color: var(--metin-3); }
 .secici-dugme.bos { color: var(--metin-2); font-weight: 500; }
@@ -593,7 +598,9 @@ input[type=checkbox].kutucuk:checked {
   position: fixed; z-index: 1000; top: var(--kenar); right: var(--kenar);
   display: flex; align-items: flex-start; gap: var(--b-2);
 }
-.altlik-secici { border-radius: var(--r-kutu); padding: var(--b-1); }
+/* Haritanın üstünde yüzer: .bolumlu'nun yarı saydam dolgusu yerine cam zemin; yoksa açık temada
+   koyu uydu görüntüsünün üstünde seçili olmayan "Harita" okunmuyor. */
+.altlik-secici { border-radius: var(--r-kutu); padding: var(--b-1); background: var(--cam-bg); }
 .altlik-secici span { height: var(--boy-xs); }
 .dikey-kontrol { display: flex; flex-direction: column; border-radius: var(--r-kutu); overflow: hidden; }
 .dikey-kontrol button, .tek-kontrol {
@@ -769,7 +776,7 @@ input[type=checkbox].kutucuk:checked {
   }
   .sekmeler [role=tab] { flex-direction: row; gap: var(--b-1-5); padding: var(--b-2) var(--b-4); border-radius: var(--r-hap); font-size: 12px; }
   .sekmeler [role=tab] .ikon { width: var(--ikon-m); height: var(--ikon-m); }
-  .cekmece { top: auto; left: var(--kenar); right: var(--kenar); width: auto; bottom: calc(var(--mobil-alt) + env(safe-area-inset-bottom)); height: 52vh; }
+  .cekmece { top: auto; left: var(--kenar); right: var(--kenar); width: auto; bottom: calc(var(--mobil-alt) + env(safe-area-inset-bottom)); max-height: 52vh; }
   .harita-kontrolleri { top: var(--kenar); right: var(--kenar); }
   .altlik-secici span { padding: 0 var(--b-2); }
   .secili-bar { bottom: auto; top: var(--mobil-cubuk-ust); left: 50%; max-width: calc(100vw - var(--b-4)); padding-left: var(--b-3); }

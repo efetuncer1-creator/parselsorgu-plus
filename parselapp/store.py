@@ -12,7 +12,7 @@ from pathlib import Path
 
 from shapely.geometry import Point, Polygon
 
-from .util import fmt_alan, parcel_key, parse_alan
+from .util import fmt_alan, iyi_yazim, katla, parcel_key, parse_alan
 
 ALANLAR = ("il", "ilce", "mahalle", "ada", "parsel", "il_id", "ilce_id", "mahalle_id",
            "alan", "nitelik", "mevkii", "pafta", "zemin")
@@ -79,7 +79,72 @@ class Store:
         if "son_erisim" not in kolonlar:
             self._db.execute("ALTER TABLE referanslar ADD COLUMN son_erisim TEXT")
             self._db.execute("UPDATE referanslar SET son_erisim = eklenme")
+        if self._db.execute("PRAGMA user_version").fetchone()[0] < 1:
+            self._anahtarlari_yenile()
+            for tur, veri in self._db.execute("SELECT tur, veri FROM idari").fetchall():
+                self.adlari_duzelt(tur, json.loads(veri))
+            self.yazimlari_birlestir()
+            self._db.execute("PRAGMA user_version = 1")
         self._db.commit()
+
+    def _anahtarlari_yenile(self):
+        """Anahtar kuralı ı/i farkını yok sayacak şekilde değişti: eski anahtarları yenile, aynı
+        parselin farklı yazımlarla girmiş iki kaydını birleştir (TKGM'den gelen, sonra yeni olan kalır)."""
+        gruplar = {}
+        for s in self._db.execute("SELECT * FROM parseller").fetchall():
+            key = parcel_key(s["il"], s["ilce"], s["mahalle"], s["ada"], s["parsel"])
+            gruplar.setdefault(key, []).append(dict(s))
+        for key, grup in gruplar.items():
+            if len(grup) == 1 and grup[0]["key"] == key:
+                continue
+            grup.sort(key=lambda s: (s["kaynak"] == "tkgm", s["kaynak_tarih"]), reverse=True)
+            ana = grup[0]
+            for diger in grup[1:]:
+                for a in ALANLAR:
+                    if ana[a] in (None, "") and diger[a] not in (None, ""):
+                        ana[a] = diger[a]
+                for a in ("il", "ilce", "mahalle"):
+                    ana[a] = iyi_yazim(ana[a], diger[a])
+                ana["eklenme"] = min(ana["eklenme"], diger["eklenme"])
+            self._db.executemany("DELETE FROM parseller WHERE key=?", [(s["key"],) for s in grup])
+            ana["key"] = key
+            kolonlar = ", ".join(ana)
+            self._db.execute(f"INSERT INTO parseller ({kolonlar}) VALUES ({', '.join(f':{k}' for k in ana)})", ana)
+
+    def yazimlari_birlestir(self):
+        """Aynı yerin farklı yazımlarını (ör. "Ağri" / "Ağrı") doğru olanında birleştirir; liste ve
+        çıktılarda aynı mahalle iki ayrı adla görünmesin."""
+        with self._lock:
+            ucluler = [tuple(r) for r in self._db.execute("SELECT DISTINCT il, ilce, mahalle FROM parseller")]
+            en_iyi = {}
+            for u in ucluler:
+                for i in range(3):
+                    k = tuple(katla(x or "") for x in u[:i + 1])
+                    en_iyi[k] = iyi_yazim(en_iyi.get(k), u[i])
+            for u in ucluler:
+                yeni = tuple(en_iyi[tuple(katla(x or "") for x in u[:i + 1])] for i in range(3))
+                if yeni != u:
+                    self._db.execute("UPDATE parseller SET il=?, ilce=?, mahalle=? WHERE il IS ? AND ilce IS ? AND mahalle IS ?",
+                                     yeni + u)
+            self._db.commit()
+
+    def adlari_duzelt(self, tur, liste):
+        """İdari listedeki doğru yazımı (ör. "Kırşehir") aynı kimlikli parsellere uygular.
+        TKGM parsel cevabında ı'ları i'ye dönmüş ad verebiliyor; listeler çoğunlukla doğru."""
+        ad_k, id_k = {"il": ("il", "il_id"), "ilce": ("ilce", "ilce_id"), "mahalle": ("mahalle", "mahalle_id")}[tur]
+        dogru = {x["id"]: x["ad"] for x in liste}
+        if not dogru:
+            return
+        yer = ",".join("?" * len(dogru))
+        with self._lock:
+            satirlar = self._db.execute(f"SELECT DISTINCT {id_k}, {ad_k} FROM parseller WHERE {id_k} IN ({yer})",
+                                        list(dogru)).fetchall()
+            for kimlik, mevcut in satirlar:
+                iyi = iyi_yazim(mevcut, dogru[kimlik])
+                if iyi != mevcut:
+                    self._db.execute(f"UPDATE parseller SET {ad_k}=? WHERE {id_k}=? AND {ad_k}=?",
+                                     (iyi, kimlik, mevcut))
+            self._db.commit()
 
     # ---- parseller -------------------------------------------------------
 
@@ -114,6 +179,8 @@ class Store:
                 for a in ALANLAR:
                     if degerler[a] in (None, "") and eski[a] not in (None, ""):
                         degerler[a] = eski[a]
+                for a in ("il", "ilce", "mahalle"):
+                    degerler[a] = iyi_yazim(degerler[a], eski[a])
                 degerler["eklenme"] = eski["eklenme"]
             degerler["alan_m2"] = parse_alan(degerler["alan"])
             if degerler["alan_m2"] is not None:
@@ -128,6 +195,9 @@ class Store:
         """Ezilmeyen kayıtta boş kalan alanları (ör. KML'de olmayan mahalle_id) eski kaynaktan tamamlar."""
         eksik = {a: kayit[a] for a in ALANLAR
                  if eski[a] in (None, "") and kayit.get(a) not in (None, "")}
+        for a in ("il", "ilce", "mahalle"):
+            if eski[a] and iyi_yazim(eski[a], kayit.get(a)) != eski[a]:
+                eksik[a] = kayit[a]  # aynı ad, doğru (ı'lı) yazımı
         if "alan" in eksik:
             eksik["alan_m2"] = parse_alan(eksik["alan"])
             if eksik["alan_m2"] is not None:

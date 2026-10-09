@@ -15,7 +15,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .importers import geometri_coz, tkgm_ozellik
-from .util import tr_sira
+from .util import iyi_yazim, tr_sira
 
 API = "https://cbsapi.tkgm.gov.tr/megsiswebapi.v3.1/api"
 BEKLEME_SN = 1.5  # ardışık istekler arasında en az bu kadar beklenir
@@ -92,6 +92,8 @@ class Tkgm:
             ({"id": f["properties"]["id"], "ad": f["properties"]["text"]} for f in veri.get("features", [])),
             key=lambda x: tr_sira(x["ad"]))
         self.store.idari_kaydet(tur, ust_id, liste)
+        self.store.adlari_duzelt(tur, liste)
+        self.store.yazimlari_birlestir()
         return liste
 
     def iller(self, yenile=False):
@@ -109,11 +111,22 @@ class Tkgm:
         if not isinstance(veri, dict) or "properties" not in veri:
             raise Bulunamadi("Parsel bulunamadı.")
         kayit = tkgm_ozellik(veri["properties"])
+        self._adlari_duzelt(kayit)
         kayit["geometri"] = geometri_coz(veri.get("geometry"))
         if not kayit["geometri"]:
             raise Bulunamadi("Parselin geometrisi yok.")
         self.store.kaydet(kayit, "tkgm")
+        self.store.yazimlari_birlestir()
         return self.store.bul_id(kayit["mahalle_id"], kayit["ada"], kayit["parsel"])
+
+    def _adlari_duzelt(self, kayit):
+        """Parsel cevabındaki adlarda ı'lar bazen i'ye dönmüş geliyor ("Kirşehir"). Kayıtlı
+        il/ilçe/mahalle listesinde doğru yazım varsa onu kullan (yeni sorgu harcanmaz)."""
+        for tur, ust, ad_k, id_k in (("il", 0, "il", "il_id"), ("ilce", kayit["il_id"], "ilce", "ilce_id"),
+                                     ("mahalle", kayit["ilce_id"], "mahalle", "mahalle_id")):
+            liste = self.store.idari_al(tur, int(ust or 0)) or []
+            dogru = next((x["ad"] for x in liste if x["id"] == kayit[id_k]), None)
+            kayit[ad_k] = iyi_yazim(kayit[ad_k], dogru)
 
     def parsel(self, mahalle_id, ada, parsel, yenile=False):
         """Önce kayda bakar; yoksa (ya da yenile=True ise) TKGM'den çeker."""

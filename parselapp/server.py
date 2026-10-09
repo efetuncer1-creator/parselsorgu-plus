@@ -8,6 +8,7 @@ import argparse
 import json
 import mimetypes
 import os
+import sys
 import threading
 import webbrowser
 from http import HTTPStatus
@@ -20,9 +21,16 @@ from .importers import ice_aktar
 from .store import Store
 from .tkgm import Bulunamadi, LimitAsildi, Tkgm, TkgmHatasi
 
-KOK = Path(__file__).resolve().parent.parent
+if getattr(sys, "frozen", False):
+    # Kurulum paketi (PyInstaller): arayüz paketin içinde, veri kullanıcının kendi klasöründe
+    # (Program Files yazılamaz).
+    KOK = Path(sys._MEIPASS)
+    VERI_KLASORU = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "ParselSorguPlus"
+else:
+    KOK = Path(__file__).resolve().parent.parent
+    VERI_KLASORU = KOK / "data"
 WEB = KOK / "web"
-VERI = KOK / "data" / "parseller.db"
+VERI = VERI_KLASORU / "parseller.db"
 
 # Alan renkleri: parsel sarısı, seçim mavisi ve boşluk kırmızısıyla karışmayanlar, sırayla verilir.
 REFERANS_RENKLERI = ("#bf5af2", "#64d2ff", "#ff9f0a", "#30d158", "#ff375f", "#ac8e68")
