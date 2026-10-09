@@ -103,19 +103,33 @@
     #acilis .alt { margin: 0; font: 600 30px/1 "Inter", sans-serif; letter-spacing: .18em; color: var(--soluk); }
     #acilis .hale { position: absolute; left: 50%; top: 50%; width: 1400px; height: 1400px; margin: -700px 0 0 -700px; border-radius: 50%; background: radial-gradient(closest-side, rgba(10, 108, 240, .32), transparent 70%); }
 
-    /* 2 — harita */
-    #harita .plaka { position: absolute; inset: 0; }
-    #harita .plaka img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    #harita .plaka svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-    #harita .p { fill: rgba(255, 214, 10, .12); stroke: var(--sari); stroke-width: 3.6; stroke-linejoin: round; }
-    #harita .alan { fill: none; stroke: var(--mavi-acik); stroke-width: 6; stroke-linejoin: round; }
-    #harita .renk { position: absolute; inset: 0; background: radial-gradient(70% 70% at 50% 40%, rgba(7, 11, 20, .25), rgba(7, 11, 20, .7)); }
-    #harita .perde { position: absolute; inset: 0; background: linear-gradient(to top, rgba(7, 11, 20, .96) 0%, rgba(7, 11, 20, .5) 34%, transparent 60%); }
-    #harita .yazi { position: absolute; left: 120px; bottom: 110px; }
-    #harita .dev { font-size: 132px; }
-    #harita .sayac { position: absolute; right: 120px; bottom: 120px; text-align: right; }
-    #harita .sayac b { display: block; font: 400 140px/1 "Anton", sans-serif; color: var(--sari); }
-    #harita .sayac span { font: 600 28px/1.3 "Inter", sans-serif; letter-spacing: .1em; color: var(--beyaz); }
+    /* 1 — uzaydan parsele dalış: her yakınlaştırma seviyesi için bir plaka, hepsi aynı noktaya ortalı */
+    #dalis .kamera { position: absolute; inset: 0; }
+    #dalis .plaka { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; object-fit: cover; transform-origin: 50% 50%; }
+    #dalis .parseller { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+    #dalis .p { fill: rgba(255, 214, 10, .12); stroke: var(--sari); stroke-width: 4.4; stroke-linejoin: round; }
+    #dalis .alan { fill: none; stroke: var(--mavi-acik); stroke-width: 7; stroke-linejoin: round; }
+    #dalis .renk { position: absolute; inset: 0; background: radial-gradient(75% 75% at 50% 45%, rgba(7, 11, 20, .1), rgba(7, 11, 20, .62)); }
+    #dalis .perde { position: absolute; inset: 0; background: linear-gradient(to top, rgba(7, 11, 20, .94) 0%, rgba(7, 11, 20, .42) 32%, transparent 58%); }
+    #dalis .hedef-kutu { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #dalis .hedef { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--sari); box-shadow: 0 0 24px rgba(255, 214, 10, .6), inset 0 0 18px rgba(255, 214, 10, .35); display: block; }
+    #dalis .koordinat { position: absolute; top: 72px; left: 120px; margin: 0; font: 600 22px/1.4 "Inter", sans-serif; letter-spacing: .14em; color: var(--beyaz); padding-left: 16px; border-left: 3px solid var(--sari); }
+    #dalis .durak { position: absolute; left: 120px; bottom: 110px; }
+    #dalis .durak .dev { font-size: 176px; }
+    #dalis .yazi { position: absolute; left: 120px; bottom: 110px; }
+    #dalis .yazi .dev { font-size: 132px; }
+    #dalis .sayac { position: absolute; right: 120px; bottom: 120px; text-align: right; }
+    #dalis .sayac b { display: block; font: 400 140px/1 "Anton", sans-serif; color: var(--sari); }
+    #dalis .sayac span { font: 600 28px/1.3 "Inter", sans-serif; letter-spacing: .1em; color: var(--beyaz); }
+
+    /* geçiş katmanları (her şeyin üstünde) */
+    .silme { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; display: block; }
+    #silme-a { background: var(--mavi); }
+    #silme-b { background: var(--sari); }
+    .isik { position: absolute; display: block; border-radius: 50%; opacity: 0; pointer-events: none; }
+    #isik-ton { left: -240px; top: -240px; width: 2400px; height: 1560px; border-radius: 0; background: rgba(255, 159, 10, 1); }
+    #isik-1 { left: -900px; top: -500px; width: 2600px; height: 2000px; background: radial-gradient(closest-side, rgba(255, 241, 166, .95), rgba(255, 214, 10, .5) 45%, transparent 75%); }
+    #isik-2 { left: 200px; top: -300px; width: 2400px; height: 1800px; background: radial-gradient(closest-side, rgba(255, 159, 10, .85), rgba(255, 120, 10, .35) 50%, transparent 78%); }
 
     /* 3, 4 — uygulama ekranları */
     .ekran-sahne .yazi { position: absolute; top: 0; bottom: 0; width: 640px; display: flex; flex-direction: column; justify-content: center; }
@@ -172,10 +186,47 @@
   </style>
 </head>
 <body>
-  <div id="root" data-composition-id="tanitim" data-start="0" data-width="1920" data-height="1080" data-duration="35">
+  <div id="root" data-composition-id="tanitim" data-start="0" data-width="1920" data-height="1080" data-duration="39.6">
 
-    <!-- 1 — açılış -->
-    <section id="acilis" class="clip" data-start="0" data-duration="4.4" data-track-index="1">
+    <!-- 1 — uzaydan parsele dalış, alan ve parseller -->
+    <section id="dalis" class="clip" data-start="0" data-duration="12.6" data-track-index="1">
+      <div class="sahne" id="dalis-sahne">
+        <div class="kamera" id="dalis-kamera">
+          <img class="plaka" id="plaka-z4" src="assets/dalis/z04.webp" alt="">
+          <img class="plaka" id="plaka-z5" src="assets/dalis/z05.webp" alt="">
+          <img class="plaka" id="plaka-z6" src="assets/dalis/z06.webp" alt="">
+          <img class="plaka" id="plaka-z7" src="assets/dalis/z07.webp" alt="">
+          <img class="plaka" id="plaka-z8" src="assets/dalis/z08.webp" alt="">
+          <img class="plaka" id="plaka-z9" src="assets/dalis/z09.webp" alt="">
+          <img class="plaka" id="plaka-z10" src="assets/dalis/z10.webp" alt="">
+          <img class="plaka" id="plaka-z11" src="assets/dalis/z11.webp" alt="">
+          <img class="plaka" id="plaka-z12" src="assets/dalis/z12.webp" alt="">
+          <img class="plaka" id="plaka-z13" src="assets/dalis/z13.webp" alt="">
+          <img class="plaka" id="plaka-z14" src="assets/dalis/z14.webp" alt="">
+          <img class="plaka" id="plaka-z15" src="assets/dalis/z15.webp" alt="">
+          <svg class="parseller" id="dalis-parseller" viewBox="0 0 3840 2160" preserveAspectRatio="xMidYMid slice"><path class="alan" pathLength="1" d="M1730.0 531.0L2096.0 474.0L2180.0 784.0L2096.0 1093.0L1815.0 1206.0L1660.0 924.0L1730.0 531.0Z"/><path class="p" pathLength="1" d="M1782.0 517.0L1744.0 523.0L1727.0 527.0L1732.0 588.0L1735.0 587.0L1790.0 580.0L1786.0 550.0L1782.0 517.0Z"/><path class="p" pathLength="1" d="M1790.0 580.0L1735.0 587.0L1732.0 588.0L1701.0 595.0L1681.0 599.0L1689.0 630.0L1702.0 687.0L1748.0 679.0L1777.0 671.0L1810.0 662.0L1796.0 620.0L1790.0 580.0Z"/><path class="p" pathLength="1" d="M1748.0 679.0L1702.0 687.0L1691.0 689.0L1698.0 769.0L1752.0 785.0L1748.0 679.0Z"/><path class="p" pathLength="1" d="M1777.0 671.0L1748.0 679.0L1752.0 785.0L1805.0 800.0L1777.0 671.0Z"/><path class="p" pathLength="1" d="M1810.0 662.0L1777.0 671.0L1805.0 800.0L1842.0 776.0L1825.0 715.0L1810.0 662.0Z"/><path class="p" pathLength="1" d="M1701.0 804.0L1615.0 822.0L1583.0 830.0L1589.0 860.0L1593.0 889.0L1605.0 887.0L1615.0 919.0L1684.0 904.0L1721.0 899.0L1701.0 804.0Z"/><path class="p" pathLength="1" d="M1758.0 893.0L1721.0 899.0L1684.0 904.0L1615.0 919.0L1624.0 953.0L1768.0 932.0L1758.0 893.0Z"/><path class="p" pathLength="1" d="M1822.0 858.0L1828.0 844.0L1785.0 849.0L1788.0 879.0L1756.0 883.0L1758.0 893.0L1768.0 932.0L1825.0 922.0L1836.0 920.0L1827.0 911.0L1822.0 858.0Z"/><path class="p" pathLength="1" d="M1828.0 844.0L1831.0 835.0L1839.0 816.0L1848.0 807.0L1842.0 779.0L1806.0 803.0L1698.0 772.0L1701.0 804.0L1721.0 899.0L1758.0 893.0L1756.0 883.0L1788.0 879.0L1785.0 849.0L1828.0 844.0Z"/><path class="p" pathLength="1" d="M1944.0 703.0L1940.0 683.0L1889.0 697.0L1860.0 706.0L1831.0 713.0L1845.0 775.0L1929.0 714.0L1944.0 703.0Z"/><path class="p" pathLength="1" d="M1944.0 703.0L1929.0 714.0L1845.0 775.0L1851.0 804.0L1878.0 776.0L1940.0 746.0L1948.0 746.0L1946.0 732.0L1944.0 703.0Z"/><path class="p" pathLength="1" d="M1775.0 956.0L1692.0 970.0L1631.0 986.0L1624.0 956.0L1601.0 962.0L1611.0 1023.0L1679.0 1007.0L1782.0 987.0L1775.0 956.0Z"/><path class="p" pathLength="1" d="M1851.0 979.0L1849.0 955.0L1847.0 926.0L1837.0 923.0L1769.0 934.0L1775.0 956.0L1782.0 987.0L1795.0 1053.0L1860.0 1046.0L1851.0 979.0Z"/><path class="p" pathLength="1" d="M1886.0 1043.0L1895.0 1030.0L1931.0 1005.0L1971.0 996.0L1988.0 983.0L1961.0 955.0L1906.0 937.0L1880.0 933.0L1865.0 933.0L1847.0 926.0L1849.0 955.0L1851.0 979.0L1860.0 1046.0L1886.0 1043.0Z"/><path class="p" pathLength="1" d="M1755.0 1153.0L1791.0 1141.0L1818.0 1136.0L1843.0 1133.0L1850.0 1133.0L1863.0 1126.0L1867.0 1124.0L1867.0 1114.0L1878.0 1111.0L1877.0 1075.0L1840.0 1079.0L1813.0 1081.0L1773.0 1087.0L1741.0 1092.0L1748.0 1117.0L1752.0 1139.0L1755.0 1153.0Z"/><path class="p" pathLength="1" d="M1764.0 1056.0L1755.0 1024.0L1696.0 1034.0L1649.0 1047.0L1616.0 1055.0L1621.0 1086.0L1625.0 1115.0L1626.0 1131.0L1637.0 1127.0L1663.0 1130.0L1689.0 1137.0L1697.0 1138.0L1712.0 1144.0L1737.0 1150.0L1755.0 1153.0L1752.0 1139.0L1748.0 1117.0L1741.0 1092.0L1773.0 1087.0L1764.0 1056.0Z"/><path class="p" pathLength="1" d="M1872.0 556.0L1840.0 384.0L1766.0 415.0L1769.0 433.0L1774.0 450.0L1781.0 484.0L1786.0 518.0L1789.0 548.0L1794.0 579.0L1796.0 593.0L1868.0 558.0L1872.0 556.0Z"/><path class="p" pathLength="1" d="M2101.0 585.0L2052.0 469.0L1997.0 496.0L1989.0 500.0L2046.0 632.0L2070.0 602.0L2093.0 588.0L2101.0 585.0Z"/><path class="p" pathLength="1" d="M2016.0 652.0L1958.0 515.0L1950.0 519.0L1899.0 543.0L1954.0 669.0L2016.0 652.0Z"/><path class="p" pathLength="1" d="M1920.0 680.0L1868.0 558.0L1796.0 593.0L1797.0 603.0L1804.0 633.0L1830.0 708.0L1920.0 680.0Z"/><path class="p" pathLength="1" d="M2064.0 737.0L2062.0 732.0L2057.0 726.0L2054.0 725.0L2046.0 719.0L2038.0 712.0L2033.0 706.0L2026.0 697.0L2023.0 687.0L2024.0 679.0L2025.0 674.0L2027.0 671.0L2037.0 657.0L2041.0 651.0L2036.0 652.0L1991.0 663.0L1998.0 742.0L2064.0 737.0Z"/><path class="p" pathLength="1" d="M2077.0 785.0L2075.0 775.0L2071.0 761.0L2070.0 756.0L2067.0 743.0L2064.0 737.0L1998.0 742.0L2001.0 779.0L2005.0 785.0L2011.0 792.0L2021.0 799.0L2025.0 801.0L2031.0 803.0L2037.0 803.0L2045.0 803.0L2053.0 802.0L2063.0 798.0L2071.0 793.0L2076.0 789.0L2077.0 785.0Z"/><path class="p" pathLength="1" d="M2180.0 697.0L2090.0 608.0L2081.0 614.0L2079.0 616.0L2074.0 622.0L2071.0 625.0L2074.0 627.0L2163.0 705.0L2180.0 697.0Z"/><path class="p" pathLength="1" d="M2196.0 924.0L2170.0 902.0L2139.0 938.0L2113.0 916.0L2090.0 939.0L2138.0 985.0L2176.0 946.0L2196.0 924.0Z"/><path class="p" pathLength="1" d="M2066.0 1117.0L1944.0 1028.0L1928.0 1034.0L1921.0 1039.0L1912.0 1044.0L1908.0 1047.0L1903.0 1062.0L1902.0 1068.0L1904.0 1072.0L1912.0 1093.0L1914.0 1100.0L1915.0 1106.0L1914.0 1114.0L2009.0 1183.0L2019.0 1169.0L2028.0 1159.0L2032.0 1155.0L2035.0 1151.0L2038.0 1147.0L2041.0 1144.0L2044.0 1140.0L2048.0 1137.0L2050.0 1133.0L2053.0 1130.0L2056.0 1127.0L2058.0 1125.0L2061.0 1123.0L2063.0 1119.0L2065.0 1118.0L2066.0 1117.0Z"/><path class="p" pathLength="1" d="M2138.0 985.0L2090.0 939.0L2026.0 999.0L2023.0 997.0L2000.0 1023.0L1992.0 1015.0L1991.0 1016.0L1976.0 1017.0L1966.0 1019.0L1960.0 1021.0L1947.0 1026.0L1944.0 1028.0L2066.0 1117.0L2068.0 1114.0L2084.0 1097.0L2166.0 1013.0L2138.0 985.0Z"/><path class="p" pathLength="1" d="M1912.0 1144.0L1903.0 1137.0L1902.0 1137.0L1896.0 1141.0L1888.0 1144.0L1880.0 1146.0L1869.0 1146.0L1847.0 1144.0L1840.0 1146.0L1834.0 1147.0L1825.0 1151.0L1815.0 1160.0L1813.0 1161.0L1867.0 1203.0L1912.0 1144.0Z"/><path class="p" pathLength="1" d="M2081.0 939.0L2010.0 879.0L1963.0 925.0L1963.0 925.0L1976.0 931.0L1985.0 937.0L1996.0 950.0L2003.0 959.0L2009.0 967.0L2014.0 974.0L2018.0 979.0L2020.0 983.0L2024.0 992.0L2026.0 992.0L2081.0 939.0Z"/><path class="p" pathLength="1" d="M2141.0 882.0L2070.0 822.0L2038.0 853.0L2108.0 913.0L2141.0 882.0Z"/><path class="p" pathLength="1" d="M2173.0 851.0L2101.0 789.0L2098.0 795.0L2094.0 800.0L2070.0 822.0L2141.0 882.0L2173.0 851.0Z"/><path class="p" pathLength="1" d="M2197.0 822.0L2133.0 767.0L2107.0 745.0L2107.0 757.0L2107.0 780.0L2101.0 789.0L2173.0 851.0L2178.0 847.0L2197.0 822.0Z"/><path class="p" pathLength="1" d="M2098.0 795.0L2101.0 789.0L2107.0 780.0L2107.0 757.0L2107.0 745.0L2107.0 735.0L2107.0 730.0L2107.0 728.0L2038.0 667.0L2035.0 670.0L2033.0 672.0L2032.0 673.0L2031.0 677.0L2031.0 683.0L2034.0 690.0L2044.0 702.0L2049.0 706.0L2063.0 716.0L2071.0 721.0L2077.0 729.0L2082.0 746.0L2087.0 776.0L2091.0 780.0L2092.0 789.0L2098.0 795.0Z"/><path class="p" pathLength="1" d="M2173.0 720.0L2102.0 658.0L2099.0 668.0L2063.0 636.0L2062.0 636.0L2056.0 645.0L2050.0 653.0L2038.0 667.0L2107.0 728.0L2107.0 730.0L2107.0 735.0L2107.0 745.0L2133.0 767.0L2173.0 720.0Z"/><path class="p" pathLength="1" d="M1968.0 909.0L1914.0 883.0L1904.0 909.0L1905.0 909.0L1940.0 919.0L1954.0 923.0L1968.0 909.0Z"/><path class="p" pathLength="1" d="M1914.0 883.0L1850.0 852.0L1848.0 857.0L1845.0 869.0L1844.0 884.0L1845.0 890.0L1848.0 895.0L1854.0 899.0L1873.0 903.0L1904.0 909.0L1914.0 883.0Z"/><path class="p" pathLength="1" d="M1982.0 896.0L1871.0 813.0L1869.0 816.0L1861.0 828.0L1850.0 852.0L1914.0 883.0L1968.0 909.0L1982.0 896.0Z"/><path class="p" pathLength="1" d="M2018.0 862.0L1931.0 776.0L1925.0 778.0L1909.0 784.0L1895.0 790.0L1884.0 799.0L1879.0 802.0L1876.0 807.0L1988.0 891.0L2018.0 862.0Z"/><path class="p" pathLength="1" d="M2066.0 816.0L2065.0 817.0L2057.0 819.0L2051.0 821.0L2046.0 822.0L2039.0 822.0L2029.0 821.0L2019.0 819.0L2010.0 814.0L2004.0 811.0L2000.0 806.0L1997.0 800.0L1992.0 794.0L1981.0 776.0L1969.0 768.0L1958.0 766.0L1953.0 768.0L1945.0 770.0L1935.0 775.0L1931.0 776.0L2018.0 862.0L2066.0 816.0Z"/></svg>
+        </div>
+        <div class="renk"></div>
+        <div class="hedef-kutu"><div class="hedef" id="dalis-hedef"></div></div>
+        <div class="perde"></div>
+        <p class="koordinat" id="dalis-koordinat">37°35′ N · 32°48′ E</p>
+        <div class="durak" id="durak-1"><p class="ust">ÜLKE</p><h2 class="dev">TÜRKİYE</h2></div>
+        <div class="durak" id="durak-2"><p class="ust">İL</p><h2 class="dev">KONYA</h2></div>
+        <div class="durak" id="durak-3"><p class="ust">İLÇE</p><h2 class="dev"><span class="vurgu">ÇUMRA</span></h2></div>
+        <div class="yazi" id="dalis-yazi">
+          <p class="ust">ALANDAN TESPİT</p>
+          <h2 class="dev">ALANI ÇİZ.</h2>
+          <h2 class="dev"><span class="vurgu">PARSELLERİ O BULSUN.</span></h2>
+        </div>
+        <div class="sayac" id="dalis-sayac">
+          <b id="dalis-sayi">0</b>
+          <span>PARSEL · 40 SORGUDA</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 — logo -->
+    <section id="acilis" class="clip" data-start="12" data-duration="4" data-track-index="2">
       <div class="sahne" id="acilis-sahne">
         <div class="zemin"></div>
         <div class="hale" id="acilis-hale"></div>
@@ -187,29 +238,9 @@
       </div>
     </section>
 
-    <!-- 2 — harita: alan ve parseller kendini çizer -->
-    <section id="harita" class="clip" data-start="4" data-duration="6.4" data-track-index="2">
-      <div class="sahne" id="harita-sahne">
-        <div class="plaka" id="harita-plaka">
-          <img src="assets/plaka-2200.webp" alt="">
-          <svg class="parseller" viewBox="0 0 3200 2000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path class="alan" pathLength="1" d="M1331.0 318.0L1849.0 237.0L1968.0 676.0L1849.0 1113.0L1452.0 1272.0L1232.0 874.0L1331.0 318.0Z"/><path class="p" pathLength="1" d="M1405.0 299.0L1351.0 306.0L1328.0 312.0L1334.0 399.0L1338.0 398.0L1416.0 387.0L1410.0 344.0L1405.0 299.0Z"/><path class="p" pathLength="1" d="M1416.0 387.0L1338.0 398.0L1334.0 399.0L1290.0 408.0L1262.0 414.0L1273.0 458.0L1291.0 538.0L1357.0 527.0L1398.0 516.0L1444.0 503.0L1425.0 444.0L1416.0 387.0Z"/><path class="p" pathLength="1" d="M1357.0 527.0L1291.0 538.0L1276.0 542.0L1286.0 654.0L1363.0 676.0L1357.0 527.0Z"/><path class="p" pathLength="1" d="M1398.0 516.0L1357.0 527.0L1363.0 676.0L1438.0 698.0L1398.0 516.0Z"/><path class="p" pathLength="1" d="M1444.0 503.0L1398.0 516.0L1438.0 698.0L1489.0 664.0L1465.0 578.0L1444.0 503.0Z"/><path class="p" pathLength="1" d="M1291.0 705.0L1169.0 730.0L1123.0 740.0L1131.0 783.0L1138.0 824.0L1155.0 822.0L1169.0 866.0L1266.0 845.0L1319.0 838.0L1291.0 705.0Z"/><path class="p" pathLength="1" d="M1371.0 830.0L1319.0 838.0L1266.0 845.0L1169.0 866.0L1181.0 914.0L1386.0 884.0L1371.0 830.0Z"/><path class="p" pathLength="1" d="M1461.0 780.0L1469.0 761.0L1409.0 768.0L1413.0 810.0L1369.0 816.0L1371.0 830.0L1386.0 884.0L1466.0 871.0L1481.0 869.0L1468.0 855.0L1461.0 780.0Z"/><path class="p" pathLength="1" d="M1469.0 761.0L1475.0 748.0L1486.0 721.0L1498.0 709.0L1490.0 668.0L1439.0 703.0L1286.0 659.0L1291.0 705.0L1319.0 838.0L1371.0 830.0L1369.0 816.0L1413.0 810.0L1409.0 768.0L1469.0 761.0Z"/><path class="p" pathLength="1" d="M1634.0 562.0L1628.0 533.0L1556.0 553.0L1515.0 565.0L1474.0 576.0L1494.0 662.0L1613.0 577.0L1634.0 562.0Z"/><path class="p" pathLength="1" d="M1634.0 562.0L1613.0 577.0L1494.0 662.0L1502.0 705.0L1540.0 665.0L1629.0 621.0L1639.0 621.0L1637.0 602.0L1634.0 562.0Z"/><path class="p" pathLength="1" d="M1396.0 918.0L1278.0 938.0L1192.0 961.0L1182.0 919.0L1148.0 927.0L1164.0 1013.0L1259.0 991.0L1405.0 963.0L1396.0 918.0Z"/><path class="p" pathLength="1" d="M1503.0 952.0L1500.0 918.0L1496.0 877.0L1483.0 872.0L1387.0 888.0L1396.0 918.0L1405.0 963.0L1423.0 1056.0L1516.0 1047.0L1503.0 952.0Z"/><path class="p" pathLength="1" d="M1552.0 1042.0L1565.0 1023.0L1615.0 988.0L1672.0 975.0L1697.0 958.0L1659.0 918.0L1579.0 893.0L1544.0 887.0L1522.0 886.0L1496.0 877.0L1500.0 918.0L1503.0 952.0L1516.0 1047.0L1552.0 1042.0Z"/><path class="p" pathLength="1" d="M1366.0 1198.0L1417.0 1181.0L1456.0 1174.0L1491.0 1170.0L1500.0 1169.0L1520.0 1160.0L1525.0 1157.0L1525.0 1142.0L1540.0 1138.0L1539.0 1087.0L1487.0 1093.0L1448.0 1096.0L1392.0 1104.0L1348.0 1111.0L1356.0 1146.0L1362.0 1177.0L1366.0 1198.0Z"/><path class="p" pathLength="1" d="M1379.0 1061.0L1366.0 1015.0L1283.0 1030.0L1217.0 1047.0L1170.0 1059.0L1177.0 1102.0L1183.0 1144.0L1185.0 1166.0L1200.0 1161.0L1236.0 1165.0L1273.0 1175.0L1285.0 1176.0L1305.0 1185.0L1342.0 1193.0L1366.0 1198.0L1362.0 1177.0L1356.0 1146.0L1348.0 1111.0L1392.0 1104.0L1379.0 1061.0Z"/><path class="p" pathLength="1" d="M1532.0 354.0L1487.0 110.0L1382.0 154.0L1387.0 179.0L1393.0 204.0L1404.0 251.0L1411.0 300.0L1415.0 342.0L1421.0 386.0L1425.0 405.0L1526.0 356.0L1532.0 354.0Z"/><path class="p" pathLength="1" d="M1856.0 394.0L1787.0 231.0L1709.0 268.0L1698.0 274.0L1778.0 460.0L1811.0 419.0L1844.0 399.0L1856.0 394.0Z"/><path class="p" pathLength="1" d="M1736.0 488.0L1654.0 295.0L1642.0 300.0L1571.0 335.0L1647.0 513.0L1736.0 488.0Z"/><path class="p" pathLength="1" d="M1601.0 529.0L1526.0 356.0L1425.0 405.0L1427.0 419.0L1436.0 462.0L1473.0 568.0L1601.0 529.0Z"/><path class="p" pathLength="1" d="M1804.0 609.0L1801.0 602.0L1794.0 594.0L1790.0 592.0L1779.0 584.0L1767.0 574.0L1759.0 566.0L1750.0 552.0L1746.0 538.0L1747.0 527.0L1748.0 520.0L1751.0 516.0L1765.0 496.0L1771.0 488.0L1764.0 488.0L1701.0 505.0L1710.0 616.0L1804.0 609.0Z"/><path class="p" pathLength="1" d="M1821.0 677.0L1819.0 662.0L1814.0 643.0L1813.0 636.0L1808.0 618.0L1804.0 609.0L1710.0 616.0L1715.0 669.0L1720.0 677.0L1729.0 687.0L1743.0 697.0L1749.0 700.0L1757.0 702.0L1766.0 703.0L1777.0 703.0L1788.0 700.0L1802.0 696.0L1813.0 689.0L1820.0 683.0L1821.0 677.0Z"/><path class="p" pathLength="1" d="M1968.0 552.0L1840.0 427.0L1828.0 435.0L1825.0 438.0L1817.0 446.0L1813.0 450.0L1818.0 454.0L1943.0 564.0L1968.0 552.0Z"/><path class="p" pathLength="1" d="M1991.0 874.0L1954.0 842.0L1910.0 893.0L1873.0 862.0L1840.0 894.0L1908.0 960.0L1962.0 904.0L1991.0 874.0Z"/><path class="p" pathLength="1" d="M1806.0 1146.0L1634.0 1021.0L1612.0 1030.0L1601.0 1036.0L1589.0 1043.0L1583.0 1047.0L1576.0 1068.0L1575.0 1077.0L1578.0 1082.0L1589.0 1113.0L1591.0 1123.0L1593.0 1131.0L1592.0 1143.0L1725.0 1240.0L1740.0 1220.0L1753.0 1206.0L1758.0 1200.0L1762.0 1195.0L1767.0 1190.0L1771.0 1185.0L1776.0 1180.0L1781.0 1175.0L1784.0 1170.0L1788.0 1165.0L1792.0 1161.0L1795.0 1158.0L1799.0 1155.0L1803.0 1150.0L1805.0 1148.0L1806.0 1146.0Z"/><path class="p" pathLength="1" d="M1908.0 960.0L1840.0 894.0L1750.0 980.0L1746.0 977.0L1713.0 1013.0L1702.0 1002.0L1700.0 1003.0L1679.0 1005.0L1665.0 1007.0L1657.0 1011.0L1637.0 1018.0L1634.0 1021.0L1806.0 1146.0L1809.0 1143.0L1832.0 1119.0L1949.0 1000.0L1908.0 960.0Z"/><path class="p" pathLength="1" d="M1589.0 1185.0L1576.0 1175.0L1574.0 1175.0L1566.0 1181.0L1555.0 1185.0L1543.0 1187.0L1527.0 1187.0L1497.0 1185.0L1487.0 1187.0L1478.0 1190.0L1465.0 1195.0L1451.0 1208.0L1449.0 1210.0L1525.0 1269.0L1589.0 1185.0Z"/><path class="p" pathLength="1" d="M1827.0 895.0L1728.0 810.0L1661.0 875.0L1661.0 875.0L1680.0 883.0L1692.0 893.0L1707.0 910.0L1718.0 923.0L1726.0 935.0L1733.0 944.0L1739.0 952.0L1742.0 958.0L1747.0 969.0L1750.0 969.0L1827.0 895.0Z"/><path class="p" pathLength="1" d="M1912.0 814.0L1813.0 730.0L1767.0 774.0L1866.0 859.0L1912.0 814.0Z"/><path class="p" pathLength="1" d="M1958.0 770.0L1856.0 683.0L1851.0 691.0L1846.0 698.0L1813.0 730.0L1912.0 814.0L1958.0 770.0Z"/><path class="p" pathLength="1" d="M1991.0 729.0L1902.0 652.0L1865.0 620.0L1865.0 637.0L1865.0 671.0L1856.0 683.0L1958.0 770.0L1965.0 765.0L1991.0 729.0Z"/><path class="p" pathLength="1" d="M1851.0 691.0L1856.0 683.0L1865.0 671.0L1865.0 637.0L1865.0 620.0L1864.0 607.0L1864.0 599.0L1864.0 597.0L1767.0 511.0L1762.0 515.0L1760.0 517.0L1759.0 518.0L1757.0 524.0L1757.0 533.0L1761.0 542.0L1775.0 560.0L1782.0 566.0L1802.0 579.0L1813.0 587.0L1822.0 598.0L1829.0 621.0L1837.0 664.0L1842.0 671.0L1843.0 682.0L1851.0 691.0Z"/><path class="p" pathLength="1" d="M1958.0 586.0L1858.0 498.0L1854.0 512.0L1802.0 466.0L1801.0 467.0L1792.0 479.0L1784.0 490.0L1767.0 511.0L1864.0 597.0L1864.0 599.0L1864.0 607.0L1865.0 620.0L1902.0 652.0L1958.0 586.0Z"/><path class="p" pathLength="1" d="M1668.0 852.0L1592.0 815.0L1577.0 852.0L1578.0 853.0L1629.0 866.0L1649.0 872.0L1668.0 852.0Z"/><path class="p" pathLength="1" d="M1592.0 815.0L1501.0 771.0L1498.0 779.0L1494.0 796.0L1493.0 818.0L1494.0 826.0L1498.0 833.0L1507.0 838.0L1533.0 844.0L1577.0 852.0L1592.0 815.0Z"/><path class="p" pathLength="1" d="M1688.0 834.0L1531.0 716.0L1527.0 720.0L1516.0 738.0L1501.0 771.0L1592.0 815.0L1668.0 852.0L1688.0 834.0Z"/><path class="p" pathLength="1" d="M1739.0 785.0L1615.0 664.0L1607.0 667.0L1584.0 676.0L1565.0 685.0L1549.0 696.0L1543.0 701.0L1538.0 708.0L1695.0 827.0L1739.0 785.0Z"/><path class="p" pathLength="1" d="M1807.0 721.0L1806.0 722.0L1793.0 725.0L1786.0 728.0L1778.0 729.0L1769.0 730.0L1754.0 728.0L1740.0 725.0L1727.0 719.0L1719.0 714.0L1713.0 707.0L1709.0 698.0L1702.0 690.0L1686.0 664.0L1670.0 653.0L1653.0 651.0L1646.0 653.0L1635.0 656.0L1621.0 662.0L1615.0 664.0L1739.0 785.0L1807.0 721.0Z"/></svg>
-        </div>
-        <div class="renk"></div>
-        <div class="perde"></div>
-        <div class="yazi" id="harita-yazi">
-          <p class="ust">ALANDAN TESPİT</p>
-          <h2 class="dev">ALANI ÇİZ.</h2>
-          <h2 class="dev"><span class="vurgu">PARSELLERİ O BULSUN.</span></h2>
-        </div>
-        <div class="sayac" id="harita-sayac">
-          <b id="harita-sayi">0</b>
-          <span>PARSEL · 40 SORGUDA</span>
-        </div>
-      </div>
-    </section>
 
     <!-- 3 — sorgula -->
-    <section id="sorgu" class="clip ekran-sahne" data-start="10" data-duration="5.4" data-track-index="3">
+    <section id="sorgu" class="clip ekran-sahne" data-start="15.4" data-duration="5.4" data-track-index="3">
       <div class="sahne" id="sorgu-sahne">
         <div class="zemin"></div>
         <div class="yazi" id="sorgu-yazi">
@@ -227,7 +258,7 @@
     </section>
 
     <!-- 4 — alan özeti -->
-    <section id="ozet" class="clip ekran-sahne" data-start="15" data-duration="6.4" data-track-index="4">
+    <section id="ozet" class="clip ekran-sahne" data-start="20.2" data-duration="6.4" data-track-index="4">
       <div class="sahne" id="ozet-sahne">
         <div class="zemin"></div>
         <div class="sahnelik">
@@ -249,7 +280,7 @@
     </section>
 
     <!-- 5 — dışa aktar -->
-    <section id="disa" class="clip" data-start="21" data-duration="5.4" data-track-index="5">
+    <section id="disa" class="clip" data-start="26" data-duration="5.4" data-track-index="5">
       <div class="sahne" id="disa-sahne">
         <div class="zemin"></div>
         <div class="yazi" id="disa-yazi">
@@ -264,7 +295,7 @@
     </section>
 
     <!-- 6 — neden -->
-    <section id="neden" class="clip" data-start="26" data-duration="4.9" data-track-index="6">
+    <section id="neden" class="clip" data-start="30.8" data-duration="4.6" data-track-index="6">
       <div class="sahne" id="neden-sahne">
         <div class="zemin"></div>
         <div class="satir" id="neden-1"><h2 class="dev">HERKESİN LİMİTİ <span class="vurgu">KENDİNE.</span></h2><p class="metin">Sorgular senin bilgisayarından gider.</p></div>
@@ -274,7 +305,7 @@
     </section>
 
     <!-- 7 — kapanış -->
-    <section id="kapanis" class="clip" data-start="30.5" data-duration="4.5" data-track-index="7">
+    <section id="kapanis" class="clip" data-start="35" data-duration="4.6" data-track-index="7">
       <div class="sahne" id="kapanis-sahne">
         <div class="zemin"></div>
         <div class="merkez">
@@ -288,51 +319,103 @@
         </div>
       </div>
     </section>
+
+    <!-- geçiş katmanları -->
+    <div class="silme" id="silme-a"></div>
+    <div class="silme" id="silme-b"></div>
+    <div class="isik" id="isik-ton"></div>
+    <div class="isik" id="isik-1"></div>
+    <div class="isik" id="isik-2"></div>
   </div>
 
   <script>
     const tl = gsap.timeline({ paused: true });
 
-    // Scene fade helper: inner wrapper fades in at the clip start and out before its end.
-    const sahne = (id, bas, bit, giris = 0.4, cikis = 0.4) => {
-      tl.fromTo(`#${id}`, { opacity: 0 }, { opacity: 1, duration: giris, ease: "power1.out" }, bas);
-      tl.to(`#${id}`, { opacity: 0, duration: cikis, ease: "power2.in" }, bit - cikis);
+    // ---- 1 — uzaydan parsele dalış (0–12.6) -----------------------------------------
+    // Her plaka bir yakınlaştırma seviyesi; hepsi aynı noktaya ortalı. Kamera "Z" seviyesindeyken
+    // z plakası 2^(Z−z) ölçekte görünür. İnce plaka, kaba olanın üstünde yumuşak kenarlı bir
+    // pencere olarak belirir ve büyüyerek bütün kareyi kaplar; kaba plakalar altta kalır.
+    const SEVIYELER = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+    const plakalar = SEVIYELER.map((z) => document.getElementById(`plaka-z${z}`));
+    const parselSvg = document.getElementById("dalis-parseller");
+    const kamera = { Z: 4 };
+    const ciz = () => {
+      const Z = kamera.Z;
+      plakalar.forEach((el, i) => {
+        const z = SEVIYELER[i];
+        const olcek = Math.pow(2, Z - z);
+        const giris = i === 0 ? 1 : Math.min(1, Math.max(0, (Z - (z - 0.75)) / 0.55));
+        const kenar = i === 0 ? 100 : Math.min(100, 35 + Math.max(0, (Z - (z - 0.75)) / 0.75) * 65);
+        el.style.transform = `scale(${olcek})`;
+        el.style.opacity = giris;
+        const maske = kenar >= 100 ? "none" : `radial-gradient(farthest-corner at 50% 50%, #000 ${kenar}%, transparent ${kenar + 22}%)`;
+        el.style.webkitMaskImage = maske;
+        el.style.maskImage = maske;
+        el.style.visibility = giris <= 0 || olcek > 4.5 ? "hidden" : "visible";
+      });
+      parselSvg.style.transform = `scale(${Math.pow(2, Z - 15)})`;
     };
+    ciz();
+    // Durak durak iniş: ülke → il → ilçe, her durakta kısa bir süzülme.
+    [
+      [0.0, 1.2, 4.6, "sine.in"], [1.2, 1.4, 7.0, "sine.inOut"], [2.6, 1.0, 7.35, "none"],
+      [3.6, 1.3, 9.9, "sine.inOut"], [4.9, 1.0, 10.25, "none"],
+      [5.9, 1.3, 13.4, "sine.inOut"], [7.2, 1.1, 15.0, "power2.out"],
+    ].forEach(([bas, sure, hedef, ease]) => tl.to(kamera, { Z: hedef, duration: sure, ease, onUpdate: ciz }, bas));
 
-    // 1 — açılış (0–4.4)
-    tl.fromTo("#acilis-sahne", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 0);
-    tl.to("#acilis-sahne", { opacity: 0, duration: 0.4, ease: "power2.in" }, 4.0);
-    tl.fromTo("#acilis-hale", { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.6, ease: "power2.out" }, 0.1);
-    tl.fromTo("#acilis-isaret", { scale: 0.3, rotation: -90, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 1.0, ease: "back.out(1.6)" }, 0.2);
-    tl.fromTo("#acilis-isaret", { filter: "drop-shadow(0 0 0px rgba(255,214,10,0))" }, { filter: "drop-shadow(0 0 60px rgba(255,214,10,.85))", duration: 0.6, ease: "power2.out", immediateRender: false }, 1.0);
-    tl.to("#acilis-isaret", { filter: "drop-shadow(0 0 0px rgba(255,214,10,0))", duration: 1.0, ease: "power2.in" }, 1.7);
-    tl.fromTo("#acilis-kelime", { clipPath: "inset(0% 50% 0% 50%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 1.2, ease: "power3.inOut" }, 1.1);
-    tl.fromTo("#acilis-alt", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 2.2);
+    tl.fromTo("#dalis-koordinat", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.6, ease: "power2.out" }, 0.3);
+    tl.to("#dalis-koordinat", { opacity: 0, duration: 0.4, ease: "power2.in" }, 8.3);
+    tl.fromTo("#dalis-hedef", { scale: 2.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "power2.out" }, 0.3);
+    tl.to("#dalis-hedef", { scale: 0.86, duration: 0.6, ease: "sine.inOut", yoyo: true, repeat: 7 }, 1.1);
+    tl.to("#dalis-hedef", { scale: 0.4, opacity: 0, duration: 0.5, ease: "power2.in" }, 7.4);
+    const durak = (id, gir, cik) => {
+      tl.fromTo(`${id} > *`, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", stagger: 0.08 }, gir);
+      tl.to(`${id} > *`, { y: -30, opacity: 0, duration: 0.35, ease: "power2.in" }, cik);
+    };
+    durak("#durak-1", 2.3, 3.55);
+    durak("#durak-2", 4.6, 5.85);
+    durak("#durak-3", 7.0, 8.4);
 
-    // 2 — harita (4–10.4)
-    sahne("harita-sahne", 4.0, 10.4);
-    tl.fromTo("#harita-plaka", { scale: 1.32 }, { scale: 1.06, duration: 6.4, ease: "sine.out" }, 4.0);
-    tl.fromTo("#harita .alan", { strokeDasharray: 1, strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut" }, 4.4);
-    tl.fromTo("#harita .p", { strokeDasharray: 1, strokeDashoffset: 1, fillOpacity: 0 },
-      { strokeDashoffset: 0, fillOpacity: 1, duration: 0.8, ease: "power2.out", stagger: { each: 0.045, from: "center" } }, 5.3);
-    tl.fromTo("#harita-yazi > *", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.18 }, 6.0);
-    tl.fromTo("#harita-sayac", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 6.6);
+    tl.fromTo("#dalis .alan", { strokeDasharray: 1, strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.3, ease: "power2.inOut" }, 8.0);
+    tl.fromTo("#dalis .p", { strokeDasharray: 1, strokeDashoffset: 1, fillOpacity: 0 },
+      { strokeDashoffset: 0, fillOpacity: 1, duration: 0.8, ease: "power2.out", stagger: { each: 0.04, from: "center" } }, 8.6);
+    tl.fromTo("#dalis-kamera", { scale: 1 }, { scale: 1.06, duration: 3.7, ease: "none" }, 8.3);
+    tl.fromTo("#dalis-yazi > *", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.18 }, 9.1);
+    tl.fromTo("#dalis-sayac", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 9.6);
     const parselSayaci = { v: 0 };
-    tl.to(parselSayaci, { v: 38, duration: 1.8, ease: "power2.out", onUpdate: () => { document.getElementById("harita-sayi").textContent = Math.round(parselSayaci.v); } }, 6.6);
+    tl.to(parselSayaci, { v: 38, duration: 1.8, ease: "power2.out", onUpdate: () => { document.getElementById("dalis-sayi").textContent = Math.round(parselSayaci.v); } }, 9.6);
 
-    // 3 — sorgu (10–15.4)
-    sahne("sorgu-sahne", 10.0, 15.4);
-    tl.fromTo("#sorgu-cerceve", { rotationY: -24, rotationX: 6, x: 160, opacity: 0 }, { rotationY: -8, rotationX: 2, x: 0, opacity: 1, duration: 1.2, ease: "power3.out" }, 10.1);
-    tl.to("#sorgu-cerceve", { rotationY: -3, duration: 4.0, ease: "none" }, 11.3);
-    tl.fromTo("#sorgu-kesit", { y: 80, scale: 0.85, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.8, ease: "back.out(1.4)" }, 11.2);
-    tl.fromTo("#sorgu-yazi > *", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.16 }, 10.5);
+    // ---- Geçiş 1 (12.0): kameranın içinden geçiş → logo -----------------------------
+    tl.to("#dalis-sahne", { scale: 2.2, opacity: 0, filter: "blur(10px)", duration: 0.55, ease: "power3.in" }, 12.0);
+    tl.fromTo("#acilis-sahne", { scale: 1.3, opacity: 0, filter: "blur(14px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.65, ease: "power3.out" }, 12.2);
 
-    // 4 — alan özeti (15–21.4)
-    sahne("ozet-sahne", 15.0, 21.4);
-    tl.fromTo("#ozet-cerceve", { rotationY: 24, rotationX: 6, x: -160, opacity: 0 }, { rotationY: 8, rotationX: 2, x: 0, opacity: 1, duration: 1.2, ease: "power3.out" }, 15.1);
-    tl.to("#ozet-cerceve", { rotationY: 3, duration: 5.0, ease: "none" }, 16.3);
-    tl.fromTo("#ozet-kesit", { y: -60, scale: 0.85, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.8, ease: "back.out(1.4)" }, 16.0);
-    tl.fromTo("#ozet-yazi > *", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.16 }, 15.5);
+    // ---- 2 — logo (12.0–16.0) ---------------------------------------------------------
+    tl.fromTo("#acilis-hale", { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.6, ease: "power2.out" }, 12.3);
+    tl.fromTo("#acilis-isaret", { scale: 0.3, rotation: -90, opacity: 0 }, { scale: 1, rotation: 0, opacity: 1, duration: 1.0, ease: "back.out(1.6)" }, 12.4);
+    tl.fromTo("#acilis-isaret", { filter: "drop-shadow(0 0 0px rgba(255,214,10,0))" }, { filter: "drop-shadow(0 0 60px rgba(255,214,10,.85))", duration: 0.6, ease: "power2.out", immediateRender: false }, 13.2);
+    tl.to("#acilis-isaret", { filter: "drop-shadow(0 0 0px rgba(255,214,10,0))", duration: 1.0, ease: "power2.in" }, 13.9);
+    tl.fromTo("#acilis-kelime", { clipPath: "inset(0% 50% 0% 50%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 1.2, ease: "power3.inOut" }, 13.3);
+    tl.fromTo("#acilis-alt", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 14.3);
+
+    // ---- Geçiş 2 (15.4): yöne doğru bulanık kayış → Sorgula -----------------------------
+    tl.to("#acilis-sahne", { filter: "blur(14px)", skewX: -6, x: -220, opacity: 0, duration: 0.45, ease: "power3.in" }, 15.4);
+    tl.fromTo("#sorgu-sahne", { filter: "blur(14px)", skewX: 6, x: 220, opacity: 0 }, { filter: "blur(0px)", skewX: 0, x: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 15.55);
+
+    // ---- 3 — sorgula (15.4–20.8) ------------------------------------------------------
+    tl.fromTo("#sorgu-cerceve", { rotationY: -24, rotationX: 6, x: 160, opacity: 0 }, { rotationY: -8, rotationX: 2, x: 0, opacity: 1, duration: 1.2, ease: "power3.out" }, 15.6);
+    tl.to("#sorgu-cerceve", { rotationY: -3, duration: 4.0, ease: "none" }, 16.8);
+    tl.fromTo("#sorgu-kesit", { y: 80, scale: 0.85, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.8, ease: "back.out(1.4)" }, 16.7);
+    tl.fromTo("#sorgu-yazi > *", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.16 }, 16.0);
+
+    // ---- Geçiş 3 (20.2): yatay itme → Alan özeti ------------------------------------------
+    tl.to("#sorgu-sahne", { x: -1920, duration: 0.6, ease: "power3.inOut" }, 20.2);
+    tl.fromTo("#ozet-sahne", { x: 1920 }, { x: 0, duration: 0.6, ease: "power3.inOut" }, 20.2);
+
+    // ---- 4 — alan özeti (20.2–26.6) ---------------------------------------------------
+    tl.fromTo("#ozet-cerceve", { rotationY: 24, rotationX: 6, x: -160, opacity: 0 }, { rotationY: 8, rotationX: 2, x: 0, opacity: 1, duration: 1.2, ease: "power3.out" }, 20.5);
+    tl.to("#ozet-cerceve", { rotationY: 3, duration: 4.9, ease: "none" }, 21.7);
+    tl.fromTo("#ozet-kesit", { y: -60, scale: 0.85, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.8, ease: "back.out(1.4)" }, 21.4);
+    tl.fromTo("#ozet-yazi > *", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.16 }, 20.9);
     const ozet = { alan: 0, parsel: 0, oran: 0 };
     tl.to(ozet, {
       alan: 998645, parsel: 38, oran: 73.2, duration: 2.2, ease: "power2.out",
@@ -341,30 +424,47 @@
         document.getElementById("ozet-parsel").textContent = Math.round(ozet.parsel);
         document.getElementById("ozet-oran").textContent = "%" + ozet.oran.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       },
-    }, 16.4);
+    }, 21.8);
 
-    // 5 — dışa aktar (21–26.4)
-    sahne("disa-sahne", 21.0, 26.4);
-    tl.fromTo("#disa-yazi .ust, #disa-yazi .dev", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.16 }, 21.3);
-    tl.fromTo("#disa-cipler li", { y: 30, scale: 0.8, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.8)", stagger: 0.14 }, 22.2);
-    tl.fromTo("#disa-kesit", { x: 120, rotation: 4, opacity: 0 }, { x: 0, rotation: 0, opacity: 1, duration: 1.0, ease: "power3.out" }, 21.6);
-    tl.to("#disa-kesit", { y: -20, duration: 3.6, ease: "none" }, 22.6);
+    // ---- Geçiş 4 (26.0): marka renklerinde blok silme → Dışa aktar ----------------------
+    tl.fromTo("#silme-a", { x: -1920 }, { x: 0, duration: 0.3, ease: "power3.inOut" }, 26.0);
+    tl.fromTo("#silme-b", { x: -1920 }, { x: 0, duration: 0.3, ease: "power3.inOut" }, 26.07);
+    tl.fromTo("#disa-sahne", { opacity: 0 }, { opacity: 1, duration: 0.01 }, 26.3);
+    tl.to("#silme-a", { x: 1920, duration: 0.32, ease: "power3.inOut" }, 26.36);
+    tl.to("#silme-b", { x: 1920, duration: 0.32, ease: "power3.inOut" }, 26.43);
 
-    // 6 — neden (26–30.9): three statements, one after another
-    sahne("neden-sahne", 26.0, 30.9, 0.3, 0.4);
-    [["#neden-1", 26.1], ["#neden-2", 27.6], ["#neden-3", 29.1]].forEach(([id, t], i, dizi) => {
+    // ---- 5 — dışa aktar (26.0–31.4) ---------------------------------------------------
+    tl.fromTo("#disa-yazi .ust, #disa-yazi .dev", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.16 }, 26.5);
+    tl.fromTo("#disa-cipler li", { y: 30, scale: 0.8, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.8)", stagger: 0.14 }, 27.3);
+    tl.fromTo("#disa-kesit", { x: 120, rotation: 4, opacity: 0 }, { x: 0, rotation: 0, opacity: 1, duration: 1.0, ease: "power3.out" }, 26.7);
+    tl.to("#disa-kesit", { y: -20, duration: 3.6, ease: "none" }, 27.7);
+
+    // ---- Geçiş 5 (30.8): ortadan açılan daire → Neden ------------------------------------
+    tl.fromTo("#neden-sahne", { clipPath: "circle(0% at 50% 50%)" }, { clipPath: "circle(75% at 50% 50%)", duration: 0.6, ease: "power2.out" }, 30.8);
+
+    // ---- 6 — neden (30.8–35.4): üç cümle art arda -----------------------------------------
+    [["#neden-1", 31.0], ["#neden-2", 32.4], ["#neden-3", 33.8]].forEach(([id, t], i, dizi) => {
       tl.fromTo(`${id} .dev`, { x: -80, opacity: 0 }, { x: 0, opacity: 1, duration: 0.55, ease: "power3.out" }, t);
       tl.fromTo(`${id} .metin`, { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, t + 0.15);
       if (i < dizi.length - 1) tl.to(`${id} > *`, { x: 80, opacity: 0, duration: 0.35, ease: "power2.in" }, t + 1.15);
     });
 
-    // 7 — kapanış (30.5–35)
-    tl.fromTo("#kapanis-sahne", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power1.out" }, 30.5);
-    tl.fromTo("#kapanis-kilit", { y: 40, scale: 0.92, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.9, ease: "power3.out" }, 30.7);
-    tl.fromTo("#kapanis-kelime", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.9, ease: "power3.inOut" }, 30.9);
-    tl.fromTo("#kapanis-cagri", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 31.6);
-    tl.fromTo("#kapanis-adres", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 31.9);
-    tl.fromTo("#kapanis-not", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" }, 32.3);
+    // ---- Geçiş 6 (35.0): sıcak ışık sızması → Kapanış ------------------------------------
+    tl.to("#isik-ton", { opacity: 0.35, duration: 0.3, ease: "power1.in" }, 35.0);
+    tl.to("#isik-1", { opacity: 0.9, x: 300, duration: 0.5, ease: "sine.inOut" }, 35.05);
+    tl.to("#isik-2", { opacity: 0.8, x: 200, duration: 0.6, ease: "sine.inOut" }, 35.1);
+    tl.to("#isik-ton", { opacity: 0.6, duration: 0.15, ease: "power2.in" }, 35.35);
+    tl.fromTo("#kapanis-sahne", { opacity: 0 }, { opacity: 1, duration: 0.01 }, 35.45);
+    tl.to("#isik-ton", { opacity: 0, duration: 0.45, ease: "power2.out" }, 35.5);
+    tl.to("#isik-1", { opacity: 0, x: 600, duration: 0.4, ease: "power1.out" }, 35.55);
+    tl.to("#isik-2", { opacity: 0, x: 500, duration: 0.45, ease: "power1.out" }, 35.7);
+
+    // ---- 7 — kapanış (35.0–39.6) -------------------------------------------------------
+    tl.fromTo("#kapanis-kilit", { y: 40, scale: 0.92, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.9, ease: "power3.out" }, 35.6);
+    tl.fromTo("#kapanis-kelime", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.9, ease: "power3.inOut" }, 35.8);
+    tl.fromTo("#kapanis-cagri", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 36.4);
+    tl.fromTo("#kapanis-adres", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" }, 36.7);
+    tl.fromTo("#kapanis-not", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.out" }, 37.0);
 
     window.__timelines["tanitim"] = tl;
   </script>
