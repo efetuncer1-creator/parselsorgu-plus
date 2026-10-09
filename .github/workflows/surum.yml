@@ -31,6 +31,14 @@ jobs:
       - name: Paket (PyInstaller)
         run: pyinstaller packaging/ParselSorgu.spec --noconfirm
 
+      - name: Pakette test ve veri klasörü olmadığını doğrula
+        shell: pwsh
+        run: |
+          $yasak = Get-ChildItem dist/ParselSorguPlus -Recurse -Directory |
+            Where-Object { $_.Name -in @("tests", "test-kml", "ornekler", "data") -or $_.Name -like "_gecici*" }
+          if ($yasak) { $yasak | ForEach-Object { $_.FullName }; throw "Pakette test/veri klasörü var, kurulum dosyası üretilmedi." }
+          "Pakette test/veri klasörü yok."
+
       - name: Kurulum dosyası (Inno Setup)
         shell: pwsh
         run: |

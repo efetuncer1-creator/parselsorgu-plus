@@ -1,0 +1,3 @@
+# GitHub'ın sürüm sayfasındaki "Source code" arşivlerine testler ve deneme verisi girmez
+tests/ export-ignore
+test-kml/ export-ignore
