@@ -15,15 +15,22 @@ TKGM parsel sorgulama ve dışa aktarma aracı. [parselsorgu.tkgm.gov.tr](https:
 - **Alandan parsel tespiti:** OSB/plan sınırını (KML/KMZ, çok katmanlı Netcad projesi dahil) yükle ya da haritada pinle çiz; içindeki/kesişen parselleri seç, kaplanmamış boşlukları gör ve sorgu bütçesiyle TKGM'den tara; sınırla birlikte KML'e, alan içi m²'leriyle Excel'e aktar.
 - Excel çıktısında köşe koordinatları **ITRF96 3°** (TUREF, EPSG:5253–5259) ya da **ED50 3°** (EPSG:2319–2325) olarak verilir. Y = sağa, X = yukarı.
 
-## Kurulum
+## İndir (Windows 10/11)
+
+**[Son sürümü indir](https://github.com/efetuncer1-creator/parselsorgu-plus/releases/latest)** → `ParselSorguPlus-Kurulum-x.y.z.exe`
+
+- Kurulum yönetici izni istemez. Başlat menüsüne (istersen masaüstüne) **Parsel Sorgu +** kısayolu ekler.
+- Uygulama kendi penceresinde açılır (Chrome; yoksa her Windows'ta hazır gelen Edge). Pencereyi kapatınca uygulama da kapanır.
+- Sorgular senin bilgisayarından gider: TKGM'nin günlük sorgu limiti her kullanıcının kendisinindir. Verilerin (önbellek) `%LOCALAPPDATA%\ParselSorguPlus` klasöründe durur.
+- Kurulum dosyası imzasız olduğu için Windows ilk açılışta "Windows bilgisayarınızı korudu" diyebilir: **Ek bilgi → Yine de çalıştır**.
+
+## Kaynaktan çalıştırma
 
 Python 3.11 veya üstü gerekir.
 
 ```bash
 pip install -r requirements.txt
 ```
-
-## Çalıştırma
 
 Windows'ta `baslat.bat`'a çift tıkla, ya da:
 
@@ -59,6 +66,8 @@ python -m unittest -v
 | `parselapp/referans.py` | Alan (referans) dosyalarını okuma, katmanlar, sınır katmanı önerisi |
 | `parselapp/analiz.py` | Alan özeti, boşluklar, boşluk tarama |
 | `parselapp/server.py` | Yerel sunucu ve JSON uç noktaları |
+| `parselapp/masaustu.py` | Masaüstü başlatıcısı: sunucu + uygulama penceresi |
+| `packaging/` | Kurulum paketi (PyInstaller + Inno Setup); `v*` etiketiyle GitHub Actions üretir |
 | `web/` | Harita ekranı (Leaflet) |
 | `data/` | Parsel veritabanı (depoya girmez) |
 | `test-kml/` | Elle deneme için gerçek KML'ler; İçe aktar ile yüklenir (depoya girmez) |
