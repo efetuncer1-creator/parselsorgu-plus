@@ -14,3 +14,7 @@ __pycache__/
 # Kurulum paketi derleme çıktıları
 dist/
 build/
+
+# Video inceleme ve render çıktıları
+video/snapshots/
+video/renders/
