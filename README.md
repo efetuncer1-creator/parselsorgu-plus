@@ -17,6 +17,12 @@ TKGM parsel sorgulama ve dışa aktarma aracı. [parselsorgu.tkgm.gov.tr](https:
 
 **Tanıtım sitesi:** https://parselsorgu-plus.vercel.app
 
+## Tanıtım videosu
+
+[![Parsel Sorgu + tanıtım videosu](site/assets/tanitim-afis.jpg)](https://parselsorgu-plus.vercel.app/#tanitim)
+
+Görsele tıklayınca sitede oynatılır · [MP4 dosyası](video/parsel-sorgu-tanitim.mp4) (29 sn, 1920×1080) · Kaynağı: [`video/`](video/)
+
 ## İndir (Windows 10/11)
 
 **[Son sürümü indir](https://github.com/efetuncer1-creator/parselsorgu-plus/releases/latest)** → `ParselSorguPlus-Kurulum-x.y.z.exe`
