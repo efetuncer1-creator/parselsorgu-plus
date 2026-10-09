@@ -1,0 +1,232 @@
+/* ==========================================================================
+   efe-rockstardesign — tokens.css
+   Two-tier token system: --rx-g-* (global, raw) → --rx-* (alias, by meaning).
+   Components use alias tokens only. Swap a palette by editing GLOBAL COLOR.
+   Palette: "Parsel" — navy night ramp (the app's blue) + parcel yellow accent.
+   ========================================================================== */
+
+:root {
+  /* ---------- PLATFORM SCALE -------------------------------------------- */
+  --rx-scale: 1;
+  --rx-font-size-multiplier: 1;
+
+  /* ---------- GLOBAL COLOR: night ramp (adaptive, dark default) --------- */
+  --rx-g-color-night-50:  #070b14;
+  --rx-g-color-night-100: #0b111d;
+  --rx-g-color-night-200: #101828;
+  --rx-g-color-night-300: #152033;
+  --rx-g-color-night-400: #1b2840;
+  --rx-g-color-night-500: #22324f;
+  --rx-g-color-night-600: #2a3d5f;
+  --rx-g-color-night-700: #344a72;
+  --rx-g-color-night-800: #48628f;
+  --rx-g-color-night-900: #6680ab;
+
+  /* ---------- GLOBAL COLOR: accent (static) ----------------------------- */
+  --rx-g-color-sun-300: #fff1a6;
+  --rx-g-color-sun-500: #ffd60a;
+  --rx-g-color-sun-700: #ff9f0a;
+  --rx-g-color-accent:  #ffd60a;
+  --rx-g-color-glow-a:  #fff3b8;
+  --rx-g-color-glow-b:  #8ec2ff;
+
+  /* ---------- GLOBAL COLOR: Parsel Sorgu + brand (static) -------------- */
+  --rx-g-color-brand-blue: #0a6cf0;
+  --rx-g-color-brand-blue-light: #3d9bff;
+  --rx-g-color-area: #8ec2ff;
+
+  /* ---------- GLOBAL COLOR: semantic (static) --------------------------- */
+  --rx-g-color-red-300: #ffb3b8;   --rx-g-color-red-600: #f0525f;   --rx-g-color-red-900: #7a1f2a;
+  --rx-g-color-yellow-300: #ffe6a3; --rx-g-color-yellow-600: #f5b83d; --rx-g-color-yellow-900: #6e4b0e;
+  --rx-g-color-green-300: #b5f0c4; --rx-g-color-green-600: #3fbf74; --rx-g-color-green-900: #164a2c;
+  --rx-g-color-blue-300: #b8d4ff;  --rx-g-color-blue-600: #4d8dff;  --rx-g-color-blue-900: #17305e;
+
+  /* ---------- GLOBAL COLOR: neutrals & alpha (static) ------------------- */
+  --rx-g-color-white: #ffffff;
+  --rx-g-color-offwhite: #fdfdfd;
+  --rx-g-color-black: #000000;
+  --rx-g-color-alpha-5:  rgb(255 255 255 / .05);
+  --rx-g-color-alpha-10: rgb(255 255 255 / .10);
+  --rx-g-color-alpha-15: rgb(255 255 255 / .15);
+  --rx-g-color-alpha-20: rgb(255 255 255 / .20);
+  --rx-g-color-alpha-60: rgb(255 255 255 / .60);
+  --rx-g-color-alpha-75: rgb(255 255 255 / .75);
+  --rx-g-color-alpha-90: rgb(255 255 255 / .90);
+  --rx-g-color-shade-35: rgb(0 0 0 / .35);
+  --rx-g-color-shade-60: rgb(0 0 0 / .60);
+
+  /* ---------- GLOBAL SPACING (8px grid × scale) ------------------------- */
+  --rx-g-space-25:   calc(2px   * var(--rx-scale));
+  --rx-g-space-50:   calc(4px   * var(--rx-scale));
+  --rx-g-space-100:  calc(8px   * var(--rx-scale));
+  --rx-g-space-150:  calc(12px  * var(--rx-scale));
+  --rx-g-space-200:  calc(16px  * var(--rx-scale));
+  --rx-g-space-250:  calc(20px  * var(--rx-scale));
+  --rx-g-space-300:  calc(24px  * var(--rx-scale));
+  --rx-g-space-400:  calc(32px  * var(--rx-scale));
+  --rx-g-space-500:  calc(40px  * var(--rx-scale));
+  --rx-g-space-600:  calc(48px  * var(--rx-scale));
+  --rx-g-space-800:  calc(64px  * var(--rx-scale));
+  --rx-g-space-1000: calc(80px  * var(--rx-scale));
+  --rx-g-space-1200: calc(96px  * var(--rx-scale));
+  --rx-g-space-1600: calc(128px * var(--rx-scale));
+  --rx-g-space-2400: calc(192px * var(--rx-scale));
+
+  /* ---------- GLOBAL RADIUS --------------------------------------------- */
+  --rx-g-radius-50: 4px;
+  --rx-g-radius-100: 8px;
+  --rx-g-radius-150: 12px;
+  --rx-g-radius-200: 16px;
+  --rx-g-radius-pill: 1000px;
+  --rx-g-radius-circle: 50%;
+
+  /* ---------- GLOBAL TYPE ----------------------------------------------- */
+  --rx-g-font-display: "Anton", "Bebas Neue", "Oswald", Impact, "Arial Narrow", sans-serif;
+  --rx-g-font-body: "Inter", "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --rx-g-font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  /* fluid display scale: min(Nvw / divisor, max * N/100 / divisor) */
+  --rx-type-divisor: 1;
+  --rx-type-max: 2560px;
+  --rx-vh-unit: 3.5vh;
+
+  /* ======================================================================
+     ALIAS TOKENS — components use only these
+     ====================================================================== */
+
+  /* text */
+  --rx-text-header:   var(--rx-g-color-offwhite);
+  --rx-text-standard: rgb(255 255 255 / .82);
+  --rx-text-muted:    rgb(255 255 255 / .64);
+  --rx-text-disabled: rgb(255 255 255 / .38);
+  --rx-text-on-accent: var(--rx-g-color-night-50);
+  --rx-text-on-image: var(--rx-g-color-white);
+
+  /* backgrounds: layered gradients, each one ramp step lighter */
+  --rx-bg-page: var(--rx-g-color-night-50);
+  --rx-bg-layer-0: linear-gradient(189deg, var(--rx-g-color-night-300) .55%, var(--rx-g-color-night-200) 30.38%, var(--rx-g-color-night-100) 65.19%, var(--rx-g-color-night-50) 100%);
+  --rx-bg-layer-1: linear-gradient(189deg, var(--rx-g-color-night-500) .55%, var(--rx-g-color-night-400) 30.38%, var(--rx-g-color-night-300) 65.19%, var(--rx-g-color-night-200) 100%);
+  --rx-bg-layer-2: linear-gradient(189deg, var(--rx-g-color-night-700) .55%, var(--rx-g-color-night-600) 30.38%, var(--rx-g-color-night-500) 65.19%, var(--rx-g-color-night-400) 100%);
+  --rx-bg-layer-3: linear-gradient(189deg, var(--rx-g-color-night-800) .55%, var(--rx-g-color-night-700) 30.38%, var(--rx-g-color-night-600) 65.19%, var(--rx-g-color-night-500) 100%);
+  --rx-bg-component-solid-layer-0: var(--rx-g-color-night-200);
+  --rx-bg-component-solid-layer-1: var(--rx-g-color-night-400);
+  --rx-bg-component-solid-layer-2: var(--rx-g-color-night-600);
+  --rx-bg-component-solid-layer-3: var(--rx-g-color-night-700);
+  --rx-bg-component-alpha-layer-0: var(--rx-g-color-alpha-5);
+  --rx-bg-component-alpha-layer-1: var(--rx-g-color-alpha-10);
+  --rx-bg-component-alpha-layer-2: var(--rx-g-color-alpha-15);
+  --rx-bg-component-alpha-layer-3: var(--rx-g-color-alpha-20);
+  --rx-bg-overlay: rgb(5 9 18 / .72);
+  --rx-bg-scrim-bottom: linear-gradient(to top, rgb(7 11 20 / .95) 0%, rgb(7 11 20 / .55) 30%, transparent 62%);
+  --rx-bg-scrim-top: linear-gradient(to bottom, rgb(7 11 20 / .7) 0%, transparent 100%);
+
+  /* accent */
+  --rx-accent: var(--rx-g-color-accent);
+  --rx-accent-gradient: radial-gradient(62.79% 100% at 50% 0%, var(--rx-g-color-sun-300) 0%, var(--rx-g-color-sun-500) 50%, var(--rx-g-color-sun-700) 100%);
+  --rx-accent-gradient-linear: linear-gradient(90deg, var(--rx-g-color-sun-300), var(--rx-g-color-sun-500) 50%, var(--rx-g-color-sun-700));
+  --rx-glow-a: var(--rx-g-color-glow-a);
+  --rx-glow-b: var(--rx-g-color-glow-b);
+  --rx-brand: var(--rx-g-color-brand-blue);
+  --rx-brand-text: var(--rx-g-color-brand-blue-light);
+  --rx-map-parcel: var(--rx-g-color-sun-500);
+  --rx-map-parcel-fill: rgb(255 214 10 / .1);
+  --rx-map-area: var(--rx-g-color-area);
+  --rx-bg-glow-parcel: radial-gradient(60% 50% at 70% 50%, rgb(255 214 10 / .07), transparent 70%);
+  --rx-text-shadow-on-image: 0 1px 8px var(--rx-g-color-shade-60);
+  --rx-bg-tint-map: radial-gradient(70% 60% at 50% 46%, rgb(7 11 20 / .58) 0%, rgb(7 11 20 / .25) 55%, rgb(7 11 20 / .55) 100%);
+
+  /* borders */
+  --rx-border-decorative: var(--rx-g-color-alpha-15);
+  --rx-border-decorative-lowest-contrast: var(--rx-g-color-alpha-5);
+  --rx-border-control: var(--rx-g-color-alpha-20);
+  --rx-border-focus: var(--rx-g-color-sun-300);
+  --rx-border-width: 1px;
+  --rx-focus-ring: 0 0 0 2px var(--rx-bg-page), 0 0 0 4px var(--rx-border-focus);
+
+  /* semantic */
+  --rx-danger: var(--rx-g-color-red-600);   --rx-danger-highest-contrast: var(--rx-g-color-red-300);   --rx-danger-lowest-contrast: var(--rx-g-color-red-900);
+  --rx-warning: var(--rx-g-color-yellow-600); --rx-warning-highest-contrast: var(--rx-g-color-yellow-300); --rx-warning-lowest-contrast: var(--rx-g-color-yellow-900);
+  --rx-success: var(--rx-g-color-green-600); --rx-success-highest-contrast: var(--rx-g-color-green-300); --rx-success-lowest-contrast: var(--rx-g-color-green-900);
+  --rx-info: var(--rx-g-color-blue-600);    --rx-info-highest-contrast: var(--rx-g-color-blue-300);    --rx-info-lowest-contrast: var(--rx-g-color-blue-900);
+
+  /* spacing & gaps */
+  --rx-space-25: var(--rx-g-space-25);   --rx-space-50: var(--rx-g-space-50);   --rx-space-100: var(--rx-g-space-100);
+  --rx-space-150: var(--rx-g-space-150); --rx-space-200: var(--rx-g-space-200); --rx-space-250: var(--rx-g-space-250);
+  --rx-space-300: var(--rx-g-space-300); --rx-space-400: var(--rx-g-space-400); --rx-space-500: var(--rx-g-space-500);
+  --rx-space-600: var(--rx-g-space-600); --rx-space-800: var(--rx-g-space-800); --rx-space-1000: var(--rx-g-space-1000);
+  --rx-space-1200: var(--rx-g-space-1200); --rx-space-1600: var(--rx-g-space-1600); --rx-space-2400: var(--rx-g-space-2400);
+  --rx-gap-50: var(--rx-g-space-50); --rx-gap-100: var(--rx-g-space-100); --rx-gap-150: var(--rx-g-space-150);
+  --rx-gap-200: var(--rx-g-space-200); --rx-gap-300: var(--rx-g-space-300); --rx-gap-500: var(--rx-g-space-500);
+  --rx-gutter: var(--rx-g-space-200);
+  --rx-content-max: calc(1440px * var(--rx-scale));
+
+  /* radius */
+  --rx-radius-sm: var(--rx-g-radius-50);
+  --rx-radius-md: var(--rx-g-radius-100);
+  --rx-radius-lg: var(--rx-g-radius-150);
+  --rx-radius-xl: var(--rx-g-radius-200);
+  --rx-radius-pill: var(--rx-g-radius-pill);
+  --rx-radius-circle: var(--rx-g-radius-circle);
+
+  /* elevation & glass */
+  --rx-shadow-sm: 0 4px 12px -4px rgb(3 7 16 / .5);
+  --rx-shadow-md: 0 12px 28px -8px rgb(3 7 16 / .55);
+  --rx-shadow-lg: 0 24px 48px -12px rgb(3 7 16 / .6);
+  --rx-shadow-xl: 0 40px 90px -20px rgb(3 7 16 / .8);
+  --rx-glass-blur-sm: blur(6.25px);
+  --rx-glass-blur-md: blur(13px);
+  --rx-glass-blur-lg: blur(25px);
+
+  /* typography */
+  --rx-font-display: var(--rx-g-font-display);
+  --rx-font-body: var(--rx-g-font-body);
+  --rx-font-mono: var(--rx-g-font-mono);
+  --rx-font-weight-regular: 400;
+  --rx-font-weight-medium: 500;
+  --rx-font-weight-bold: 700;
+  --rx-font-weight-heavy: 900;
+  --rx-lh-090: .9; --rx-lh-100: 1; --rx-lh-110: 1.1; --rx-lh-130: 1.3; --rx-lh-150: 1.5;
+  --rx-ls-neg-150: -.015em; --rx-ls-neg-50: -.005em; --rx-ls-0: 0; --rx-ls-25: .025em; --rx-ls-100: .1em;
+  --rx-font-size-body-xs: calc(12px * var(--rx-font-size-multiplier) * var(--rx-scale));
+  --rx-font-size-body-sm: calc(14px * var(--rx-font-size-multiplier) * var(--rx-scale));
+  --rx-font-size-body-md: calc(16px * var(--rx-font-size-multiplier) * var(--rx-scale));
+  --rx-font-size-body-lg: calc(18px * var(--rx-font-size-multiplier) * var(--rx-scale));
+  --rx-font-size-body-xl: calc(20px * var(--rx-font-size-multiplier) * var(--rx-scale));
+
+  --rx-fs-4:   min(calc(4vw   / var(--rx-type-divisor)), calc(var(--rx-type-max) * .04  / var(--rx-type-divisor)));
+  --rx-fs-4-5: min(calc(4.5vw / var(--rx-type-divisor)), calc(var(--rx-type-max) * .045 / var(--rx-type-divisor)));
+  --rx-fs-5:   min(calc(5vw   / var(--rx-type-divisor)), calc(var(--rx-type-max) * .05  / var(--rx-type-divisor)));
+  --rx-fs-6:   min(calc(6vw   / var(--rx-type-divisor)), calc(var(--rx-type-max) * .06  / var(--rx-type-divisor)));
+  --rx-fs-7:   min(calc(7vw   / var(--rx-type-divisor)), calc(var(--rx-type-max) * .07  / var(--rx-type-divisor)));
+  --rx-fs-8:   min(calc(8vw   / var(--rx-type-divisor)), calc(var(--rx-type-max) * .08  / var(--rx-type-divisor)));
+  --rx-fs-10:  min(calc(10vw  / var(--rx-type-divisor)), calc(var(--rx-type-max) * .10  / var(--rx-type-divisor)));
+  --rx-fs-12:  min(calc(12vw  / var(--rx-type-divisor)), calc(var(--rx-type-max) * .12  / var(--rx-type-divisor)));
+  --rx-fs-14:  min(calc(14vw  / var(--rx-type-divisor)), calc(var(--rx-type-max) * .14  / var(--rx-type-divisor)));
+  --rx-fs-16:  min(calc(16vw  / var(--rx-type-divisor)), calc(var(--rx-type-max) * .16  / var(--rx-type-divisor)));
+  --rx-fs-20:  min(calc(20vw  / var(--rx-type-divisor)), calc(var(--rx-type-max) * .20  / var(--rx-type-divisor)));
+
+  /* motion */
+  --rx-ease-in-out: cubic-bezier(.455, .03, .515, .955);
+  --rx-ease-out: cubic-bezier(.215, .61, .355, 1);
+  --rx-ease-in: cubic-bezier(.55, .085, .68, .53);
+  --rx-dur-fast: .2s;
+  --rx-dur-base: .35s;
+  --rx-dur-slow: 1s;
+
+  /* z-index */
+  --rx-z-base: 0; --rx-z-content: 10; --rx-z-nav: 100; --rx-z-overlay: 1000;
+}
+
+/* ---------- breakpoints: scale ratio + type divisor ---------------------- */
+@media (max-width: 767.98px) and (orientation: landscape) { :root { --rx-type-divisor: 2; --rx-vh-unit: 1.8vh; } }
+@media (min-width: 768px)  { :root { --rx-type-divisor: 3; --rx-gutter: var(--rx-g-space-300); --rx-vh-unit: 3vh; } }
+@media (min-width: 1024px) { :root { --rx-scale: 1.125; --rx-type-divisor: 3.5; } }
+@media (min-width: 1440px) { :root { --rx-type-divisor: 4; } }
+@media (min-width: 1920px) { :root { --rx-scale: 1.25; } }
+@media (min-width: 2560px) { :root { --rx-scale: 1.5; } }
+@media (min-aspect-ratio: 2.25) and (min-width: 768px) { :root { --rx-type-divisor: 4.5; } }
+
+/* ---------- reduced motion ---------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :root { --rx-dur-fast: 0s; --rx-dur-base: 0s; --rx-dur-slow: 0s; }
+}

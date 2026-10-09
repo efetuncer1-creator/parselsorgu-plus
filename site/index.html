@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Parsel Sorgu + — TKGM parsel sorgu, KML ve Excel</title>
+  <meta name="description" content="TKGM parsellerini sorgula, alanı çiz, içindeki parselleri bul; KML ve Excel'e (ITRF96 / ED50 3°) aktar. Windows için ücretsiz ve açık kaynak.">
+  <meta name="theme-color" content="#070b14">
+  <link rel="icon" type="image/svg+xml" href="assets/isaret.svg">
+  <link rel="apple-touch-icon" href="assets/ikon-192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Parsel Sorgu +">
+  <meta property="og:description" content="Ada/parsel sorgula, alanı çiz, içindeki parselleri bul; KML ve Excel'e aktar. Windows için ücretsiz.">
+  <meta property="og:image" content="assets/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/plaka-2200.webp" imagesrcset="assets/plaka-1440.webp 1440w, assets/plaka-2200.webp 2200w, assets/plaka-3200.webp 3200w" imagesizes="100vw" media="(min-width: 768px), (orientation: landscape)">
+  <link rel="preload" as="image" href="assets/plaka-mobil-1080.webp" media="(max-width: 767.98px) and (orientation: portrait)">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="rx-skip" href="#main">İçeriğe geç</a>
+
+  <header class="rx-nav" data-nav>
+    <a class="rx-nav__brand" href="#" aria-label="Parsel Sorgu + ana sayfa">
+      <svg class="rx-mark" viewBox="0 0 216 216" aria-hidden="true"><rect width="216" height="216" rx="52" class="rx-mark__bg"/><g class="rx-mark__plus"><rect x="92" y="40" width="32" height="136"/><rect x="40" y="92" width="136" height="32"/></g><rect x="92" y="92" width="32" height="32" class="rx-mark__dot"/></svg>
+      <span>Parsel Sorgu</span>
+    </a>
+    <nav aria-label="Ana menü">
+      <ul class="rx-nav__links">
+        <li><a href="#ozellikler">Özellikler</a></li>
+        <li><a href="#neden">Nasıl çalışır</a></li>
+        <li><a href="#sss">SSS</a></li>
+      </ul>
+    </nav>
+    <a class="rx-btn rx-btn--accent rx-btn--sm" href="#indir">İndir</a>
+  </header>
+
+  <main id="main">
+    <!-- HERO: the Çumra plate, parcel outlines flying in from depth, then the brand lands -->
+    <section class="rx-hero" aria-labelledby="hero-baslik">
+      <div class="rx-hero-stage" data-hero>
+        <picture class="rx-hero-layer rx-hero-plate" data-z="0" data-plate>
+          <source media="(max-width: 767.98px) and (orientation: portrait)" srcset="assets/plaka-mobil-1080.webp 1080w, assets/plaka-mobil-1800.webp 1800w" sizes="100vw">
+          <img src="assets/plaka-2200.webp" srcset="assets/plaka-1440.webp 1440w, assets/plaka-2200.webp 2200w, assets/plaka-3200.webp 3200w" sizes="100vw" alt="" fetchpriority="high">
+        </picture>
+        <div class="rx-hero-layer rx-hero-tint" data-z="0" aria-hidden="true"></div>
+        <div class="rx-hero-layer rx-hero-parcels" data-z="-5200" data-reveal-beat="3" aria-hidden="true">
+          <svg class="rx-parcels rx-parcels--genis" viewBox="0 0 3200 2000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path class="alan" pathLength="1" d="M1331.0 318.0L1849.0 237.0L1968.0 676.0L1849.0 1113.0L1452.0 1272.0L1232.0 874.0L1331.0 318.0Z"/><path class="p" pathLength="1" d="M1405.0 299.0L1351.0 306.0L1328.0 312.0L1334.0 399.0L1338.0 398.0L1416.0 387.0L1410.0 344.0L1405.0 299.0Z"/><path class="p" pathLength="1" d="M1416.0 387.0L1338.0 398.0L1334.0 399.0L1290.0 408.0L1262.0 414.0L1273.0 458.0L1291.0 538.0L1357.0 527.0L1398.0 516.0L1444.0 503.0L1425.0 444.0L1416.0 387.0Z"/><path class="p" pathLength="1" d="M1357.0 527.0L1291.0 538.0L1276.0 542.0L1286.0 654.0L1363.0 676.0L1357.0 527.0Z"/><path class="p" pathLength="1" d="M1398.0 516.0L1357.0 527.0L1363.0 676.0L1438.0 698.0L1398.0 516.0Z"/><path class="p" pathLength="1" d="M1444.0 503.0L1398.0 516.0L1438.0 698.0L1489.0 664.0L1465.0 578.0L1444.0 503.0Z"/><path class="p" pathLength="1" d="M1291.0 705.0L1169.0 730.0L1123.0 740.0L1131.0 783.0L1138.0 824.0L1155.0 822.0L1169.0 866.0L1266.0 845.0L1319.0 838.0L1291.0 705.0Z"/><path class="p" pathLength="1" d="M1371.0 830.0L1319.0 838.0L1266.0 845.0L1169.0 866.0L1181.0 914.0L1386.0 884.0L1371.0 830.0Z"/><path class="p" pathLength="1" d="M1461.0 780.0L1469.0 761.0L1409.0 768.0L1413.0 810.0L1369.0 816.0L1371.0 830.0L1386.0 884.0L1466.0 871.0L1481.0 869.0L1468.0 855.0L1461.0 780.0Z"/><path class="p" pathLength="1" d="M1469.0 761.0L1475.0 748.0L1486.0 721.0L1498.0 709.0L1490.0 668.0L1439.0 703.0L1286.0 659.0L1291.0 705.0L1319.0 838.0L1371.0 830.0L1369.0 816.0L1413.0 810.0L1409.0 768.0L1469.0 761.0Z"/><path class="p" pathLength="1" d="M1634.0 562.0L1628.0 533.0L1556.0 553.0L1515.0 565.0L1474.0 576.0L1494.0 662.0L1613.0 577.0L1634.0 562.0Z"/><path class="p" pathLength="1" d="M1634.0 562.0L1613.0 577.0L1494.0 662.0L1502.0 705.0L1540.0 665.0L1629.0 621.0L1639.0 621.0L1637.0 602.0L1634.0 562.0Z"/><path class="p" pathLength="1" d="M1396.0 918.0L1278.0 938.0L1192.0 961.0L1182.0 919.0L1148.0 927.0L1164.0 1013.0L1259.0 991.0L1405.0 963.0L1396.0 918.0Z"/><path class="p" pathLength="1" d="M1503.0 952.0L1500.0 918.0L1496.0 877.0L1483.0 872.0L1387.0 888.0L1396.0 918.0L1405.0 963.0L1423.0 1056.0L1516.0 1047.0L1503.0 952.0Z"/><path class="p" pathLength="1" d="M1552.0 1042.0L1565.0 1023.0L1615.0 988.0L1672.0 975.0L1697.0 958.0L1659.0 918.0L1579.0 893.0L1544.0 887.0L1522.0 886.0L1496.0 877.0L1500.0 918.0L1503.0 952.0L1516.0 1047.0L1552.0 1042.0Z"/><path class="p" pathLength="1" d="M1366.0 1198.0L1417.0 1181.0L1456.0 1174.0L1491.0 1170.0L1500.0 1169.0L1520.0 1160.0L1525.0 1157.0L1525.0 1142.0L1540.0 1138.0L1539.0 1087.0L1487.0 1093.0L1448.0 1096.0L1392.0 1104.0L1348.0 1111.0L1356.0 1146.0L1362.0 1177.0L1366.0 1198.0Z"/><path class="p" pathLength="1" d="M1379.0 1061.0L1366.0 1015.0L1283.0 1030.0L1217.0 1047.0L1170.0 1059.0L1177.0 1102.0L1183.0 1144.0L1185.0 1166.0L1200.0 1161.0L1236.0 1165.0L1273.0 1175.0L1285.0 1176.0L1305.0 1185.0L1342.0 1193.0L1366.0 1198.0L1362.0 1177.0L1356.0 1146.0L1348.0 1111.0L1392.0 1104.0L1379.0 1061.0Z"/><path class="p" pathLength="1" d="M1532.0 354.0L1487.0 110.0L1382.0 154.0L1387.0 179.0L1393.0 204.0L1404.0 251.0L1411.0 300.0L1415.0 342.0L1421.0 386.0L1425.0 405.0L1526.0 356.0L1532.0 354.0Z"/><path class="p" pathLength="1" d="M1856.0 394.0L1787.0 231.0L1709.0 268.0L1698.0 274.0L1778.0 460.0L1811.0 419.0L1844.0 399.0L1856.0 394.0Z"/><path class="p" pathLength="1" d="M1736.0 488.0L1654.0 295.0L1642.0 300.0L1571.0 335.0L1647.0 513.0L1736.0 488.0Z"/><path class="p" pathLength="1" d="M1601.0 529.0L1526.0 356.0L1425.0 405.0L1427.0 419.0L1436.0 462.0L1473.0 568.0L1601.0 529.0Z"/><path class="p" pathLength="1" d="M1804.0 609.0L1801.0 602.0L1794.0 594.0L1790.0 592.0L1779.0 584.0L1767.0 574.0L1759.0 566.0L1750.0 552.0L1746.0 538.0L1747.0 527.0L1748.0 520.0L1751.0 516.0L1765.0 496.0L1771.0 488.0L1764.0 488.0L1701.0 505.0L1710.0 616.0L1804.0 609.0Z"/><path class="p" pathLength="1" d="M1821.0 677.0L1819.0 662.0L1814.0 643.0L1813.0 636.0L1808.0 618.0L1804.0 609.0L1710.0 616.0L1715.0 669.0L1720.0 677.0L1729.0 687.0L1743.0 697.0L1749.0 700.0L1757.0 702.0L1766.0 703.0L1777.0 703.0L1788.0 700.0L1802.0 696.0L1813.0 689.0L1820.0 683.0L1821.0 677.0Z"/><path class="p" pathLength="1" d="M1968.0 552.0L1840.0 427.0L1828.0 435.0L1825.0 438.0L1817.0 446.0L1813.0 450.0L1818.0 454.0L1943.0 564.0L1968.0 552.0Z"/><path class="p" pathLength="1" d="M1991.0 874.0L1954.0 842.0L1910.0 893.0L1873.0 862.0L1840.0 894.0L1908.0 960.0L1962.0 904.0L1991.0 874.0Z"/><path class="p" pathLength="1" d="M1806.0 1146.0L1634.0 1021.0L1612.0 1030.0L1601.0 1036.0L1589.0 1043.0L1583.0 1047.0L1576.0 1068.0L1575.0 1077.0L1578.0 1082.0L1589.0 1113.0L1591.0 1123.0L1593.0 1131.0L1592.0 1143.0L1725.0 1240.0L1740.0 1220.0L1753.0 1206.0L1758.0 1200.0L1762.0 1195.0L1767.0 1190.0L1771.0 1185.0L1776.0 1180.0L1781.0 1175.0L1784.0 1170.0L1788.0 1165.0L1792.0 1161.0L1795.0 1158.0L1799.0 1155.0L1803.0 1150.0L1805.0 1148.0L1806.0 1146.0Z"/><path class="p" pathLength="1" d="M1908.0 960.0L1840.0 894.0L1750.0 980.0L1746.0 977.0L1713.0 1013.0L1702.0 1002.0L1700.0 1003.0L1679.0 1005.0L1665.0 1007.0L1657.0 1011.0L1637.0 1018.0L1634.0 1021.0L1806.0 1146.0L1809.0 1143.0L1832.0 1119.0L1949.0 1000.0L1908.0 960.0Z"/><path class="p" pathLength="1" d="M1589.0 1185.0L1576.0 1175.0L1574.0 1175.0L1566.0 1181.0L1555.0 1185.0L1543.0 1187.0L1527.0 1187.0L1497.0 1185.0L1487.0 1187.0L1478.0 1190.0L1465.0 1195.0L1451.0 1208.0L1449.0 1210.0L1525.0 1269.0L1589.0 1185.0Z"/><path class="p" pathLength="1" d="M1827.0 895.0L1728.0 810.0L1661.0 875.0L1661.0 875.0L1680.0 883.0L1692.0 893.0L1707.0 910.0L1718.0 923.0L1726.0 935.0L1733.0 944.0L1739.0 952.0L1742.0 958.0L1747.0 969.0L1750.0 969.0L1827.0 895.0Z"/><path class="p" pathLength="1" d="M1912.0 814.0L1813.0 730.0L1767.0 774.0L1866.0 859.0L1912.0 814.0Z"/><path class="p" pathLength="1" d="M1958.0 770.0L1856.0 683.0L1851.0 691.0L1846.0 698.0L1813.0 730.0L1912.0 814.0L1958.0 770.0Z"/><path class="p" pathLength="1" d="M1991.0 729.0L1902.0 652.0L1865.0 620.0L1865.0 637.0L1865.0 671.0L1856.0 683.0L1958.0 770.0L1965.0 765.0L1991.0 729.0Z"/><path class="p" pathLength="1" d="M1851.0 691.0L1856.0 683.0L1865.0 671.0L1865.0 637.0L1865.0 620.0L1864.0 607.0L1864.0 599.0L1864.0 597.0L1767.0 511.0L1762.0 515.0L1760.0 517.0L1759.0 518.0L1757.0 524.0L1757.0 533.0L1761.0 542.0L1775.0 560.0L1782.0 566.0L1802.0 579.0L1813.0 587.0L1822.0 598.0L1829.0 621.0L1837.0 664.0L1842.0 671.0L1843.0 682.0L1851.0 691.0Z"/><path class="p" pathLength="1" d="M1958.0 586.0L1858.0 498.0L1854.0 512.0L1802.0 466.0L1801.0 467.0L1792.0 479.0L1784.0 490.0L1767.0 511.0L1864.0 597.0L1864.0 599.0L1864.0 607.0L1865.0 620.0L1902.0 652.0L1958.0 586.0Z"/><path class="p" pathLength="1" d="M1668.0 852.0L1592.0 815.0L1577.0 852.0L1578.0 853.0L1629.0 866.0L1649.0 872.0L1668.0 852.0Z"/><path class="p" pathLength="1" d="M1592.0 815.0L1501.0 771.0L1498.0 779.0L1494.0 796.0L1493.0 818.0L1494.0 826.0L1498.0 833.0L1507.0 838.0L1533.0 844.0L1577.0 852.0L1592.0 815.0Z"/><path class="p" pathLength="1" d="M1688.0 834.0L1531.0 716.0L1527.0 720.0L1516.0 738.0L1501.0 771.0L1592.0 815.0L1668.0 852.0L1688.0 834.0Z"/><path class="p" pathLength="1" d="M1739.0 785.0L1615.0 664.0L1607.0 667.0L1584.0 676.0L1565.0 685.0L1549.0 696.0L1543.0 701.0L1538.0 708.0L1695.0 827.0L1739.0 785.0Z"/><path class="p" pathLength="1" d="M1807.0 721.0L1806.0 722.0L1793.0 725.0L1786.0 728.0L1778.0 729.0L1769.0 730.0L1754.0 728.0L1740.0 725.0L1727.0 719.0L1719.0 714.0L1713.0 707.0L1709.0 698.0L1702.0 690.0L1686.0 664.0L1670.0 653.0L1653.0 651.0L1646.0 653.0L1635.0 656.0L1621.0 662.0L1615.0 664.0L1739.0 785.0L1807.0 721.0Z"/></svg>
+          <svg class="rx-parcels rx-parcels--dik" viewBox="0 0 1800 3200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path class="alan" pathLength="1" d="M631.0 648.0L1149.0 567.0L1268.0 1006.0L1149.0 1443.0L752.0 1602.0L532.0 1204.0L631.0 648.0Z"/><path class="p" pathLength="1" d="M705.0 629.0L651.0 636.0L628.0 642.0L634.0 729.0L638.0 728.0L716.0 717.0L710.0 674.0L705.0 629.0Z"/><path class="p" pathLength="1" d="M716.0 717.0L638.0 728.0L634.0 729.0L590.0 738.0L562.0 744.0L573.0 788.0L591.0 868.0L657.0 857.0L698.0 846.0L744.0 833.0L725.0 774.0L716.0 717.0Z"/><path class="p" pathLength="1" d="M657.0 857.0L591.0 868.0L576.0 872.0L586.0 984.0L663.0 1006.0L657.0 857.0Z"/><path class="p" pathLength="1" d="M698.0 846.0L657.0 857.0L663.0 1006.0L738.0 1028.0L698.0 846.0Z"/><path class="p" pathLength="1" d="M744.0 833.0L698.0 846.0L738.0 1028.0L789.0 994.0L765.0 908.0L744.0 833.0Z"/><path class="p" pathLength="1" d="M591.0 1035.0L469.0 1060.0L423.0 1070.0L431.0 1113.0L438.0 1154.0L455.0 1152.0L469.0 1196.0L566.0 1175.0L619.0 1168.0L591.0 1035.0Z"/><path class="p" pathLength="1" d="M671.0 1160.0L619.0 1168.0L566.0 1175.0L469.0 1196.0L481.0 1244.0L686.0 1214.0L671.0 1160.0Z"/><path class="p" pathLength="1" d="M761.0 1110.0L769.0 1091.0L709.0 1098.0L713.0 1140.0L669.0 1146.0L671.0 1160.0L686.0 1214.0L766.0 1201.0L781.0 1199.0L768.0 1185.0L761.0 1110.0Z"/><path class="p" pathLength="1" d="M769.0 1091.0L775.0 1078.0L786.0 1051.0L798.0 1039.0L790.0 998.0L739.0 1033.0L586.0 989.0L591.0 1035.0L619.0 1168.0L671.0 1160.0L669.0 1146.0L713.0 1140.0L709.0 1098.0L769.0 1091.0Z"/><path class="p" pathLength="1" d="M934.0 892.0L928.0 863.0L856.0 883.0L815.0 895.0L774.0 906.0L794.0 992.0L913.0 907.0L934.0 892.0Z"/><path class="p" pathLength="1" d="M934.0 892.0L913.0 907.0L794.0 992.0L802.0 1035.0L840.0 995.0L929.0 951.0L939.0 951.0L937.0 932.0L934.0 892.0Z"/><path class="p" pathLength="1" d="M696.0 1248.0L578.0 1268.0L492.0 1291.0L482.0 1249.0L448.0 1257.0L464.0 1343.0L559.0 1321.0L705.0 1293.0L696.0 1248.0Z"/><path class="p" pathLength="1" d="M803.0 1282.0L800.0 1248.0L796.0 1207.0L783.0 1202.0L687.0 1218.0L696.0 1248.0L705.0 1293.0L723.0 1386.0L816.0 1377.0L803.0 1282.0Z"/><path class="p" pathLength="1" d="M852.0 1372.0L865.0 1353.0L915.0 1318.0L972.0 1305.0L997.0 1288.0L959.0 1248.0L879.0 1223.0L844.0 1217.0L822.0 1216.0L796.0 1207.0L800.0 1248.0L803.0 1282.0L816.0 1377.0L852.0 1372.0Z"/><path class="p" pathLength="1" d="M666.0 1528.0L717.0 1511.0L756.0 1504.0L791.0 1500.0L800.0 1499.0L820.0 1490.0L825.0 1487.0L825.0 1472.0L840.0 1468.0L839.0 1417.0L787.0 1423.0L748.0 1426.0L692.0 1434.0L648.0 1441.0L656.0 1476.0L662.0 1507.0L666.0 1528.0Z"/><path class="p" pathLength="1" d="M679.0 1391.0L666.0 1345.0L583.0 1360.0L517.0 1377.0L470.0 1389.0L477.0 1432.0L483.0 1474.0L485.0 1496.0L500.0 1491.0L536.0 1495.0L573.0 1505.0L585.0 1506.0L605.0 1515.0L642.0 1523.0L666.0 1528.0L662.0 1507.0L656.0 1476.0L648.0 1441.0L692.0 1434.0L679.0 1391.0Z"/><path class="p" pathLength="1" d="M832.0 684.0L787.0 440.0L682.0 484.0L687.0 509.0L693.0 534.0L704.0 581.0L711.0 630.0L715.0 672.0L721.0 716.0L725.0 735.0L826.0 686.0L832.0 684.0Z"/><path class="p" pathLength="1" d="M1156.0 724.0L1087.0 561.0L1009.0 598.0L998.0 604.0L1078.0 790.0L1111.0 749.0L1144.0 729.0L1156.0 724.0Z"/><path class="p" pathLength="1" d="M1036.0 818.0L954.0 625.0L942.0 630.0L871.0 665.0L947.0 843.0L1036.0 818.0Z"/><path class="p" pathLength="1" d="M901.0 859.0L826.0 686.0L725.0 735.0L727.0 749.0L736.0 792.0L773.0 898.0L901.0 859.0Z"/><path class="p" pathLength="1" d="M1104.0 939.0L1101.0 932.0L1094.0 924.0L1090.0 922.0L1079.0 914.0L1067.0 904.0L1059.0 896.0L1050.0 882.0L1046.0 868.0L1047.0 857.0L1048.0 850.0L1051.0 846.0L1065.0 826.0L1071.0 818.0L1064.0 818.0L1001.0 835.0L1010.0 946.0L1104.0 939.0Z"/><path class="p" pathLength="1" d="M1121.0 1007.0L1119.0 992.0L1114.0 973.0L1113.0 966.0L1108.0 948.0L1104.0 939.0L1010.0 946.0L1015.0 999.0L1020.0 1007.0L1029.0 1017.0L1043.0 1027.0L1049.0 1030.0L1057.0 1032.0L1066.0 1033.0L1077.0 1033.0L1088.0 1030.0L1102.0 1026.0L1113.0 1019.0L1120.0 1013.0L1121.0 1007.0Z"/><path class="p" pathLength="1" d="M1268.0 882.0L1140.0 757.0L1128.0 765.0L1125.0 768.0L1117.0 776.0L1113.0 780.0L1118.0 784.0L1243.0 894.0L1268.0 882.0Z"/><path class="p" pathLength="1" d="M1291.0 1204.0L1254.0 1172.0L1210.0 1223.0L1173.0 1192.0L1140.0 1224.0L1208.0 1290.0L1262.0 1234.0L1291.0 1204.0Z"/><path class="p" pathLength="1" d="M1106.0 1476.0L934.0 1351.0L912.0 1360.0L901.0 1366.0L889.0 1373.0L883.0 1377.0L876.0 1398.0L875.0 1407.0L878.0 1412.0L889.0 1443.0L891.0 1453.0L893.0 1461.0L892.0 1473.0L1025.0 1570.0L1040.0 1550.0L1053.0 1536.0L1058.0 1530.0L1062.0 1525.0L1067.0 1520.0L1071.0 1515.0L1076.0 1510.0L1081.0 1505.0L1084.0 1500.0L1088.0 1495.0L1092.0 1491.0L1095.0 1488.0L1099.0 1485.0L1103.0 1480.0L1105.0 1478.0L1106.0 1476.0Z"/><path class="p" pathLength="1" d="M1208.0 1290.0L1140.0 1224.0L1050.0 1310.0L1046.0 1307.0L1013.0 1343.0L1002.0 1332.0L1000.0 1333.0L979.0 1335.0L965.0 1337.0L957.0 1341.0L937.0 1348.0L934.0 1351.0L1106.0 1476.0L1109.0 1473.0L1132.0 1449.0L1249.0 1330.0L1208.0 1290.0Z"/><path class="p" pathLength="1" d="M889.0 1515.0L876.0 1505.0L874.0 1505.0L866.0 1511.0L855.0 1515.0L843.0 1517.0L827.0 1517.0L797.0 1515.0L787.0 1517.0L778.0 1520.0L765.0 1525.0L751.0 1538.0L749.0 1540.0L825.0 1599.0L889.0 1515.0Z"/><path class="p" pathLength="1" d="M1127.0 1225.0L1028.0 1140.0L961.0 1205.0L961.0 1205.0L980.0 1213.0L992.0 1223.0L1007.0 1240.0L1018.0 1253.0L1026.0 1265.0L1033.0 1274.0L1039.0 1282.0L1042.0 1288.0L1047.0 1299.0L1050.0 1299.0L1127.0 1225.0Z"/><path class="p" pathLength="1" d="M1212.0 1144.0L1113.0 1060.0L1067.0 1104.0L1166.0 1189.0L1212.0 1144.0Z"/><path class="p" pathLength="1" d="M1258.0 1100.0L1156.0 1013.0L1151.0 1021.0L1146.0 1028.0L1113.0 1060.0L1212.0 1144.0L1258.0 1100.0Z"/><path class="p" pathLength="1" d="M1291.0 1059.0L1202.0 982.0L1165.0 950.0L1165.0 967.0L1165.0 1001.0L1156.0 1013.0L1258.0 1100.0L1265.0 1095.0L1291.0 1059.0Z"/><path class="p" pathLength="1" d="M1151.0 1021.0L1156.0 1013.0L1165.0 1001.0L1165.0 967.0L1165.0 950.0L1164.0 937.0L1164.0 929.0L1164.0 927.0L1067.0 841.0L1062.0 845.0L1060.0 847.0L1059.0 848.0L1057.0 854.0L1057.0 863.0L1061.0 872.0L1075.0 890.0L1082.0 896.0L1102.0 909.0L1113.0 917.0L1122.0 928.0L1129.0 951.0L1137.0 994.0L1142.0 1001.0L1143.0 1012.0L1151.0 1021.0Z"/><path class="p" pathLength="1" d="M1258.0 916.0L1158.0 828.0L1154.0 842.0L1102.0 796.0L1101.0 797.0L1092.0 809.0L1084.0 820.0L1067.0 841.0L1164.0 927.0L1164.0 929.0L1164.0 937.0L1165.0 950.0L1202.0 982.0L1258.0 916.0Z"/><path class="p" pathLength="1" d="M968.0 1182.0L892.0 1145.0L877.0 1182.0L878.0 1183.0L929.0 1196.0L949.0 1202.0L968.0 1182.0Z"/><path class="p" pathLength="1" d="M892.0 1145.0L801.0 1101.0L798.0 1109.0L794.0 1126.0L793.0 1148.0L794.0 1156.0L798.0 1163.0L807.0 1168.0L833.0 1174.0L877.0 1182.0L892.0 1145.0Z"/><path class="p" pathLength="1" d="M988.0 1164.0L831.0 1046.0L827.0 1050.0L816.0 1068.0L801.0 1101.0L892.0 1145.0L968.0 1182.0L988.0 1164.0Z"/><path class="p" pathLength="1" d="M1039.0 1115.0L915.0 994.0L907.0 997.0L884.0 1006.0L865.0 1015.0L849.0 1026.0L843.0 1031.0L838.0 1038.0L995.0 1157.0L1039.0 1115.0Z"/><path class="p" pathLength="1" d="M1107.0 1051.0L1106.0 1052.0L1093.0 1055.0L1086.0 1058.0L1078.0 1059.0L1069.0 1060.0L1054.0 1058.0L1040.0 1055.0L1027.0 1049.0L1019.0 1044.0L1013.0 1037.0L1009.0 1028.0L1002.0 1020.0L986.0 994.0L970.0 983.0L953.0 981.0L946.0 983.0L935.0 986.0L921.0 992.0L915.0 994.0L1039.0 1115.0L1107.0 1051.0Z"/></svg>
+        </div>
+        <div class="rx-hero-layer rx-hero__scrim" data-z="0" aria-hidden="true"></div>
+        <div class="rx-hero-layer rx-hero-logo2" data-z="-13400" data-role="logo-secondary" aria-hidden="true">
+          <svg class="rx-mark rx-mark--hero" viewBox="0 0 216 216"><rect width="216" height="216" rx="52" class="rx-mark__bg"/><g class="rx-mark__plus"><rect x="92" y="40" width="32" height="136"/><rect x="40" y="92" width="136" height="32"/></g><rect x="92" y="92" width="32" height="32" class="rx-mark__dot"/></svg>
+        </div>
+        <h1 class="rx-hero-layer rx-hero-logo" data-z="-15800" data-role="logo" id="hero-baslik">
+          <span class="rx-sr">Parsel Sorgu +</span>
+          <svg class="rx-wordmark" viewBox="0 0 670 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="22"><g><path d="M11 100V11H22A20 20 0 0 1 22 51H11" stroke-linejoin="miter"/></g><g transform="translate(60 0)"><path d="M11 100V26A15 15 0 0 1 41 26V100M11 64H41"/></g><g transform="translate(120 0)"><path d="M11 100V11H22A20 20 0 0 1 22 51H11M24 51L42 100" stroke-linejoin="miter"/></g><g transform="translate(180 0)"><path d="M41 27C41 16 34 11 26 11C17 11 11 17 11 27C11 39 20 44 26 47C33 51 41 57 41 72C41 84 34 89 26 89C17 89 11 83 11 73"/></g><g transform="translate(240 0)"><path d="M44 11H11V89H44M11 50H38" stroke-linejoin="miter"/></g><g transform="translate(292 0)"><path d="M11 0V89H44" stroke-linejoin="miter"/></g><g transform="translate(378 0)"><path d="M41 27C41 16 34 11 26 11C17 11 11 17 11 27C11 39 20 44 26 47C33 51 41 57 41 72C41 84 34 89 26 89C17 89 11 83 11 73"/></g><g transform="translate(438 0)"><rect x="11" y="11" width="30" height="78" rx="15"/></g><g transform="translate(498 0)"><path d="M11 100V11H22A20 20 0 0 1 22 51H11M24 51L42 100" stroke-linejoin="miter"/></g><g transform="translate(558 0)"><path d="M41 30V26A15 15 0 0 0 11 26V74A15 15 0 0 0 41 74V54H27" stroke-linejoin="miter"/></g><g transform="translate(618 0)"><path d="M11 0V74A15 15 0 0 0 41 74V0"/></g></g></svg>
+        </h1>
+      </div>
+      <p class="rx-hero__yer" data-hero-ui aria-hidden="true">
+        <span lang="en">37°35′ N · 32°48′ E</span>
+        <span>Konya · Çumra — 38 parsel, 40 sorgu</span>
+      </p>
+      <div class="rx-hero__ui" data-hero-ui>
+        <p class="rx-hero__tagline">TKGM parselleri haritada, tablo elinde. Ada/parsel sorgula, alanı çiz, içindeki parselleri bul; <span lang="en">KML</span> ve <span lang="en">Excel</span>'e aktar.</p>
+        <div class="rx-hero__actions">
+          <a class="rx-btn rx-btn--accent rx-btn--lg" href="#indir" data-indir-git>
+            <svg class="rx-ikon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
+            <span><span lang="en">Windows</span> için indir</span>
+          </a>
+          <a class="rx-btn rx-btn--ghost rx-btn--lg" href="#ozellikler">Neler yapıyor?</a>
+        </div>
+        <p class="rx-hero__not">Ücretsiz · Açık kaynak · <span data-surum>v0.1.0</span></p>
+      </div>
+      <p class="rx-hero__kaynak">Uydu görüntüsü: <span lang="en">Esri, Maxar, Earthstar Geographics</span></p>
+    </section>
+
+    <!-- STATEMENT: pinned, words brighten one after another -->
+    <section class="rx-statement" data-statement aria-label="Özet">
+      <p class="rx-statement__text">
+        <span>Ada.</span> <span>Parsel.</span> <span>Sınır.</span> <span class="rx-vurgu">Tek ekranda.</span>
+      </p>
+    </section>
+
+    <!-- SCENE 01: query -->
+    <section class="rx-scene" id="ozellikler" aria-labelledby="s1">
+      <div class="rx-scene__media">
+        <div class="rx-scene__cerceve"><img data-speed="6" src="assets/uygulama-parsel-1920.webp" srcset="assets/uygulama-parsel-1200.webp 1200w, assets/uygulama-parsel-1920.webp 1920w, assets/uygulama-parsel-3200.webp 3200w" sizes="(min-width: 768px) 60vw, 100vw" alt="Parsel Sorgu + ekranı: Çumra'da parseller haritada sarı sınırlarla, solda parsel listesi, üstte 512/18 parselinin bilgi kartı" loading="lazy" width="3200" height="2000"></div>
+        <img class="rx-scene__kesit" data-speed="-10" src="assets/kesit-sorgu-748.webp" srcset="assets/kesit-sorgu-520.webp 520w, assets/kesit-sorgu-748.webp 748w" sizes="(min-width: 768px) 22vw, 50vw" alt="İl Konya, ilçe Çumra seçili; mahalle listesinde “gü” yazınca Güvercinlik Köyü bulunuyor" loading="lazy" width="748" height="708">
+      </div>
+      <div class="rx-scene__copy">
+        <p class="rx-eyebrow" data-reveal>01 · Sorgula</p>
+        <h2 class="rx-h2" data-reveal>Yaz, seç, bul.</h2>
+        <p data-reveal>İl, ilçe ve mahalleyi yazarak seç, ada ve parseli gir. Ya da haritada parsele tıkla. Tapu alanı, nitelik, mevkii ve pafta tek kartta.</p>
+        <p data-reveal>Sorgulanan her parsel bilgisayarında saklanır: aynı parsel için <strong>TKGM'ye ikinci kez gidilmez</strong>, günlük limitin boşa gitmez.</p>
+        <ul class="rx-cipler" data-reveal>
+          <li>Yazarak ara</li><li>Haritadan sorgu</li><li>Önbellek</li><li>Eski <span lang="en">KML</span>'leri içe aktar</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SCENE 02: area detection — pinned, counters fill with scroll -->
+    <section class="rx-alan" aria-labelledby="s2" data-alan>
+      <div class="rx-alan__ekran">
+        <img src="assets/uygulama-alan-1920.webp" srcset="assets/uygulama-alan-1200.webp 1200w, assets/uygulama-alan-1920.webp 1920w, assets/uygulama-alan-3200.webp 3200w" sizes="100vw" alt="Alandan parsel tespiti: çizilen Çumra ovası alanı, içindeki ve kesişen parseller mavi, sorgulanmamış boşluklar kırmızı taralı" loading="lazy" width="3200" height="2000">
+      </div>
+      <div class="rx-alan__perde" aria-hidden="true"></div>
+      <div class="rx-alan__icerik">
+        <p class="rx-eyebrow">02 · Alandan tespit</p>
+        <h2 class="rx-h2" id="s2">Alanı çiz.<br>Parselleri<br><span class="rx-vurgu">o bulsun.</span></h2>
+        <p class="rx-alan__metin">OSB ya da plan sınırını yükle (<span lang="en">KML, KMZ</span>, <span lang="en">Netcad</span> projesi) veya haritada pinlerle çiz. İçindekileri ve kesişenleri tek tıkla seç, boşlukları gör; sorgu bütçesiyle TKGM'den otomatik tara.</p>
+        <dl class="rx-sayaclar">
+          <div><dt>Alan</dt><dd><b data-sayac="998645" data-bicim="m2">998.645</b> <small>m²</small></dd></div>
+          <div><dt>Kesişen parsel</dt><dd><b data-sayac="38">38</b></dd></div>
+          <div><dt>Kaplanan</dt><dd><b data-sayac="73.2" data-bicim="yuzde">%73,2</b></dd></div>
+        </dl>
+        <p class="rx-alan__dipnot">Bu ekrandaki 38 parselin hepsi, çizilen alandan 40 sorguyla otomatik bulundu.</p>
+      </div>
+    </section>
+
+    <!-- SCENE 03: export -->
+    <section class="rx-scene rx-scene--flip" aria-labelledby="s3">
+      <div class="rx-scene__media">
+        <div class="rx-scene__cerceve"><img data-speed="6" src="assets/uygulama-disa-1920.webp" srcset="assets/uygulama-disa-1200.webp 1200w, assets/uygulama-disa-1920.webp 1920w, assets/uygulama-disa-3200.webp 3200w" sizes="(min-width: 768px) 60vw, 100vw" alt="Dışa aktarma: alanla kesişen 38 parsel, Excel biçimi, ED50 3° koordinat sistemi seçili" loading="lazy" width="3200" height="2000"></div>
+        <img class="rx-scene__kesit" data-speed="-10" src="assets/kesit-disa-748.webp" srcset="assets/kesit-disa-520.webp 520w, assets/kesit-disa-748.webp 748w" sizes="(min-width: 768px) 22vw, 50vw" alt="Dışa aktar paneli: kesişenler, alan sınırını ekle, Excel, ED50 3°, dilim otomatik" loading="lazy" width="748" height="772">
+      </div>
+      <div class="rx-scene__copy">
+        <p class="rx-eyebrow" data-reveal>03 · Dışa aktar</p>
+        <h2 class="rx-h2" data-reveal>Google Earth'e de, tabloya da.</h2>
+        <p data-reveal><span lang="en">KML</span> ile Google Earth'e, <span lang="en">Excel</span> ile tabloya. Köşe koordinatları <strong>ITRF96 3°</strong> ya da <strong>ED50 3°</strong>; dilim otomatik ya da elle.</p>
+        <p data-reveal>Alan sınırı <span lang="en">KML</span>'e, alan içi metrekareler <span lang="en">Excel</span>'e eklenir. İstersen her parsel ayrı dosya.</p>
+        <ul class="rx-cipler" data-reveal lang="en">
+          <li>KML</li><li>EXCEL</li><li>ITRF96 3°</li><li>ED50 3°</li><li>ZIP</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- MEDIA RAIL -->
+    <section class="rx-rail" aria-labelledby="ray-baslik" data-rail>
+      <h2 class="rx-h2 rx-rail__title" id="ray-baslik">Ekranlar</h2>
+      <div class="rx-rail__track" data-rail-track>
+        <figure class="rx-card"><img src="assets/uygulama-alan-1200.webp" srcset="assets/uygulama-alan-1200.webp 1200w, assets/uygulama-alan-1920.webp 1920w" sizes="(min-width: 768px) 46vw, 82vw" alt="Alan özeti ve boşluklar" loading="lazy" width="1200" height="750"><figcaption>Alan özeti: içindekiler, kesişenler, boşluklar</figcaption></figure>
+        <figure class="rx-card"><img src="assets/uygulama-sorgu-1200.webp" srcset="assets/uygulama-sorgu-1200.webp 1200w, assets/uygulama-sorgu-1920.webp 1920w" sizes="(min-width: 768px) 46vw, 82vw" alt="Aranabilir il, ilçe, mahalle listesi" loading="lazy" width="1200" height="750"><figcaption>Yazarak aranan il / ilçe / mahalle listesi</figcaption></figure>
+        <figure class="rx-card"><img src="assets/uygulama-acik-1200.webp" srcset="assets/uygulama-acik-1200.webp 1200w, assets/uygulama-acik-1920.webp 1920w" sizes="(min-width: 768px) 46vw, 82vw" alt="Uygulamanın açık teması" loading="lazy" width="1200" height="750"><figcaption>Açık tema: Windows temasına uyar</figcaption></figure>
+        <figure class="rx-card"><img src="assets/uygulama-parsel-1200.webp" srcset="assets/uygulama-parsel-1200.webp 1200w, assets/uygulama-parsel-1920.webp 1920w" sizes="(min-width: 768px) 46vw, 82vw" alt="Parsel bilgi kartı" loading="lazy" width="1200" height="750"><figcaption>Parsel kartı: tek tıkla TKGM'den güncelle</figcaption></figure>
+        <figure class="rx-card rx-card--dik"><img src="assets/uygulama-mobil-780.webp" srcset="assets/uygulama-mobil-780.webp 780w, assets/uygulama-mobil-1170.webp 1170w" sizes="(min-width: 768px) 18vw, 50vw" alt="Dar pencerede uygulama" loading="lazy" width="780" height="1688"><figcaption>Dar pencerede de çalışır</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- WHY -->
+    <section class="rx-neden" id="neden" aria-labelledby="neden-baslik">
+      <p class="rx-eyebrow" data-reveal>Nasıl çalışır</p>
+      <h2 class="rx-h2" id="neden-baslik" data-reveal>Bilgisayarında çalışır.<br><span class="rx-vurgu">Limit de veri de senin.</span></h2>
+      <div class="rx-kartlar">
+        <article class="rx-kart" data-reveal>
+          <svg class="rx-ikon rx-kart__ikon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+          <h3>Herkesin limiti kendine</h3>
+          <p>Sorgular senin bilgisayarından, senin internetinden TKGM'ye gider. İş arkadaşının sorgusu senin limitinden düşmez.</p>
+        </article>
+        <article class="rx-kart" data-reveal>
+          <svg class="rx-ikon rx-kart__ikon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 0v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+          <h3>Önbellek bir kere sorar</h3>
+          <p>Sorguladığın her parsel saklanır. Aynı parseli yine aradığında ya da haritada içine tıkladığında sorgu harcanmaz.</p>
+        </article>
+        <article class="rx-kart" data-reveal>
+          <svg class="rx-ikon rx-kart__ikon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          <h3>Veri sende kalır</h3>
+          <p>Parseller ve alanların yalnızca bilgisayarında durur; hiçbir sunucuya gönderilmez. Hesap, kayıt, abonelik yok.</p>
+        </article>
+        <article class="rx-kart" data-reveal>
+          <svg class="rx-ikon rx-kart__ikon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>
+          <h3>Açık kaynak</h3>
+          <p>Kodun tamamı GitHub'da. Alan Yöneticisi ve parselsorgu <span lang="en">KML</span>'leri, <span lang="en">fav_list.json</span> dosyaları içe aktarılır.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section class="rx-cta" id="indir" aria-labelledby="indir-baslik">
+      <h2 class="rx-cta__title" id="indir-baslik" data-reveal>İndir, kur, sorgula.</h2>
+      <p data-reveal><span lang="en">Windows</span> 10 / 11 · Chrome ya da Edge · İnternet bağlantısı</p>
+      <a class="rx-btn rx-btn--accent rx-btn--lg rx-cta__dugme" href="https://github.com/efetuncer1-creator/parselsorgu-plus/releases/latest" data-indir data-reveal>
+        <svg class="rx-ikon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
+        <span>Kurulum dosyasını indir</span>
+        <small data-indir-bilgi><span data-surum>v0.1.0</span></small>
+      </a>
+      <ol class="rx-adimlar" data-reveal>
+        <li><b>1</b><span>Kurulum dosyasını indir ve çalıştır. Yönetici izni istemez.</span></li>
+        <li><b>2</b><span><span lang="en">Windows</span> “bilgisayarınızı korudu” derse <strong>Ek bilgi → Yine de çalıştır</strong>. Dosya henüz imzalı değil; kodu açık.</span></li>
+        <li><b>3</b><span>Başlat menüsünden <strong>Parsel Sorgu +</strong>'yı aç. Pencereyi kapatınca uygulama da kapanır.</span></li>
+      </ol>
+      <p class="rx-cta__kod" data-reveal><a href="https://github.com/efetuncer1-creator/parselsorgu-plus">Kaynak kodu <span lang="en">GitHub</span>'da</a> · <a href="https://github.com/efetuncer1-creator/parselsorgu-plus/releases">Tüm sürümler</a></p>
+    </section>
+
+    <!-- FAQ -->
+    <section class="rx-sss" id="sss" aria-labelledby="sss-baslik">
+      <h2 class="rx-h2" id="sss-baslik" data-reveal>Sorular</h2>
+      <div class="rx-sss__liste" data-reveal>
+        <details><summary>Ücretli mi?</summary><p>Hayır. Ücretsiz ve açık kaynak; hesap ya da kayıt gerekmez.</p></details>
+        <details><summary>TKGM'nin günlük limiti dolarsa ne olur?</summary><p>Uygulama “Limit doldu” der. Daha önce sorguladığın parseller önbellekten gelmeye devam eder; yeni sorgular ertesi gün açılır. Limit her kullanıcının kendi bağlantısına göredir.</p></details>
+        <details><summary>Alanlar ne kadar doğru?</summary><p>Tapu alanı TKGM'nin verdiği değerdir; uygulama onu hesaplamaz. Alan içi metrekare gibi hesaplar parsel sınırlarından yapılır ve yaklaşıktır. TKGM koordinatları yaklaşık 1 m hassasiyettedir; ED50 dönüşümü yaklaşık ±2 m'dir.</p></details>
+        <details><summary>Verilerim nerede duruyor?</summary><p>Yalnızca kendi bilgisayarında: <code>%LOCALAPPDATA%\ParselSorguPlus</code>. Uygulama hiçbir sunucuya veri göndermez; sadece TKGM'ye sorgu atar.</p></details>
+        <details><summary>Windows kurulumda uyarı veriyor, güvenli mi?</summary><p>Kurulum dosyası henüz dijital olarak imzalı olmadığı için <span lang="en">SmartScreen</span> uyarı verebilir. <strong>Ek bilgi → Yine de çalıştır</strong> ile devam edebilirsin. Dosya, GitHub'daki açık kaynak koddan GitHub'ın kendi sunucularında derlenir.</p></details>
+        <details><summary>Mac ya da Linux'ta çalışır mı?</summary><p>Kurulum paketi şimdilik yalnızca Windows için. Python yüklü her bilgisayarda kaynak koddan çalıştırılabilir; adımlar GitHub sayfasında.</p></details>
+        <details><summary>TKGM'nin uygulaması mı?</summary><p>Hayır, resmi bir uygulama değildir ve TKGM ile bağlantısı yoktur. Parsel verileri Tapu ve Kadastro Genel Müdürlüğü'ne aittir; uygulama, parselsorgu sitesinin kullandığı herkese açık servisi kullanır.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rx-footer">
+    <p><b>Parsel Sorgu +</b> · Açık kaynak · <a href="https://github.com/efetuncer1-creator/parselsorgu-plus" lang="en">GitHub</a></p>
+    <p>TKGM'nin resmi uygulaması değildir. Parsel verileri Tapu ve Kadastro Genel Müdürlüğü'ne aittir. Uydu görüntüleri: <span lang="en">Esri, Maxar, Earthstar Geographics</span>.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js"></script>
+  <script src="hero-depth.js"></script>
+  <script src="scroll-scenes.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
