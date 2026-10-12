@@ -206,8 +206,8 @@ $("hepsiniGoster").addEventListener("click", () => {
   if (sinirlar.isValid()) harita.fitBounds(sinirlar, { padding: [40, 40], maxZoom: 18 });
   else mesaj("Haritada gösterilecek parsel ya da alan yok.");
 });
-// Referanslar ve boşluklar parsellerin altında çizilir ve tıklamayı engellemez.
-harita.createPane("referans").style.zIndex = 350;
+// Boşluklar parsellerin altında çizilir ve tıklamayı engellemez. Alanların ve notların bölmeleri
+// katmanBolmesi ile açılır; z-sıraları katman listesini izler (sirayiUygula).
 harita.createPane("bosluk").style.zIndex = 360;
 // Haritadaki yazılar (ada/parsel numaraları, alan adları) parsellerin üstünde durur ve tıklamayı engellemez.
 for (const [ad, z] of [["parselNo", 450], ["alanAdi", 460]]) {
@@ -425,7 +425,8 @@ function sekmeAc(ad) {
   if (ad !== "parsel" && durum.mod === "sorgu") sorguModu(false);
   if (ad !== "alan" && durum.mod === "cizim") cizimIptal();
   if (ad === "alan" && aktifAlan) ozetYukle();
-  if (ad === "gorsel") { katmanSirasiCiz(); gorselDuzenDoldur(); }
+  notlariSekmeyeUydur();
+  if (ad === "gorsel") { katmanSirasiCiz(); gorselDuzenDoldur(); notDuzenDoldur(); }
   try { localStorage.setItem("sekme", ad); } catch { /* tercih saklanamazsa önemli değil */ }
 }
 
@@ -784,6 +785,7 @@ $("haritaModu").addEventListener("click", () => sorguModu(durum.mod !== "sorgu")
 
 harita.on("click", async (e) => {
   if (durum.mod === "cizim") return cizimPinEkle(e.latlng);
+  if (durum.mod?.startsWith("not-")) return notTikla(e.latlng);
   if (durum.mod !== "sorgu") return;
   try {
     const r = await postJson("sorgu-nokta", { enlem: e.latlng.lat, boylam: e.latlng.lng });
@@ -908,7 +910,7 @@ let aktifAlan = null; // referans id
 let sonOzet = null;
 
 const katmanAdi = (f) => (f.properties && f.properties.katman) || "";
-const katmanSirasi = []; // alan kimlikleri, haritada en üstteki başta; alanlar gibi sadece bu sayfa açıkken yaşar
+const katmanSirasi = []; // alan (sayı) ve not ("n1") kimlikleri, haritada en üstteki başta; sadece bu sayfa açıkken yaşar
 const gorselKayit = { bekleyen: new Map(), kuyruk: Promise.resolve() }; // sunucuya yazılmayı bekleyen görünümler
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -967,12 +969,12 @@ function referansKatmani(r) {
   const gizli = new Set(r.gizli || []);
   const hesap = r.hesap_katmani;
   return L.geoJSON(r.geojson, {
-    pane: "referans",
     interactive: false,
     // Sınır katmanı gizli olsa da çizilir: hesap ona göre yapılıyor, görünmesi gerekir.
     filter: (f) => !gizli.has(katmanAdi(f)) || katmanAdi(f) === hesap,
     style: referansStili(r),
-    pointToLayer: (_, latlng) => L.circleMarker(latlng, { pane: "referans", radius: 5, interactive: false }),
+    pane: katmanBolmesi(r.id),
+    pointToLayer: (_, latlng) => L.circleMarker(latlng, { pane: katmanBolmesi(r.id), radius: 5, interactive: false }),
   });
 }
 
@@ -999,14 +1001,24 @@ function alanAdiIsareti(r) {
   }).addTo(harita);
 }
 
-// Leaflet aynı bölmedeki şekilleri ekleniş sırasıyla çizer: alttakinden başlayarak öne alınır,
-// listenin başındaki en üstte kalır. Ad etiketleri de aynı sırayla üst üste biner.
+// Her katmanın kendi bölmesi var; bölmelerin z-sırası listedeki sırayı izler. Alanlar parsellerin
+// altında kalır (300'ler), yazı ve oklar parsellerin ve alan adlarının üstünde (470'ler).
+function katmanBolmesi(id) {
+  const ad = `katman-${id}`;
+  if (!harita.getPane(ad)) harita.createPane(ad);
+  return ad;
+}
+
 function sirayiUygula() {
+  let alt = 0, ust = 0;
   for (let i = katmanSirasi.length - 1; i >= 0; i--) {
-    const ref = referanslar.get(katmanSirasi[i]);
-    if (!ref) continue;
-    if (harita.hasLayer(ref.katman)) ref.katman.bringToFront();
-    ref.etiket?.setZIndexOffset((katmanSirasi.length - i) * 100000);
+    const id = katmanSirasi[i];
+    const bolme = harita.getPane(`katman-${id}`);
+    if (typeof id === "number") {
+      if (bolme) bolme.style.zIndex = Math.min(349, 300 + alt);
+      referanslar.get(id)?.etiket?.setZIndexOffset(alt * 100000);
+      alt++;
+    } else if (bolme) bolme.style.zIndex = 470 + ust++;
   }
 }
 
@@ -1376,6 +1388,7 @@ function cizimPinEkle(latlng) {
 
 function cizimBasla() {
   if (durum.mod === "sorgu") sorguModu(false);
+  if (durum.mod?.startsWith("not-")) notModu(null);
   cizimTemizle();
   durum.mod = "cizim";
   $("cizimBasla").setAttribute("aria-pressed", "true");
@@ -1440,6 +1453,7 @@ $("cizimIptal").addEventListener("click", cizimIptal);
 
 document.addEventListener("keydown", (e) => {
   if (durum.mod === "sorgu" && e.key === "Escape") return sorguModu(false);
+  if (durum.mod?.startsWith("not-") && e.key === "Escape") return notModu(null);
   if (durum.mod !== "cizim" || e.target.matches("input, select, textarea")) return;
   if (e.key === "Escape") cizimIptal();
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); cizimGeriAl(); }
@@ -1633,20 +1647,25 @@ function katmanOrnegi(r) {
   return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true"><rect x="2" y="2" width="28" height="18" rx="3" ${dolgu} ${kenar}/></svg>`;
 }
 
+// Seçili katman yoksa (ya da silindiyse) üzerinde çalışılan alan, o da yoksa listedeki ilk katman seçilir.
 function katmanSirasiCiz() {
   if (surukleme.li) return; // sürükleme bitince çizilir
-  const liste = katmanSirasi.filter((id) => referanslar.has(id));
-  if (!referanslar.has(gorselAlan)) {
-    gorselAlan = referanslar.has(aktifAlan) ? aktifAlan : liste[0] ?? null;
+  const liste = katmanSirasi.filter((id) => referanslar.has(id) || notlar.has(id));
+  if (!notlar.has(seciliNot) && !referanslar.has(gorselAlan)) {
+    seciliNot = null;
+    gorselAlan = referanslar.has(aktifAlan) ? aktifAlan : liste.find((id) => referanslar.has(id)) ?? null;
+    if (!gorselAlan) seciliNot = liste.find((id) => notlar.has(id)) ?? null;
     gorselDuzenDoldur();
+    notDuzenDoldur();
   }
   $("katmanAdet").textContent = liste.length;
   $("gorselBos").hidden = liste.length > 0;
   $("katmanIpucu").hidden = liste.length < 2;
-  const gorunenler = liste.map((id) => referanslar.get(id).veri).filter((r) => r.gorunur);
+  const gorunenler = liste.filter((id) => referanslar.has(id)).map((id) => referanslar.get(id).veri).filter((r) => r.gorunur);
   $("adlarHepsi").hidden = !gorunenler.length;
   $("adlarHepsi").lastElementChild.textContent = gorunenler.some((r) => r.gorsel.etiket) ? "Adları gizle" : "Adları göster";
   $("katmanSirasi").innerHTML = liste.map((id) => {
+    if (notlar.has(id)) return notSatiri(notlar.get(id));
     const r = referanslar.get(id).veri, g = r.gorsel, secili = id === gorselAlan;
     const kenar = g.kalinlik ? `${CIZGI_ADI[g.cizgi]} ${kalinlikMetni(g.kalinlik)}` : "Çizgisiz";
     const ozet = r.gorunur ? `${kenar} · ${DESEN_ADI[g.desen]}` : "Haritada gizli";
@@ -1663,6 +1682,21 @@ function katmanSirasiCiz() {
   }).join("");
   lejantCiz();
   lejantDuzenCiz();
+}
+
+function notSatiri(n) {
+  const secili = n.id === seciliNot;
+  const ozet = !n.gorunur ? "Haritada gizli" : n.tur === "yazi" ? `Yazı · ${n.boyut} px` : `Ok · ${kalinlikMetni(n.kalinlik)}`;
+  return `
+    <li data-id="${n.id}" class="${secili ? "secili" : ""}${n.gorunur ? "" : " gizli"}">
+      <button type="button" class="tutamac" aria-label="${esc(notAdi(n))} katmanını taşı" title="Sürükle ya da yukarı/aşağı okla taşı">${ikon("tutamac")}</button>
+      ${notOrnegi(n)}
+      <button type="button" class="ad" data-is="duzenle" aria-pressed="${secili}" title="${secili ? "Haritada göster" : "Düzenle"}">${esc(notAdi(n))}<small>${esc(ozet)}</small></button>
+      <span class="dugme-yeri" aria-hidden="true"></span>
+      <label class="ikon-dugme gorunur-anahtar" title="Haritada göster ya da gizle">
+        <input type="checkbox" data-is="gorunur" ${n.gorunur ? "checked" : ""} aria-label="${esc(notAdi(n))} haritada görünsün">${ikon("goz", "ikon acik")}${ikon("goz-kapali", "ikon kapali")}
+      </label>
+    </li>`;
 }
 
 function gorselDuzenDoldur(kaynak = null) {
@@ -1862,20 +1896,31 @@ $("gorselVarsayilan").addEventListener("click", () => {
 $("katmanSirasi").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-is]");
   if (!b) return;
-  const id = Number(b.closest("li").dataset.id);
-  if (b.dataset.is === "etiket") gorselDegistir(id, { etiket: b.getAttribute("aria-pressed") !== "true" });
+  const id = kimlik(b.closest("li").dataset.id);
+  if (notlar.has(id)) {
+    if (id === seciliNot) return notaYaklas(notlar.get(id));
+    notSec(id);
+  } else if (b.dataset.is === "etiket") gorselDegistir(id, { etiket: b.getAttribute("aria-pressed") !== "true" });
   else if (id === gorselAlan) return alanaYaklas(id);
   else {
+    const onceki = notlar.get(seciliNot);
+    seciliNot = null;
+    if (onceki) notCiz(onceki);
     gorselAlan = id;
     katmanSirasiCiz();
     gorselDuzenDoldur();
+    notDuzenDoldur();
   }
   document.querySelector(`#katmanSirasi li[data-id="${id}"] [data-is="${b.dataset.is}"]`)?.focus();
 });
 
 $("katmanSirasi").addEventListener("change", async (e) => {
   if (e.target.dataset.is !== "gorunur") return;
-  const id = Number(e.target.closest("li").dataset.id);
+  const id = kimlik(e.target.closest("li").dataset.id);
+  if (notlar.has(id)) {
+    notGuncelle(id, { gorunur: e.target.checked });
+    return document.querySelector(`#katmanSirasi li[data-id="${id}"] [data-is=gorunur]`)?.focus();
+  }
   try {
     referansCiz(await postJson(`referanslar/${id}/guncelle`, { gorunur: e.target.checked }));
     referansListeCiz();
@@ -1892,7 +1937,7 @@ $("adlarHepsi").addEventListener("click", () => {
 $("alanSekmesineGit").addEventListener("click", () => sekmeAc("alan"));
 
 function siraOku() {
-  const yeni = [...$("katmanSirasi").children].map((li) => Number(li.dataset.id));
+  const yeni = [...$("katmanSirasi").children].map((li) => kimlik(li.dataset.id));
   katmanSirasi.splice(0, katmanSirasi.length, ...yeni, ...katmanSirasi.filter((id) => !yeni.includes(id)));
   sirayiUygula();
 }
@@ -1980,21 +2025,25 @@ function lejantKaydet() {
   try { localStorage.setItem("lejant", JSON.stringify(lejant)); } catch { /* tercih saklanamazsa önemli değil */ }
 }
 
-const ogeAnahtari = (o) => (o.tur === "alan" ? `alan-${o.id}` : o.tur === "ozel" ? o.k : o.tur);
+// Öğe türleri: alan, not (ok), ozel ve LEJANT_SABIT'teki hazır öğeler.
+const ogeAnahtari = (o) => (o.tur === "alan" || o.tur === "not" ? `${o.tur}-${o.id}` : o.tur === "ozel" ? o.k : o.tur);
 const lejantAlani = (o) => referanslar.get(o.id)?.veri;
-const lejantGecerli = (o) => o.tur !== "alan" || referanslar.has(o.id);
-const lejantVarsayilanAdi = (o) => (o.tur === "alan" ? lejantAlani(o).ad : o.tur === "ozel" ? "Özel öğe" : LEJANT_SABIT[o.tur].ad);
+const lejantGecerli = (o) => (o.tur === "alan" ? referanslar.has(o.id) : o.tur === "not" ? notlar.has(o.id) : true);
+const lejantGorunur = (o) => (o.tur === "alan" ? lejantAlani(o).gorunur : o.tur === "not" ? notlar.get(o.id).gorunur : true);
+const lejantVarsayilanAdi = (o) => (o.tur === "alan" ? lejantAlani(o).ad : o.tur === "not" ? notAdi(notlar.get(o.id))
+  : o.tur === "ozel" ? "Özel öğe" : LEJANT_SABIT[o.tur].ad);
 const lejantAdi = (o) => o.ad ?? lejantVarsayilanAdi(o);
 
 function lejantOrnegi(o) {
   if (o.tur === "alan") return katmanOrnegi(lejantAlani(o));
+  if (o.tur === "not") return notOrnegi(notlar.get(o.id));
   if (o.tur === "ozel") return sekilOrnegi(o.sekil, o.renk, OZEL_SEKIL[o.sekil]);
   return LEJANT_SABIT[o.tur].ornek();
 }
 
 // Haritadaki kutu. Haritada gizli alan lejantta da görünmez.
 function lejantCiz() {
-  const ogeler = lejant.ogeler.filter((o) => lejantGecerli(o) && (o.tur !== "alan" || lejantAlani(o).gorunur));
+  const ogeler = lejant.ogeler.filter((o) => lejantGecerli(o) && lejantGorunur(o));
   $("lejant").hidden = !lejant.acik || !ogeler.length;
   $("lejant").classList.toggle("dar", !!lejant.daralt);
   $("lejantUst").setAttribute("aria-expanded", !lejant.daralt);
@@ -2015,12 +2064,12 @@ function lejantDuzenCiz() {
   const odakK = odak?.closest("li").dataset.k, odakIs = odak?.dataset.is, imlec = odak?.selectionStart;
   $("lejantOgeleri").innerHTML = ogeler.map((o) => {
     const ad = lejantAdi(o);
-    const gizli = o.tur === "alan" && !lejantAlani(o).gorunur;
+    const gizli = !lejantGorunur(o);
     const ornek = o.tur === "ozel"
       ? `<button type="button" class="ornek-dugme" data-is="renk" aria-label="${esc(ad)} rengi" title="Rengi değiştir">${lejantOrnegi(o)}</button>`
       : lejantOrnegi(o);
     return `
-    <li data-k="${esc(ogeAnahtari(o))}"${gizli ? ` class="gizli" title="Alan haritada gizli; lejantta da görünmez"` : ""}>
+    <li data-k="${esc(ogeAnahtari(o))}"${gizli ? ` class="gizli" title="Haritada gizli; lejantta da görünmez"` : ""}>
       <button type="button" class="tutamac" aria-label="${esc(ad)} öğesini taşı" title="Sürükle ya da yukarı/aşağı okla taşı">${ikon("tutamac")}</button>
       ${ornek}
       <input class="oge-ad" data-is="ad" value="${esc(ad)}" placeholder="${esc(lejantVarsayilanAdi(o))}" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Lejanttaki adı">
@@ -2033,7 +2082,8 @@ function lejantDuzenCiz() {
     if (imlec != null) el?.setSelectionRange?.(imlec, imlec);
   }
   lejantEklenebilir = [
-    ...katmanSirasi.filter((id) => referanslar.has(id) && !lejant.ogeler.some((o) => o.tur === "alan" && o.id === id)).map((id) => ({ tur: "alan", id })),
+    ...katmanSirasi.filter((id) => (referanslar.has(id) || notlar.get(id)?.tur === "ok") && !lejant.ogeler.some((o) => o.id === id))
+      .map((id) => ({ tur: referanslar.has(id) ? "alan" : "not", id })),
     ...Object.keys(LEJANT_SABIT).filter((tur) => !lejant.ogeler.some((o) => o.tur === tur)).map((tur) => ({ tur })),
   ];
   $("lejantCipler").innerHTML = lejantEklenebilir.map((o, i) =>
@@ -2054,9 +2104,10 @@ function lejantaAlanEkle(id) {
   lejantKaydet();
 }
 
+// Silinen alan ya da not lejanttan da çıkar.
 function lejantAlanCikar(id) {
   const n = lejant.ogeler.length;
-  lejant.ogeler = lejant.ogeler.filter((o) => !(o.tur === "alan" && o.id === id));
+  lejant.ogeler = lejant.ogeler.filter((o) => o.id !== id);
   if (lejant.ogeler.length !== n) lejantKaydet();
 }
 
@@ -2164,6 +2215,265 @@ $("ozelOgeEkle").addEventListener("click", () => {
 $("ozelOgeAd").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); $("ozelOgeEkle").click(); }
 });
+
+// ================================================================================
+// Notlar: haritaya yazı ve ok. Alanlarla aynı katman listesinde durur; sadece bu sayfa açıkken yaşar.
+// ================================================================================
+// Kimlikleri "n1", "n2"... (alanlarınki sayı). Görsel sekmesi açıkken tıklanır ve sürüklenir; diğer
+// sekmelerde tıklamayı haritaya bırakır.
+
+const notlar = new Map();
+let notSayac = 0;
+let seciliNot = null; // Görsel sekmesinde düzenlenen not
+const okTaslak = { bas: null, cizgi: null };
+const gorselSekmesinde = () => !$("panel-gorsel").hidden;
+const kimlik = (s) => (/^\d+$/.test(s) ? Number(s) : s);
+
+const NOT_RENKLERI = [["--not-beyaz", "Beyaz"], ["--not-siyah", "Siyah"], ...ALAN_RENKLERI];
+const acikRenk = (hex) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)); return 0.299 * r + 0.587 * g + 0.114 * b > 150; };
+const notAdi = (n) => n.ad || (n.tur === "yazi" ? n.metin.split("\n")[0].slice(0, 40) || "Yazı" : "Ok");
+
+// Listede ve lejantta okun küçük örneği (uçlar elle hesaplandı: 7 boy, 7 taban).
+function okOrnegi(renk, uc = "tek", cizgi = "duz") {
+  const dizi = cizgi === "kesik" ? ` stroke-dasharray="4 3"` : "";
+  const uclar = { tek: ["M26 5.5L21.6 12L18.2 5.9z"], cift: ["M26 5.5L21.6 12L18.2 5.9z", "M6 16.5L13.8 16.1L10.4 10z"], yok: [] }[uc];
+  return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true"><path d="M8 15.4L23 7" stroke="${esc(renk)}" stroke-width="2.2" stroke-linecap="round"${dizi}/>` +
+    uclar.map((d) => `<path d="${d}" fill="${esc(renk)}"/>`).join("") + "</svg>";
+}
+
+function notOrnegi(n) {
+  if (n.tur === "ok") return okOrnegi(n.renk, n.uc, n.cizgi);
+  return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true"><rect x="2" y="2" width="28" height="18" rx="3" fill="none" stroke="currentColor" stroke-opacity=".25"/>
+    <text x="16" y="15.5" text-anchor="middle" font-size="12" font-weight="700" fill="${esc(n.renk)}" stroke="${acikRenk(n.renk) ? token("--harita-yazi-hale") : "transparent"}" stroke-width="2" paint-order="stroke">Aa</text></svg>`;
+}
+
+function yaziHtml(n) {
+  const acik = acikRenk(n.renk);
+  const secili = n.id === seciliNot && gorselSekmesinde();
+  return `<span class="harita-not ${n.stil}${n.kalin ? " kalin" : ""}${secili ? " secili" : ""}" style="--not-renk:${esc(n.renk)};--not-boyut:${n.boyut}px;` +
+    `--not-hale:${acik ? "var(--harita-yazi-hale)" : "var(--not-hale-acik)"};--not-zemin:${acik ? "var(--not-zemin-koyu)" : "var(--not-zemin-acik)"}">${esc(n.metin)}</span>`;
+}
+
+// Okun ucu SVG işaretidir (marker); çizgiyle birlikte döner, kalınlıkla büyür.
+function okUcuYaz(n) {
+  const id = `ok-ucu-${n.id}`;
+  let isaret = document.getElementById(id);
+  if (!isaret) {
+    isaret = svgEl("marker", { id, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 3.4, markerHeight: 3.4, markerUnits: "strokeWidth", orient: "auto-start-reverse" });
+    isaret.append(svgEl("path", { d: "M0 0L10 5L0 10z" }));
+    $("desenler").append(isaret);
+  }
+  isaret.firstChild.setAttribute("fill", n.renk);
+  const yol = n.katman.getElement();
+  if (n.uc === "yok") yol.removeAttribute("marker-end"); else yol.setAttribute("marker-end", `url(#${id})`);
+  if (n.uc === "cift") yol.setAttribute("marker-start", `url(#${id})`); else yol.removeAttribute("marker-start");
+}
+
+const ortaNokta = (n) => L.latLng((n.noktalar[0][0] + n.noktalar[1][0]) / 2, (n.noktalar[0][1] + n.noktalar[1][1]) / 2);
+
+function notCiz(n) {
+  n.katman?.remove();
+  n.tutamaclar?.forEach((t) => t.remove());
+  n.katman = null;
+  n.tutamaclar = [];
+  if (n.gorunur) {
+    const pane = katmanBolmesi(n.id);
+    harita.getPane(pane).classList.add("not-katmani");
+    if (n.tur === "yazi") {
+      n.katman = L.marker(n.konum, {
+        pane, draggable: true, keyboard: false,
+        icon: L.divIcon({ className: "harita-yazi-ikon", html: yaziHtml(n), iconSize: null }),
+      });
+      n.katman.on("dragend", () => { const p = n.katman.getLatLng(); n.konum = [p.lat, p.lng]; });
+      n.katman.on("click", () => notSec(n.id));
+      n.katman.on("dblclick", (e) => { L.DomEvent.stop(e); notSec(n.id); $("notMetin").focus(); });
+    } else {
+      n.katman = L.polyline(n.noktalar, {
+        pane, color: n.renk, weight: n.kalinlik, opacity: 1, lineCap: "round", bubblingMouseEvents: false,
+        dashArray: n.cizgi === "kesik" ? `${n.kalinlik * 3} ${n.kalinlik * 2.2}` : null,
+      });
+      n.katman.on("click", () => notSec(n.id));
+    }
+    n.katman.addTo(harita);
+    if (n.tur === "ok") okUcuYaz(n);
+    if (n.id === seciliNot && gorselSekmesinde()) tutamaclariCiz(n);
+  }
+  sirayiUygula();
+}
+
+// Seçili okun uçlarında ve ortasında sürüklenebilir noktalar: uçlar yönü, ortadaki yeri değiştirir.
+function tutamaclariCiz(n) {
+  if (n.tur !== "ok" || !n.katman) return;
+  const tutamac = (konum, tasi, sinif) => {
+    const t = L.marker(konum, {
+      draggable: true, keyboard: false, zIndexOffset: 1000,
+      icon: L.divIcon({ className: `not-tutamac ${sinif}`, iconSize: [14, 14], iconAnchor: [7, 7] }),
+    }).addTo(harita);
+    t.on("drag", () => tasi(t.getLatLng()));
+    n.tutamaclar.push(t);
+    return t;
+  };
+  const yenile = () => { n.katman.setLatLngs(n.noktalar); orta.setLatLng(ortaNokta(n)); };
+  const bas = tutamac(n.noktalar[0], (p) => { n.noktalar[0] = [p.lat, p.lng]; yenile(); }, "uc");
+  const son = tutamac(n.noktalar[1], (p) => { n.noktalar[1] = [p.lat, p.lng]; yenile(); }, "uc");
+  const orta = tutamac(ortaNokta(n), (p) => {
+    const o = ortaNokta(n), dLat = p.lat - o.lat, dLng = p.lng - o.lng;
+    n.noktalar = n.noktalar.map(([a, b]) => [a + dLat, b + dLng]);
+    n.katman.setLatLngs(n.noktalar);
+    bas.setLatLng(n.noktalar[0]);
+    son.setLatLng(n.noktalar[1]);
+  }, "orta");
+}
+
+function notEkle(tur, ayar) {
+  const id = `n${++notSayac}`;
+  const n = tur === "yazi"
+    ? { id, tur, ad: "", gorunur: true, metin: "Yazı", boyut: 16, renk: token("--not-beyaz"), stil: "hale", kalin: true, ...ayar }
+    : { id, tur, ad: "", gorunur: true, renk: token("--alan-renk-3"), kalinlik: 3, uc: "tek", cizgi: "duz", ...ayar };
+  notlar.set(id, n);
+  katmanSirasi.unshift(id); // yeni katman en üste
+  notCiz(n);
+  notSec(id);
+  return n;
+}
+
+function notSec(id) {
+  const onceki = notlar.get(seciliNot);
+  seciliNot = id;
+  gorselAlan = null;
+  if (!gorselSekmesinde()) sekmeAc("gorsel");
+  if (onceki && onceki.id !== id) notCiz(onceki); // seçim çerçevesi ve tutamaçlar kalksın
+  const n = notlar.get(id);
+  if (n) notCiz(n);
+  katmanSirasiCiz();
+  gorselDuzenDoldur();
+  notDuzenDoldur();
+}
+
+function notGuncelle(id, degisim) {
+  const n = notlar.get(id);
+  if (!n) return;
+  Object.assign(n, degisim);
+  notCiz(n);
+  katmanSirasiCiz();
+  notDuzenDoldur();
+}
+
+function notSil(id) {
+  const n = notlar.get(id);
+  if (!n) return;
+  n.katman?.remove();
+  n.tutamaclar?.forEach((t) => t.remove());
+  notlar.delete(id);
+  if (katmanSirasi.includes(id)) katmanSirasi.splice(katmanSirasi.indexOf(id), 1);
+  document.getElementById(`ok-ucu-${id}`)?.remove();
+  lejantAlanCikar(id);
+  if (seciliNot === id) seciliNot = null;
+  katmanSirasiCiz();
+  notDuzenDoldur();
+}
+
+function notaYaklas(n) {
+  if (n.tur === "yazi") harita.panTo(n.konum);
+  else harita.fitBounds(L.latLngBounds(n.noktalar), { padding: [80, 80], maxZoom: harita.getZoom() });
+}
+
+// Görsel sekmesinden çıkınca seçim çerçevesi ve tutamaçlar gizlenir, notlar tıklanmaz olur.
+function notlariSekmeyeUydur() {
+  document.body.classList.toggle("gorsel-acik", gorselSekmesinde());
+  if (!gorselSekmesinde()) notModu(null);
+  const n = notlar.get(seciliNot);
+  if (n) notCiz(n);
+}
+
+// ---- yerleştirme: "Yazı ekle" haritada bir tık, "Ok ekle" iki tık ------------------------
+
+function notModu(tur) {
+  if (tur && durum.mod === "sorgu") sorguModu(false);
+  if (tur && durum.mod === "cizim") cizimIptal();
+  okTaslak.cizgi?.remove();
+  okTaslak.bas = okTaslak.cizgi = null;
+  if (tur) durum.mod = `not-${tur}`;
+  else if (durum.mod?.startsWith("not-")) durum.mod = null;
+  $("yaziEkle").setAttribute("aria-pressed", tur === "yazi");
+  $("okEkle").setAttribute("aria-pressed", tur === "ok");
+  $("notIpucu").hidden = !tur;
+  $("notIpucu").textContent = tur === "yazi" ? "Haritada yazının yerine tıkla. Vazgeçmek için Esc."
+    : tur === "ok" ? "Okun başladığı yere, sonra gösterdiği yere tıkla. Vazgeçmek için Esc." : "";
+  imlecGuncelle();
+}
+
+function notTikla(latlng) {
+  if (durum.mod === "not-yazi") {
+    notModu(null);
+    notEkle("yazi", { konum: [latlng.lat, latlng.lng] });
+    $("notMetin").focus();
+    $("notMetin").select();
+    return;
+  }
+  if (!okTaslak.bas) {
+    okTaslak.bas = latlng;
+    okTaslak.cizgi = L.polyline([latlng, latlng], { color: HR.cizim, weight: 2, dashArray: "6 5", interactive: false }).addTo(harita);
+    $("notIpucu").textContent = "Şimdi okun gösterdiği yere tıkla.";
+    return;
+  }
+  const bas = okTaslak.bas;
+  notModu(null);
+  notEkle("ok", { noktalar: [[bas.lat, bas.lng], [latlng.lat, latlng.lng]] });
+}
+
+harita.on("mousemove", (e) => { if (okTaslak.cizgi) okTaslak.cizgi.setLatLngs([okTaslak.bas, e.latlng]); });
+$("yaziEkle").addEventListener("click", () => notModu(durum.mod === "not-yazi" ? null : "yazi"));
+$("okEkle").addEventListener("click", () => notModu(durum.mod === "not-ok" ? null : "ok"));
+
+// ---- not düzenleyici -------------------------------------------------------------------
+
+$("notRenkler").innerHTML = NOT_RENKLERI.map(([ad, isim]) => {
+  const renk = token(ad);
+  return `<button type="button" data-renk="${renk}" style="--ornek:${renk}" aria-label="${isim}" data-ipucu="${isim}" aria-pressed="false"></button>`;
+}).join("");
+
+function notDuzenDoldur() {
+  const n = notlar.get(seciliNot);
+  $("notDuzen").hidden = !n;
+  if (!n) return;
+  document.querySelectorAll("#notDuzen [data-not]").forEach((el) => { el.hidden = el.dataset.not !== n.tur; });
+  $("notBaslik").textContent = n.tur === "yazi" ? "Yazı" : notAdi(n);
+  [...$("notRenkler").children].forEach((b) => b.setAttribute("aria-pressed", b.dataset.renk.toLowerCase() === n.renk.toLowerCase()));
+  if (n.tur === "yazi") {
+    if (document.activeElement !== $("notMetin")) $("notMetin").value = n.metin;
+    $("notBoyut").value = n.boyut;
+    $("notBoyutDeger").textContent = `${n.boyut} px`;
+    kaydiriciDoldur($("notBoyut"));
+    document.querySelectorAll("input[name=notStil]").forEach((x) => { x.checked = x.value === n.stil; });
+    $("notKalin").checked = n.kalin;
+  } else {
+    if (document.activeElement !== $("notAd")) $("notAd").value = n.ad;
+    $("notKalinlik").value = n.kalinlik;
+    $("notKalinlikDeger").textContent = kalinlikMetni(n.kalinlik);
+    kaydiriciDoldur($("notKalinlik"));
+    document.querySelectorAll("input[name=notUc]").forEach((x) => { x.checked = x.value === n.uc; });
+    document.querySelectorAll("input[name=notCizgi]").forEach((x) => { x.checked = x.value === n.cizgi; });
+  }
+}
+
+$("notMetin").addEventListener("input", (e) => notGuncelle(seciliNot, { metin: e.target.value }));
+$("notMetin").addEventListener("change", (e) => { if (!e.target.value.trim()) notGuncelle(seciliNot, { metin: "Yazı" }); });
+$("notAd").addEventListener("input", (e) => notGuncelle(seciliNot, { ad: e.target.value.trim() }));
+$("notBoyut").addEventListener("input", (e) => notGuncelle(seciliNot, { boyut: Number(e.target.value) }));
+$("notKalinlik").addEventListener("input", (e) => notGuncelle(seciliNot, { kalinlik: Number(e.target.value) }));
+$("notKalin").addEventListener("change", (e) => notGuncelle(seciliNot, { kalin: e.target.checked }));
+for (const ad of ["notStil", "notUc", "notCizgi"]) {
+  document.querySelectorAll(`input[name=${ad}]`).forEach((x) => x.addEventListener("change", () => {
+    notGuncelle(seciliNot, { [{ notStil: "stil", notUc: "uc", notCizgi: "cizgi" }[ad]]: x.value });
+  }));
+}
+$("notRenkler").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-renk]");
+  if (b) notGuncelle(seciliNot, { renk: b.dataset.renk });
+});
+$("notSil").addEventListener("click", () => notSil(seciliNot));
+
 
 // ---- başlangıç -----------------------------------------------------------------
 
