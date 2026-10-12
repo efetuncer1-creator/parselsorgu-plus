@@ -1,0 +1,28 @@
+{
+  "aciklama": "Güncelleme geçmişi. En yeni sürüm en üstte. tur: yeni | iyilestirme | duzeltme. Henüz yayınlanmamış bir sürüm 'taslak': true ile yazılabilir; sitede görünmez, etiketi gönderilmeden önce kaldırılır. GitHub derlemesi, etiketin sürüm notunu buradan alır; not yoksa sürüm yayınlanmaz.",
+  "surumler": [
+    {
+      "surum": "0.1.1",
+      "tarih": "2026-10-09",
+      "baslik": "Liste sıralaması düzeltildi",
+      "notlar": [
+        { "tur": "duzeltme", "metin": "İl, ilçe ve mahalle listelerinde Türkçe sıralama düzeltildi: “Apa Köyü” artık “Apasaraycık Köyü”nden önce geliyor." },
+        { "tur": "duzeltme", "metin": "Daha önce kaydedilmiş listeler de açılırken yeniden doğru sıralanıyor; yeni sorgu harcanmıyor." }
+      ]
+    },
+    {
+      "surum": "0.1.0",
+      "tarih": "2026-10-09",
+      "baslik": "İlk sürüm",
+      "notlar": [
+        { "tur": "yeni", "metin": "Ada/parsel sorgusu: il, ilçe ve mahalle yazarak aranır; tapu alanı, nitelik, mevkii ve pafta tek kartta." },
+        { "tur": "yeni", "metin": "Haritadan sorgu: haritada parsele tıkla, bilgisi gelsin." },
+        { "tur": "yeni", "metin": "Önbellek: sorgulanan her parsel bilgisayarda saklanır, aynı parsel için TKGM'ye ikinci kez gidilmez." },
+        { "tur": "yeni", "metin": "Alandan parsel tespiti: OSB ya da plan sınırını yükle (KML, KMZ, Netcad projesi) veya haritada çiz; içindekileri ve kesişenleri seç, boşlukları sorgu bütçesiyle TKGM'den tara." },
+        { "tur": "yeni", "metin": "KML ve Excel çıktısı; köşe koordinatları ITRF96 3° ya da ED50 3°, alan sınırı ve alan içi metrekarelerle." },
+        { "tur": "yeni", "metin": "Alan Yöneticisi ve parselsorgu KML'leri ile fav_list.json dosyaları içe aktarılır." },
+        { "tur": "yeni", "metin": "Kendi penceresinde açılan masaüstü uygulaması (Chrome, yoksa Edge); kurulum yönetici izni istemez." }
+      ]
+    }
+  ]
+}

@@ -62,6 +62,21 @@ TKGM'ye bağlanmaz, örnek dosyalar uydurmadır.
 python -m unittest -v
 ```
 
+## Güncelleme yayınlama
+
+Güncelleme geçmişinin tek kaynağı [`site/guncellemeler.json`](site/guncellemeler.json). Sitedeki [Güncellemeler](https://parselsorgu-plus.vercel.app/guncellemeler) sayfası da GitHub'daki sürüm notu da buradan beslenir.
+
+1. `site/guncellemeler.json`'da `surumler` listesinin **en üstüne** yeni sürümü ekle. Not türleri: `yeni`, `iyilestirme`, `duzeltme`. Hazır değilse `"taslak": true` yaz; sitede görünmez.
+2. `"taslak"` satırını kaldır, commit'le ve gönder. Site birkaç dakika içinde güncellenir.
+3. Etiketi gönder; GitHub kurulum dosyasını derler ve notu sürüm sayfasına yazar:
+
+```bash
+git tag v0.1.2
+git push origin v0.1.2
+```
+
+O sürümün notu yoksa ya da hâlâ taslaksa derleme baştan durur ve sürüm yayınlanmaz.
+
 ## Yapı
 
 | Dosya | Görev |
@@ -75,7 +90,8 @@ python -m unittest -v
 | `parselapp/analiz.py` | Alan özeti, boşluklar, boşluk tarama |
 | `parselapp/server.py` | Yerel sunucu ve JSON uç noktaları |
 | `parselapp/masaustu.py` | Masaüstü başlatıcısı: sunucu + uygulama penceresi |
-| `packaging/` | Kurulum paketi (PyInstaller + Inno Setup); `v*` etiketiyle GitHub Actions üretir |
+| `packaging/` | Kurulum paketi (PyInstaller + Inno Setup) ve sürüm notu; `v*` etiketiyle GitHub Actions üretir |
+| `site/` | Tanıtım sitesi (Vercel); `guncellemeler.json` güncelleme geçmişi |
 | `web/` | Harita ekranı (Leaflet) |
 | `data/` | Parsel veritabanı (depoya girmez) |
 | `test-kml/` | Elle deneme için gerçek KML'ler; İçe aktar ile yüklenir (depoya girmez) |

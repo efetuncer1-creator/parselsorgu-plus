@@ -20,6 +20,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Not yoksa ya da taslaksa burada durur; paket derlenmez, sürüm yayınlanmaz.
+      - name: Sürüm notu (site/guncellemeler.json)
+        id: surum_notu
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python packaging/surum_notu.py "${{ github.ref_name }}" dist/surum-notu.md
+
       - name: Bağımlılıklar
         run: |
           python -m pip install --upgrade pip
@@ -51,8 +57,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ steps.surum_notu.outputs.baslik }}
+          body_path: dist/surum-notu.md
           files: dist/ParselSorguPlus-Kurulum-*.exe
-          generate_release_notes: true
 
       - name: Derleme çıktısı (elle çalıştırmada)
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
