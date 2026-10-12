@@ -1160,3 +1160,9 @@ body:not(.gorsel-acik) .not-katmani, body:not(.gorsel-acik) .not-katmani * { poi
 .onizleme-tutamac::before { content: ""; position: absolute; inset: calc(var(--b-1-5) * -1); } /* tutması kolay olsun */
 .onizleme-kutu:hover .onizleme-tutamac, .onizleme-kutu.suruklenen .onizleme-tutamac { opacity: 1; }
 @media (hover: none) { .onizleme-tutamac { opacity: 1; } }
+
+/* Canlı sayfa: Çıktı sekmesinde kağıt haritanın üstünde; sadece kutular tıklanır */
+.canli-sayfa { position: absolute; pointer-events: none; box-shadow: var(--cam-golge); }
+.canli-sayfa .onizleme-tuval { position: absolute; inset: 0; }
+.canli-sayfa .onizleme-kutu { pointer-events: auto; }
+body.cikti-sayfasi .lejant { display: none; }

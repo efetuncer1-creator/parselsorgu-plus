@@ -20,7 +20,7 @@ const ciktiSekmesinde = () => !$("panel-cikti").hidden;
 const bugun = () => new Date().toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 const cikti = {
-  sablon: "A4", yon: "yatay", olcek: "otomatik", dpi: 150, carpan: 2, sistem: "itrf96",
+  sablon: "A4", yon: "yatay", olcek: "otomatik", dpi: 150, carpan: 2, sistem: "itrf96", canli: true,
   ogeler: { baslik: true, lejant: true, kuzey: true, izgara: false },
   baslik: "", tarih: "",
   serbest: null, // "Seçtiğim alan": [[güney, batı], [kuzey, doğu]]
@@ -31,13 +31,13 @@ const cikti = {
 // Kalıcı tercihler (sayfa öğeleri ve konumları dosya içerdiği için saklanmaz)
 try {
   const k = JSON.parse(localStorage.getItem("cikti") || "{}");
-  for (const ad of ["sablon", "yon", "olcek", "dpi", "carpan", "sistem", "baslik"]) if (k[ad] != null) cikti[ad] = k[ad];
+  for (const ad of ["sablon", "yon", "olcek", "dpi", "carpan", "sistem", "baslik", "canli"]) if (k[ad] != null) cikti[ad] = k[ad];
   if (k.ogeler && typeof k.ogeler === "object") Object.assign(cikti.ogeler, k.ogeler);
 } catch { /* varsayılanlar */ }
 if (!Object.hasOwn(KAGITLAR, cikti.sablon) && cikti.sablon !== "serbest") cikti.sablon = "A4";
 function ciktiKaydet() {
-  const { sablon, yon, olcek, dpi, carpan, sistem, baslik, ogeler } = cikti;
-  try { localStorage.setItem("cikti", JSON.stringify({ sablon, yon, olcek, dpi, carpan, sistem, baslik, ogeler })); } catch { /* önemli değil */ }
+  const { sablon, yon, olcek, dpi, carpan, sistem, baslik, ogeler, canli } = cikti;
+  try { localStorage.setItem("cikti", JSON.stringify({ sablon, yon, olcek, dpi, carpan, sistem, baslik, ogeler, canli })); } catch { /* önemli değil */ }
 }
 
 // ---- sayfa düzeni ve harita çerçevesi -------------------------------------------------------
@@ -53,19 +53,28 @@ function kagitDuzeni() {
   return { en, boy, harita: { x: kenar, y: kenar + bant, en: en - 2 * kenar, boy: boy - 2 * kenar - bant } };
 }
 
-// Otomatik ölçek: çerçeve ekrandaki haritaya sığacak en büyük yuvarlak ölçek.
+// Haritanın çekmecenin altında kalmayan kısmı (kap noktası): masaüstünde çekmecenin sağı, telefonda üstü.
+function gorunurAlan() {
+  const s = harita.getSize(), c = document.querySelector(".cekmece").getBoundingClientRect();
+  if (matchMedia("(max-width: 760px)").matches) return { x0: 0, y0: 0, x1: s.x, y1: Math.max(120, c.top) };
+  return { x0: Math.min(s.x - 120, c.right), y0: 0, x1: s.x, y1: s.y };
+}
+
+// Otomatik ölçek: kağıdın tamamı haritanın görünen kısmına sığacak en büyük yuvarlak ölçek.
 function gecerliOlcek() {
   if (cikti.olcek !== "otomatik") return Number(cikti.olcek);
-  const d = kagitDuzeni(), s = harita.getSize(), m = harita.getCenter();
-  const mPiksel = metrePiksel(m.lat);
-  const sigan = Math.min((s.x * 0.86 * mPiksel) / (d.harita.en / 1000), (s.y * 0.86 * mPiksel) / (d.harita.boy / 1000));
+  const d = kagitDuzeni(), a = gorunurAlan(), mPiksel = metrePiksel(harita.getCenter().lat);
+  const sigan = Math.min(((a.x1 - a.x0) * 0.92 * mPiksel) / (d.en / 1000), ((a.y1 - a.y0) * 0.92 * mPiksel) / (d.boy / 1000));
   return [...OLCEKLER].reverse().find((o) => o <= sigan) ?? OLCEKLER[0];
 }
 
-// Haritadaki çerçeve (coğrafi). Kağıtta ekranın ortasındadır ve harita kaydıkça onu izler.
+// Haritadaki çerçeve (coğrafi). Kağıt, haritanın görünen kısmının ortasında durur; harita kaydıkça çerçeve onu izler.
 function cerceveSiniri() {
   if (cikti.sablon === "serbest") return cikti.serbest ? L.latLngBounds(cikti.serbest) : null;
-  const d = kagitDuzeni(), olcek = gecerliOlcek(), m = harita.getCenter();
+  const d = kagitDuzeni(), olcek = gecerliOlcek(), a = gorunurAlan();
+  const pxmm = olcek / 1000 / metrePiksel(harita.getCenter().lat); // ekranda kağıdın bir milimetresi
+  // Çerçevenin ortası kağıdın ortasından başlık bandının yarısı kadar aşağıdadır.
+  const m = harita.containerPointToLatLng([(a.x0 + a.x1) / 2, (a.y0 + a.y1) / 2 + (d.harita.y + d.harita.boy / 2 - d.boy / 2) * pxmm]);
   const k = 1 / Math.cos((m.lat * Math.PI) / 180); // yer metresi -> Merkatör metresi
   const yariEn = ((d.harita.en / 1000) * olcek * k) / 2, yariBoy = ((d.harita.boy / 1000) * olcek * k) / 2;
   const p = merkatorla(m);
@@ -92,8 +101,11 @@ function cerceveCiz() {
       cerceve.maske = L.polygon([dunya, ic], { pane: "cikti", stroke: false, fillColor: token("--cikti-maske"), fillOpacity: 1, interactive: false }).addTo(harita);
       cerceve.kenar = L.rectangle(s, { pane: "cikti", color: HR.cizim, weight: 2, dashArray: "6 5", fill: false, interactive: false }).addTo(harita);
     }
+    // Kağıt haritada görünürken çerçevenin siyah kenarı sayfada çizili; kesik çizgi yalnızca serbest alanda kalır.
+    cerceve.kenar.setStyle({ opacity: cikti.canli && cikti.sablon !== "serbest" ? 0 : 1 });
   }
   ciktiBilgisi();
+  canliKonumla();
 }
 
 function ciktiBilgisi() {
@@ -103,10 +115,15 @@ function ciktiBilgisi() {
 }
 
 harita.on("move zoomend resize", () => { if (ciktiSekmesinde() && cikti.sablon !== "serbest") cerceveCiz(); });
+harita.on("move", () => { if (ciktiSekmesinde()) canliKonumla(); });
+// Kağıtta çerçeve haritayla birlikte kayar; ızgara değerleri yeni yere göre çizilsin.
+harita.on("zoomend resize", () => canliZamanla());
+harita.on("moveend", () => { if (ciktiSekmesinde() && cikti.sablon !== "serbest" && cikti.ogeler.izgara) canliZamanla(); });
 document.addEventListener("sekme", () => {
   if (!ciktiSekmesinde()) serbestSecimBitir(true);
   cerceveCiz();
   if (ciktiSekmesinde()) ciktiPaneliDoldur();
+  canliZamanla();
 });
 
 // ---- "Seçtiğim alan": haritada sürükleyerek dikdörtgen -----------------------------------------
@@ -118,6 +135,7 @@ function serbestSecimBasla() {
   harita.dragging.disable();
   imlecGuncelle();
   $("alanSec").setAttribute("aria-pressed", "true");
+  canliKonumla();
   mesaj("Haritada çıktısı alınacak alanı sürükleyerek çiz.");
 }
 function serbestSecimBitir(iptal = false) {
@@ -129,6 +147,7 @@ function serbestSecimBitir(iptal = false) {
   secim.bas = secim.kutu = null;
   $("alanSec").setAttribute("aria-pressed", "false");
   if (!iptal) cerceveCiz();
+  canliZamanla();
 }
 harita.on("mousedown", (e) => {
   if (durum.mod !== "cikti-sec") return;
@@ -415,7 +434,9 @@ async function izgaraAl(s) {
 
 // Sayfayı verilen çözünürlükte çizer. dpi: kağıtta inç başına piksel; serbest alanda ekran pikseli çarpanı
 // "carpan" kullanılır. Dönen kutular önizlemede sürüklenebilen öğelerin sayfadaki yerleridir.
-async function sayfaCiz({ onizleme = false } = {}) {
+// canli: Çıktı sekmesinde haritanın üstüne konan sayfa; ekran çözünürlüğünde, harita alanı saydam
+// (altında gerçek harita görünür), sadece kenar boşlukları ve sayfa öğeleri çizilir.
+async function sayfaCiz({ onizleme = false, canli = false } = {}) {
   await document.fonts.ready;
   const serbest = cikti.sablon === "serbest";
   const s = cerceveSiniri();
@@ -425,13 +446,16 @@ async function sayfaCiz({ onizleme = false } = {}) {
     const a = harita.latLngToContainerPoint(s.getSouthWest()), b = harita.latLngToContainerPoint(s.getNorthEast());
     const enEkran = Math.abs(b.x - a.x), boyEkran = Math.abs(a.y - b.y);
     // Seçilen alan ekrandan çok büyükse (uzaklaşıp seçip yakınlaşınca) piksel sayısı sınırlanır.
-    p = Math.min(onizleme ? 1.2 : cikti.carpan, (onizleme ? 1000 : EN_BUYUK_KENAR) / Math.max(enEkran, boyEkran));
+    p = canli ? devicePixelRatio
+      : Math.min(onizleme ? 1.2 : cikti.carpan, (onizleme ? 1000 : EN_BUYUK_KENAR) / Math.max(enEkran, boyEkran));
     mm = (p * 96) / 25.4;
     sayfa = { en: Math.round(enEkran * p), boy: Math.round(boyEkran * p) };
     hc = { x: 0, y: 0, en: sayfa.en, boy: sayfa.boy };
   } else {
     const d = kagitDuzeni();
-    const dpi = onizleme ? Math.min(150, 1100 / (Math.max(d.en, d.boy) / 25.4)) : cikti.dpi;
+    const a = harita.latLngToContainerPoint(s.getSouthWest()), b = harita.latLngToContainerPoint(s.getNorthEast());
+    const dpi = canli ? ((b.x - a.x) / d.harita.en) * devicePixelRatio * 25.4 // ekrandaki kağıtla aynı boy
+      : onizleme ? Math.min(150, 1100 / (Math.max(d.en, d.boy) / 25.4)) : cikti.dpi;
     mm = dpi / 25.4;
     p = dpi / 96;
     sayfa = { en: Math.round(d.en * mm), boy: Math.round(d.boy * mm) };
@@ -441,6 +465,7 @@ async function sayfaCiz({ onizleme = false } = {}) {
   const ctx = tuval.getContext("2d");
   ctx.fillStyle = token("--not-beyaz");
   ctx.fillRect(0, 0, sayfa.en, sayfa.boy);
+  if (canli) ctx.clearRect(hc.x, hc.y, hc.en, hc.boy);
 
   // Merkatör -> sayfa pikseli
   const sw = merkatorla(s.getSouthWest()), ne = merkatorla(s.getNorthEast());
@@ -452,78 +477,80 @@ async function sayfaCiz({ onizleme = false } = {}) {
   ctx.beginPath();
   ctx.rect(hc.x, hc.y, hc.en, hc.boy);
   ctx.clip();
-  let eksik = await karolariCiz(ctx, aktifAltlik, g);
-  if (aktifAltlik === altlik.Uydu && etiketAcik) {
-    const [ulasim, yerler] = etiketler.getLayers();
-    eksik += await karolariCiz(ctx, ulasim, g, ulasim.options.opacity ?? 1);
-    eksik += await karolariCiz(ctx, yerler, g);
-  }
-  if (eksik && !onizleme) mesaj(`${eksik} harita karosu indirilemedi; çıktıda o yerler boş kalabilir.`, true);
-
-  const sira = [...katmanSirasi].reverse(); // alttan üste
-  const altBant = (id) => typeof id === "number" || notlar.get(id)?.tur === "gorsel";
-  for (const id of sira.filter(altBant)) {
-    if (typeof id === "number") {
-      const r = referanslar.get(id)?.veri;
-      if (r?.gorunur) alanCiz(ctx, r, g, p);
-      continue;
+  if (!canli) { // canlı sayfada altında gerçek harita var
+    let eksik = await karolariCiz(ctx, aktifAltlik, g);
+    if (aktifAltlik === altlik.Uydu && etiketAcik) {
+      const [ulasim, yerler] = etiketler.getLayers();
+      eksik += await karolariCiz(ctx, ulasim, g, ulasim.options.opacity ?? 1);
+      eksik += await karolariCiz(ctx, yerler, g);
     }
-    const n = notlar.get(id);
-    if (!n?.gorunur) continue;
-    const img = await resimYukle(n.url);
-    const [x, y] = g.nokta(...n.merkez), en = (n.genislik / Math.cos((n.merkez[0] * Math.PI) / 180)) * g.k, boy = (en * n.boy) / n.en;
-    ctx.save();
-    ctx.globalAlpha = n.opaklik / 100;
-    if (n.karistir) ctx.globalCompositeOperation = "multiply";
-    ctx.translate(x, y);
-    ctx.rotate((n.aci * Math.PI) / 180);
-    ctx.drawImage(img, -en / 2, -boy / 2, en, boy);
-    ctx.restore();
-  }
+    if (eksik && !onizleme) mesaj(`${eksik} harita karosu indirilemedi; çıktıda o yerler boş kalabilir.`, true);
 
-  // Ekranda açıksa boşluklar ve parsel çıkmayan noktalar
-  if (bosluKatmani && sonOzet) {
+    const sira = [...katmanSirasi].reverse(); // alttan üste
+    const altBant = (id) => typeof id === "number" || notlar.get(id)?.tur === "gorsel";
+    for (const id of sira.filter(altBant)) {
+      if (typeof id === "number") {
+        const r = referanslar.get(id)?.veri;
+        if (r?.gorunur) alanCiz(ctx, r, g, p);
+        continue;
+      }
+      const n = notlar.get(id);
+      if (!n?.gorunur) continue;
+      const img = await resimYukle(n.url);
+      const [x, y] = g.nokta(...n.merkez), en = (n.genislik / Math.cos((n.merkez[0] * Math.PI) / 180)) * g.k, boy = (en * n.boy) / n.en;
+      ctx.save();
+      ctx.globalAlpha = n.opaklik / 100;
+      if (n.karistir) ctx.globalCompositeOperation = "multiply";
+      ctx.translate(x, y);
+      ctx.rotate((n.aci * Math.PI) / 180);
+      ctx.drawImage(img, -en / 2, -boy / 2, en, boy);
+      ctx.restore();
+    }
+
+    // Ekranda açıksa boşluklar ve parsel çıkmayan noktalar
+    if (bosluKatmani && sonOzet) {
+      ctx.save();
+      ctx.strokeStyle = ctx.fillStyle = HR.bosluk;
+      for (const f of sonOzet.bosluk.geojson.features || []) {
+        const yol = geometriYolu(f.geometry, g.nokta);
+        ctx.globalAlpha = 0.14; ctx.fill(yol, "evenodd");
+        ctx.globalAlpha = 1; ctx.lineWidth = 1.5 * p; ctx.setLineDash([4 * p, 4 * p]); ctx.stroke(yol);
+      }
+      ctx.restore();
+    }
+
+    // Parseller (seçililer mavi), sonra numaraları
     ctx.save();
-    ctx.strokeStyle = ctx.fillStyle = HR.bosluk;
-    for (const f of sonOzet.bosluk.geojson.features || []) {
+    ctx.lineJoin = "round";
+    for (const [key, f] of durum.parseller) {
+      const st = durum.secili.has(key) ? STIL_SECILI : STIL;
       const yol = geometriYolu(f.geometry, g.nokta);
-      ctx.globalAlpha = 0.14; ctx.fill(yol, "evenodd");
-      ctx.globalAlpha = 1; ctx.lineWidth = 1.5 * p; ctx.setLineDash([4 * p, 4 * p]); ctx.stroke(yol);
+      ctx.globalAlpha = st.fillOpacity; ctx.fillStyle = st.fillColor; ctx.fill(yol, "evenodd");
+      ctx.globalAlpha = st.opacity; ctx.lineWidth = st.weight * p; ctx.strokeStyle = st.color; ctx.stroke(yol);
     }
     ctx.restore();
-  }
-
-  // Parseller (seçililer mavi), sonra numaraları
-  ctx.save();
-  ctx.lineJoin = "round";
-  for (const [key, f] of durum.parseller) {
-    const st = durum.secili.has(key) ? STIL_SECILI : STIL;
-    const yol = geometriYolu(f.geometry, g.nokta);
-    ctx.globalAlpha = st.fillOpacity; ctx.fillStyle = st.fillColor; ctx.fill(yol, "evenodd");
-    ctx.globalAlpha = st.opacity; ctx.lineWidth = st.weight * p; ctx.strokeStyle = st.color; ctx.stroke(yol);
-  }
-  ctx.restore();
-  if (parselNo.acik) {
-    for (const f of durum.parseller.values()) {
-      const b = L.geoJSON(f).getBounds();
-      const [x0, y0] = g.nokta(b.getSouth(), b.getWest()), [x1, y1] = g.nokta(b.getNorth(), b.getEast());
-      if (x1 - x0 < 40 * p || y0 - y1 < 16 * p) continue;
-      const m = icNokta(f), [x, y] = g.nokta(m.lat, m.lng);
-      yaziCiz(ctx, [`${f.properties.ada}/${f.properties.parsel}`], x, y, { boyut: 11.5, kalin: true, renk: token("--harita-yazi"), stil: "hale", p });
+    if (parselNo.acik) {
+      for (const f of durum.parseller.values()) {
+        const b = L.geoJSON(f).getBounds();
+        const [x0, y0] = g.nokta(b.getSouth(), b.getWest()), [x1, y1] = g.nokta(b.getNorth(), b.getEast());
+        if (x1 - x0 < 40 * p || y0 - y1 < 16 * p) continue;
+        const m = icNokta(f), [x, y] = g.nokta(m.lat, m.lng);
+        yaziCiz(ctx, [`${f.properties.ada}/${f.properties.parsel}`], x, y, { boyut: 11.5, kalin: true, renk: token("--harita-yazi"), stil: "hale", p });
+      }
     }
-  }
-  for (const id of sira.filter((i) => typeof i === "number")) {
-    const r = referanslar.get(id)?.veri;
-    if (!r?.gorunur || !r.gorsel.etiket) continue;
-    const m = alanIcNokta(r);
-    if (m) alanAdiCiz(ctx, r, ...g.nokta(m.lat, m.lng), p);
-  }
-  for (const id of sira.filter((i) => !altBant(i))) {
-    const n = notlar.get(id);
-    if (!n?.gorunur) continue;
-    if (n.tur === "yazi") yaziCiz(ctx, n.metin.split("\n"), ...g.nokta(...n.konum), { ...n, p });
-    else if (n.tur === "ok") okCiz(ctx, g.nokta(...n.noktalar[0]), g.nokta(...n.noktalar[1]), n, p);
-    else if (n.tur === "tablo") tabloCiz(ctx, n, ...g.nokta(...n.konum), n.boyut * p);
+    for (const id of sira.filter((i) => typeof i === "number")) {
+      const r = referanslar.get(id)?.veri;
+      if (!r?.gorunur || !r.gorsel.etiket) continue;
+      const m = alanIcNokta(r);
+      if (m) alanAdiCiz(ctx, r, ...g.nokta(m.lat, m.lng), p);
+    }
+    for (const id of sira.filter((i) => !altBant(i))) {
+      const n = notlar.get(id);
+      if (!n?.gorunur) continue;
+      if (n.tur === "yazi") yaziCiz(ctx, n.metin.split("\n"), ...g.nokta(...n.konum), { ...n, p });
+      else if (n.tur === "ok") okCiz(ctx, g.nokta(...n.noktalar[0]), g.nokta(...n.noktalar[1]), n, p);
+      else if (n.tur === "tablo") tabloCiz(ctx, n, ...g.nokta(...n.konum), n.boyut * p);
+    }
   }
 
   // Koordinat ızgarası: ince çizgiler, değerler çerçevenin iç kenarında
@@ -768,6 +795,20 @@ async function ciktiIndir(bicim, buton) {
 
 const onizleme = { surum: 0, kutular: [], sayfa: null, zamanlayici: 0, surukle: null };
 
+// Sayfa tuvali ve üstünde sürüklenebilen kutular (önizlemede ve haritadaki canlı sayfada ortak).
+function kutulariYerlestir(kap, tuval, kutular, sayfa) {
+  tuval.className = "onizleme-tuval";
+  kap.replaceChildren(tuval, ...kutular.map((k) => {
+    const el = document.createElement("div");
+    el.className = "onizleme-kutu";
+    el.dataset.id = k.id;
+    el.title = "Sürükleyerek yerleştir";
+    el.innerHTML = `<span class="onizleme-tutamac" title="Sürükleyerek büyüt ya da küçült"></span>`;
+    Object.assign(el.style, { left: `${(100 * k.x) / sayfa.en}%`, top: `${(100 * k.y) / sayfa.boy}%`, width: `${(100 * k.en) / sayfa.en}%`, height: `${(100 * k.boy) / sayfa.boy}%` });
+    return el;
+  }));
+}
+
 async function onizlemeCiz() {
   const surum = ++onizleme.surum;
   $("onizlemeDurum").textContent = "Hazırlanıyor…";
@@ -776,16 +817,7 @@ async function onizlemeCiz() {
     if (surum !== onizleme.surum) return;
     Object.assign(onizleme, { kutular, sayfa });
     const kap = $("onizlemeSayfa");
-    tuval.className = "onizleme-tuval";
-    kap.replaceChildren(tuval, ...kutular.map((k) => {
-      const el = document.createElement("div");
-      el.className = "onizleme-kutu";
-      el.dataset.id = k.id;
-      el.title = "Sürükleyerek yerleştir";
-      el.innerHTML = `<span class="onizleme-tutamac" title="Sürükleyerek büyüt ya da küçült"></span>`;
-      Object.assign(el.style, { left: `${(100 * k.x) / sayfa.en}%`, top: `${(100 * k.y) / sayfa.boy}%`, width: `${(100 * k.en) / sayfa.en}%`, height: `${(100 * k.boy) / sayfa.boy}%` });
-      return el;
-    }));
+    kutulariYerlestir(kap, tuval, kutular, sayfa);
     kap.style.aspectRatio = `${sayfa.en} / ${sayfa.boy}`;
     kap.style.setProperty("--oran", (sayfa.en / sayfa.boy).toFixed(4));
     $("onizlemeDurum").textContent = kutular.length ? "Öğeleri sürükleyerek taşı; köşedeki tutamaçla büyüt ya da küçült." : "";
@@ -800,47 +832,54 @@ function onizlemeZamanla() {
 }
 
 // Kutunun kendisi taşır; köşedeki tutamaç en/boy oranını koruyarak büyütür (sol üst köşe yerinde kalır).
-$("onizlemeSayfa").addEventListener("pointerdown", (e) => {
-  const el = e.target.closest(".onizleme-kutu");
-  if (!el || e.button !== 0) return;
-  e.preventDefault();
-  el.setPointerCapture(e.pointerId);
-  const r = $("onizlemeSayfa").getBoundingClientRect(), k = onizleme.kutular.find((x) => x.id === el.dataset.id);
-  onizleme.surukle = { el, k, r, bas: [e.clientX, e.clientY], boyut: !!e.target.closest(".onizleme-tutamac") };
-  el.classList.add("suruklenen");
-});
-$("onizlemeSayfa").addEventListener("pointermove", (e) => {
-  const s = onizleme.surukle;
-  if (!s) return;
-  if (s.boyut) {
-    const sayfa = onizleme.sayfa, k = s.k;
-    const dx = ((e.clientX - s.bas[0]) * sayfa.en) / s.r.width, dy = ((e.clientY - s.bas[1]) * sayfa.boy) / s.r.height;
-    // Sürükleme köşegen boyunca izdüşürülür; kutu sayfadan taşmaz.
-    const enFazla = Math.min((sayfa.en - k.x) / k.en, (sayfa.boy - k.y) / k.boy);
-    s.carpan = Math.max(0.2, Math.min(enFazla, 1 + (dx * k.en + dy * k.boy) / (k.en ** 2 + k.boy ** 2)));
-    s.el.style.width = `${(100 * k.en * s.carpan) / sayfa.en}%`;
-    s.el.style.height = `${(100 * k.boy * s.carpan) / sayfa.boy}%`;
-    return;
-  }
-  const dx = (e.clientX - s.bas[0]) / s.r.width, dy = (e.clientY - s.bas[1]) / s.r.height;
-  const x = Math.max(0, Math.min(1 - s.k.en / onizleme.sayfa.en, s.k.x / onizleme.sayfa.en + dx));
-  const y = Math.max(0, Math.min(1 - s.k.boy / onizleme.sayfa.boy, s.k.y / onizleme.sayfa.boy + dy));
-  s.el.style.left = `${x * 100}%`;
-  s.el.style.top = `${y * 100}%`;
-  s.konum = { x, y };
-});
-$("onizlemeSayfa").addEventListener("pointerup", () => {
-  const s = onizleme.surukle;
-  onizleme.surukle = null;
-  if (!s) return;
-  s.el.classList.remove("suruklenen");
-  if (s.konum) { cikti.konumlar[s.k.id] = s.konum; onizlemeZamanla(); }
-  if (s.carpan && Math.abs(s.carpan - 1) > 0.01) {
-    cikti.konumlar[s.k.id] = { x: s.k.x / onizleme.sayfa.en, y: s.k.y / onizleme.sayfa.boy };
-    ogeyiBuyut(s.k.id, s.carpan);
-    onizlemeZamanla();
-  }
-});
+// yuzey: kutular ve sayfa ölçüleri (önizleme ya da canlı sayfa); bitince yenile() yeniden çizer.
+function duzenleyiciBagla(kap, yuzey, yenile) {
+  kap.addEventListener("pointerdown", (e) => {
+    const el = e.target.closest(".onizleme-kutu");
+    if (!el || e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation(); // haritayı kaydırmasın
+    el.setPointerCapture(e.pointerId);
+    const r = kap.getBoundingClientRect(), k = yuzey.kutular.find((x) => x.id === el.dataset.id);
+    yuzey.surukle = { el, k, r, bas: [e.clientX, e.clientY], boyut: !!e.target.closest(".onizleme-tutamac") };
+    el.classList.add("suruklenen");
+  });
+  kap.addEventListener("pointermove", (e) => {
+    const s = yuzey.surukle;
+    if (!s) return;
+    if (s.boyut) {
+      const sayfa = yuzey.sayfa, k = s.k;
+      const dx = ((e.clientX - s.bas[0]) * sayfa.en) / s.r.width, dy = ((e.clientY - s.bas[1]) * sayfa.boy) / s.r.height;
+      // Sürükleme köşegen boyunca izdüşürülür; kutu sayfadan taşmaz.
+      const enFazla = Math.min((sayfa.en - k.x) / k.en, (sayfa.boy - k.y) / k.boy);
+      s.carpan = Math.max(0.2, Math.min(enFazla, 1 + (dx * k.en + dy * k.boy) / (k.en ** 2 + k.boy ** 2)));
+      s.el.style.width = `${(100 * k.en * s.carpan) / sayfa.en}%`;
+      s.el.style.height = `${(100 * k.boy * s.carpan) / sayfa.boy}%`;
+      return;
+    }
+    const dx = (e.clientX - s.bas[0]) / s.r.width, dy = (e.clientY - s.bas[1]) / s.r.height;
+    const x = Math.max(0, Math.min(1 - s.k.en / yuzey.sayfa.en, s.k.x / yuzey.sayfa.en + dx));
+    const y = Math.max(0, Math.min(1 - s.k.boy / yuzey.sayfa.boy, s.k.y / yuzey.sayfa.boy + dy));
+    s.el.style.left = `${x * 100}%`;
+    s.el.style.top = `${y * 100}%`;
+    s.konum = { x, y };
+  });
+  const bitir = () => {
+    const s = yuzey.surukle;
+    yuzey.surukle = null;
+    if (!s) return;
+    s.el.classList.remove("suruklenen");
+    if (s.konum) { cikti.konumlar[s.k.id] = s.konum; yenile(); }
+    if (s.carpan && Math.abs(s.carpan - 1) > 0.01) {
+      cikti.konumlar[s.k.id] = { x: s.k.x / yuzey.sayfa.en, y: s.k.y / yuzey.sayfa.boy };
+      ogeyiBuyut(s.k.id, s.carpan);
+      yenile();
+    }
+  };
+  kap.addEventListener("pointerup", bitir);
+  kap.addEventListener("pointercancel", bitir);
+}
+duzenleyiciBagla($("onizlemeSayfa"), onizleme, onizlemeZamanla);
 
 const sinirla = (v, [alt, ust, adim = 0.01]) => Math.min(ust, Math.max(alt, Math.round(v / adim) * adim));
 
@@ -858,6 +897,7 @@ $("ciktiOnizle").addEventListener("click", () => {
   onizlemeCiz();
 });
 $("onizlemeKapat").addEventListener("click", () => $("onizleme").close());
+$("onizleme").addEventListener("close", () => canliZamanla()); // önizlemede yapılan değişiklik haritadaki sayfaya da gelsin
 $("onizlemeSifirla").addEventListener("click", () => { cikti.konumlar = {}; cikti.boyutlar = {}; onizlemeCiz(); });
 for (const [id, bicim] of [["ciktiPng", "png"], ["ciktiPdf", "pdf"], ["onizlemePng", "png"], ["onizlemePdf", "pdf"]]) {
   $(id).addEventListener("click", (e) => ciktiIndir(bicim, e.currentTarget));
@@ -873,6 +913,7 @@ function ciktiPaneliDoldur() {
   document.querySelectorAll("input[name=ciktiCarpan]").forEach((x) => { x.checked = Number(x.value) === cikti.carpan; });
   document.querySelectorAll("input[name=ciktiSistem]").forEach((x) => { x.checked = x.value === cikti.sistem; });
   document.querySelectorAll("#panel-cikti [data-sablon]").forEach((el) => { el.hidden = (el.dataset.sablon === "serbest") !== serbest; });
+  $("ciktiCanli").checked = cikti.canli;
   $("ciktiOlcek").value = String(cikti.olcek);
   $("ciktiOlcek").dispatchEvent(new Event("change"));
   for (const ad of Object.keys(cikti.ogeler)) $(`ciktiOge-${ad}`).checked = cikti.ogeler[ad];
@@ -885,6 +926,7 @@ function ciktiPaneliDoldur() {
   $("ciktiLejantUyari").hidden = !cikti.ogeler.lejant || lejantVar;
   sayfaOgeleriCiz();
   ciktiBilgisi();
+  canliZamanla();
 }
 
 function ciktiAyari(degisim) {
@@ -914,8 +956,9 @@ $("ciktiOlcek").addEventListener("change", (e) => {
 for (const ad of Object.keys(cikti.ogeler)) {
   $(`ciktiOge-${ad}`).addEventListener("change", (e) => ciktiAyari({ ogeler: { ...cikti.ogeler, [ad]: e.target.checked } }));
 }
-$("ciktiBaslik").addEventListener("input", (e) => { cikti.baslik = e.target.value; ciktiKaydet(); });
-$("ciktiTarih").addEventListener("input", (e) => { cikti.tarih = e.target.value; });
+$("ciktiBaslik").addEventListener("input", (e) => { cikti.baslik = e.target.value; ciktiKaydet(); canliZamanla(); });
+$("ciktiTarih").addEventListener("input", (e) => { cikti.tarih = e.target.value; canliZamanla(); });
+$("ciktiCanli").addEventListener("change", (e) => ciktiAyari({ canli: e.target.checked }));
 $("alanSec").addEventListener("click", () => (durum.mod === "cikti-sec" ? serbestSecimBitir(true) : serbestSecimBasla()));
 $("ciktiLejantGit").addEventListener("click", () => {
   sekmeAc("gorsel");
@@ -940,6 +983,7 @@ function sayfaOgeleriCiz() {
     </li>`;
   }).join("");
   $("sayfaOgeleri").querySelectorAll("input[type=range]").forEach(kaydiriciDoldur);
+  canliZamanla();
 }
 
 async function sayfayaEkle(dosyalar) {
@@ -972,12 +1016,13 @@ $("sayfaYazi").addEventListener("click", () => {
 const sayfaOgesi = (el) => cikti.sayfaOgeleri.find((o) => o.id === el.closest("li").dataset.id);
 $("sayfaOgeleri").addEventListener("input", (e) => {
   const o = sayfaOgesi(e.target);
-  if (e.target.dataset.is === "metin") { o.metin = e.target.value; o.ad = o.metin.split("\n")[0].slice(0, 30) || "Yazı"; return; }
+  if (e.target.dataset.is === "metin") { o.metin = e.target.value; o.ad = o.metin.split("\n")[0].slice(0, 30) || "Yazı"; return canliZamanla(); }
   if (e.target.dataset.is !== "boyut") return;
   const v = Number(e.target.value);
   if (o.tur === "gorsel") { o.genislikMm = v; e.target.nextElementSibling.textContent = `${sayi(v)} mm`; }
   else { o.boyutMm = v; e.target.nextElementSibling.textContent = `${sayi(v, 1)} mm`; }
   kaydiriciDoldur(e.target);
+  canliZamanla();
 });
 $("sayfaOgeleri").addEventListener("click", (e) => {
   const b = e.target.closest("[data-is=sil]");
@@ -988,6 +1033,55 @@ $("sayfaOgeleri").addEventListener("click", (e) => {
   if (o.tur === "gorsel") URL.revokeObjectURL(o.url);
   sayfaOgeleriCiz();
 });
+
+// ---- canlı sayfa: Çıktı sekmesinde kağıt haritanın üstünde -------------------------------------------
+// Kenar boşlukları, başlık, lejant, kuzey oku, ölçek ve sayfaya eklenenler ekran çözünürlüğünde çizilir;
+// harita alanı saydamdır, altında gerçek harita görünür. Öğeler burada da sürüklenir ve büyütülür.
+// Leaflet bölmesinde durur; harita kaydıkça yeri güncellenir, yakınlaşınca yeniden çizilir.
+
+harita.createPane("ciktiSayfa").style.zIndex = 485;
+const canli = { kap: L.DomUtil.create("div", "canli-sayfa leaflet-zoom-hide", harita.getPane("ciktiSayfa")), kutular: [], sayfa: null, surum: 0, zamanlayici: 0, surukle: null };
+canli.kap.hidden = true;
+L.DomEvent.disableClickPropagation(canli.kap);
+L.DomEvent.disableScrollPropagation(canli.kap);
+
+const canliAcik = () => ciktiSekmesinde() && cikti.canli && !!cerceveSiniri() && durum.mod !== "cikti-sec";
+
+// Sayfanın haritadaki yeri (katman pikseli): kağıtta çerçeve + kenar boşlukları, serbest alanda çerçevenin kendisi.
+function canliKonumla() {
+  // Sayfanın kendi lejantı var; haritadaki lejant kutusu bu sırada gizlenir.
+  document.body.classList.toggle("cikti-sayfasi", canliAcik());
+  if (!canliAcik()) { canli.kap.hidden = true; return; }
+  if (!canli.sayfa) return;
+  const s = cerceveSiniri(), ust = harita.latLngToLayerPoint(s.getNorthWest()), alt = harita.latLngToLayerPoint(s.getSouthEast());
+  let x = ust.x, y = ust.y, en = alt.x - ust.x, boy = alt.y - ust.y;
+  if (cikti.sablon !== "serbest") {
+    const d = kagitDuzeni(), pxmm = en / d.harita.en;
+    [x, y, en, boy] = [x - d.harita.x * pxmm, y - d.harita.y * pxmm, d.en * pxmm, d.boy * pxmm];
+  }
+  Object.assign(canli.kap.style, { left: `${x}px`, top: `${y}px`, width: `${en}px`, height: `${boy}px` });
+  canli.kap.hidden = false;
+}
+
+async function canliCiz() {
+  const surum = ++canli.surum;
+  if (!canliAcik()) { canli.kap.hidden = true; return; }
+  if (canli.surukle) return; // sürükleme bitince çizilir
+  try {
+    const { tuval, kutular, sayfa } = await sayfaCiz({ canli: true });
+    if (surum !== canli.surum || canli.surukle) return;
+    Object.assign(canli, { kutular, sayfa });
+    kutulariYerlestir(canli.kap, tuval, kutular, sayfa);
+    canliKonumla();
+  } catch (e) { canli.kap.hidden = true; }
+}
+
+function canliZamanla() {
+  clearTimeout(canli.zamanlayici);
+  canli.zamanlayici = setTimeout(canliCiz, 150);
+}
+
+duzenleyiciBagla(canli.kap, canli, canliZamanla);
 
 ciktiPaneliDoldur();
 cerceveCiz();
