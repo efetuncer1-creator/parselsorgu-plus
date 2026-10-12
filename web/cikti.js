@@ -11,6 +11,9 @@
 const KAGITLAR = { A4: [210, 297], A3: [297, 420] }; // mm, dikey
 const EN_BUYUK_KENAR = 8000; // serbest çıktının uzun kenarı, piksel
 const EN_COK_KARO = 2500; // bir katman için; aşılırsa çıktı çizilmez (tarayıcı kilitlenmesin)
+// Sayfaya konanların boyut sınırları (mm): paneldeki kaydırıcı ve önizlemedeki köşe tutamacı aynı sınırları kullanır.
+const SAYFA_OGE_SINIRI = { gorsel: [10, 400, 1], tablo: [1.5, 10, 0.1], yazi: [1.5, 30, 0.1] };
+const HAZIR_OGE_SINIRI = [0.5, 3]; // başlık, lejant, kuzey oku ve ölçeğin büyütme çarpanı
 const OLCEKLER = [500, 1000, 2000, 2500, 5000, 10000, 25000, 50000];
 const MERKATOR_R = 20037508.342789244;
 const ciktiSekmesinde = () => !$("panel-cikti").hidden;
@@ -22,6 +25,7 @@ const cikti = {
   baslik: "", tarih: "",
   serbest: null, // "Seçtiğim alan": [[güney, batı], [kuzey, doğu]]
   konumlar: {}, // öğe kimliği -> { x, y }: sol üst köşe, sayfa genişliği/yüksekliği oranı
+  boyutlar: {}, // başlık, lejant, kuzey, olcek -> büyütme çarpanı (önizlemede köşeden ayarlanır)
   sayfaOgeleri: [], // sayfaya konan görsel, tablo, yazı (oturumla yaşar)
 };
 // Kalıcı tercihler (sayfa öğeleri ve konumları dosya içerdiği için saklanmaz)
@@ -590,50 +594,55 @@ async function sayfaCiz({ onizleme = false } = {}) {
     ctx.restore();
   };
 
+  // Hazır öğelerin içindeki ölçüler kendi büyütme çarpanıyla (b) çarpılır; yerleri mm ile hesaplanır.
+  const buyut = (id) => mm * (cikti.boyutlar[id] ?? 1);
+
   if (cikti.ogeler.baslik) {
     const baslik = cikti.baslik.trim() || "Parsel Sorgu +", tarih = cikti.tarih.trim() || bugun();
+    const b = buyut("baslik");
     ctx.save();
-    ctx.font = `700 ${5.5 * mm}px Inter, sans-serif`;
+    ctx.font = `700 ${5.5 * b}px Inter, sans-serif`;
     const baslikEn = ctx.measureText(baslik).width;
-    ctx.font = `500 ${3.2 * mm}px Inter, sans-serif`;
+    ctx.font = `500 ${3.2 * b}px Inter, sans-serif`;
     const tarihEn = ctx.measureText(tarih).width;
-    const en = Math.max(baslikEn, tarihEn) + (serbest ? 8 * mm : 0), boy = 11 * mm;
+    const en = Math.max(baslikEn, tarihEn) + (serbest ? 8 * b : 0), boy = 11 * b;
     const k = yerlestir("baslik", en, boy, serbest ? [ic, ic] : [hc.x, 10 * mm - 1 * mm]);
     if (serbest) beyazKutu(k);
-    const x = k.x + (serbest ? 4 * mm : 0);
+    const x = k.x + (serbest ? 4 * b : 0);
     ctx.fillStyle = token("--not-siyah");
     ctx.textBaseline = "alphabetic";
-    ctx.font = `700 ${5.5 * mm}px Inter, sans-serif`;
-    ctx.fillText(baslik, x, k.y + 6 * mm);
-    ctx.font = `500 ${3.2 * mm}px Inter, sans-serif`;
+    ctx.font = `700 ${5.5 * b}px Inter, sans-serif`;
+    ctx.fillText(baslik, x, k.y + 6 * b);
+    ctx.font = `500 ${3.2 * b}px Inter, sans-serif`;
     ctx.fillStyle = token("--metin-3");
-    ctx.fillText(tarih, x, k.y + 10 * mm);
+    ctx.fillText(tarih, x, k.y + 10 * b);
     ctx.restore();
   }
 
   if (cikti.ogeler.lejant) {
     const ogeler = lejant.ogeler.filter((o) => lejantGecerli(o) && lejantGorunur(o));
     if (ogeler.length) {
-      const satirBoy = 6 * mm, ornekEn = 8 * mm, ornekBoy = 5.5 * mm, dolgu = 3 * mm;
+      const b = buyut("lejant");
+      const satirBoy = 6 * b, ornekEn = 8 * b, ornekBoy = 5.5 * b, dolgu = 3 * b;
       ctx.save();
-      ctx.font = `600 ${3 * mm}px Inter, sans-serif`;
+      ctx.font = `600 ${3 * b}px Inter, sans-serif`;
       const baslik = lejant.baslik.trim() || "Lejant";
       let en = ctx.measureText(baslik).width;
-      ctx.font = `400 ${2.8 * mm}px Inter, sans-serif`;
-      for (const o of ogeler) en = Math.max(en, ornekEn + 2.5 * mm + ctx.measureText(lejantAdi(o)).width);
-      const kEn = en + dolgu * 2, kBoy = dolgu * 2 + 5 * mm + ogeler.length * satirBoy;
+      ctx.font = `400 ${2.8 * b}px Inter, sans-serif`;
+      for (const o of ogeler) en = Math.max(en, ornekEn + 2.5 * b + ctx.measureText(lejantAdi(o)).width);
+      const kEn = en + dolgu * 2, kBoy = dolgu * 2 + 5 * b + ogeler.length * satirBoy;
       const k = yerlestir("lejant", kEn, kBoy, [hc.x + ic, hc.y + hc.boy - ic - kBoy]);
       beyazKutu(k);
       ctx.fillStyle = token("--not-siyah");
       ctx.textBaseline = "middle";
-      ctx.font = `600 ${3 * mm}px Inter, sans-serif`;
-      ctx.fillText(baslik, k.x + dolgu, k.y + dolgu + 2 * mm);
-      ctx.font = `400 ${2.8 * mm}px Inter, sans-serif`;
+      ctx.font = `600 ${3 * b}px Inter, sans-serif`;
+      ctx.fillText(baslik, k.x + dolgu, k.y + dolgu + 2 * b);
+      ctx.font = `400 ${2.8 * b}px Inter, sans-serif`;
       for (const [i, o] of ogeler.entries()) {
-        const y = k.y + dolgu + 5 * mm + i * satirBoy;
+        const y = k.y + dolgu + 5 * b + i * satirBoy;
         const resim = await svgResmi(lejantOrnegi(o), Math.round(ornekEn), Math.round(ornekBoy));
         ctx.drawImage(resim, k.x + dolgu, y + (satirBoy - ornekBoy) / 2, ornekEn, ornekBoy);
-        ctx.fillText(lejantAdi(o), k.x + dolgu + ornekEn + 2.5 * mm, y + satirBoy / 2);
+        ctx.fillText(lejantAdi(o), k.x + dolgu + ornekEn + 2.5 * b, y + satirBoy / 2);
       }
       ctx.restore();
     }
@@ -641,45 +650,48 @@ async function sayfaCiz({ onizleme = false } = {}) {
 
   if (cikti.ogeler.kuzey) {
     // Kuzey oku
-    const kEn = 11 * mm, kBoy = 15 * mm;
+    const kb = buyut("kuzey");
+    const kEn = 11 * kb, kBoy = 15 * kb;
     const k = yerlestir("kuzey", kEn, kBoy, [hc.x + hc.en - ic - kEn, hc.y + ic]);
     beyazKutu(k);
-    const cx = k.x + kEn / 2, ust = k.y + 6 * mm, alt = k.y + kBoy - 2 * mm, yari = 2.6 * mm;
+    const cx = k.x + kEn / 2, ust = k.y + 6 * kb, alt = k.y + kBoy - 2 * kb, yari = 2.6 * kb;
     ctx.save();
     ctx.fillStyle = token("--not-siyah");
     ctx.strokeStyle = token("--not-siyah");
-    ctx.lineWidth = Math.max(1, 0.25 * mm);
-    ctx.beginPath(); ctx.moveTo(cx, ust); ctx.lineTo(cx - yari, alt); ctx.lineTo(cx, alt - 2 * mm); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(cx, ust); ctx.lineTo(cx + yari, alt); ctx.lineTo(cx, alt - 2 * mm); ctx.closePath(); ctx.stroke();
-    ctx.font = `700 ${3.2 * mm}px Inter, sans-serif`;
+    ctx.lineWidth = Math.max(1, 0.25 * kb);
+    ctx.beginPath(); ctx.moveTo(cx, ust); ctx.lineTo(cx - yari, alt); ctx.lineTo(cx, alt - 2 * kb); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx, ust); ctx.lineTo(cx + yari, alt); ctx.lineTo(cx, alt - 2 * kb); ctx.closePath(); ctx.stroke();
+    ctx.font = `700 ${3.2 * kb}px Inter, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("K", cx, k.y + 3 * mm);
+    ctx.fillText("K", cx, k.y + 3 * kb);
     ctx.restore();
 
-    // Ölçek çubuğu: çerçeve genişliğinin beşte birine yakın yuvarlak uzunluk
-    const metre = yuvarlakUzunluk((hc.en / yerK) / 5), cubuk = metre * yerK;
+    // Ölçek çubuğu: çerçeve genişliğinin beşte birine yakın yuvarlak uzunluk. Büyütünce yazılar büyür,
+    // çubuk da daha uzun bir yuvarlak uzunluğa geçer (her zaman haritanın ölçeğine uyar).
+    const oc = cikti.boyutlar.olcek ?? 1, ob = mm * oc;
+    const metre = yuvarlakUzunluk(((hc.en / yerK) / 5) * oc), cubuk = metre * yerK;
     const olcekMetni = serbest ? "" : `Ölçek 1:${sayi(gecerliOlcek())}`;
     ctx.save();
-    ctx.font = `500 ${2.6 * mm}px Inter, sans-serif`;
-    const oEn = Math.max(cubuk, ctx.measureText(olcekMetni).width) + 8 * mm, oBoy = (olcekMetni ? 13 : 9.5) * mm;
+    ctx.font = `500 ${2.6 * ob}px Inter, sans-serif`;
+    const oEn = Math.max(cubuk, ctx.measureText(olcekMetni).width) + 8 * ob, oBoy = (olcekMetni ? 13 : 9.5) * ob;
     const o = yerlestir("olcek", oEn, oBoy, [hc.x + hc.en - ic - oEn, hc.y + hc.boy - ic - oBoy]);
     beyazKutu(o);
-    const x0 = o.x + 4 * mm, y0 = o.y + 6 * mm, h = 1.6 * mm;
+    const x0 = o.x + 4 * ob, y0 = o.y + 6 * ob, h = 1.6 * ob;
     for (let i = 0; i < 4; i++) {
       ctx.fillStyle = token(i % 2 ? "--not-beyaz" : "--not-siyah");
       ctx.fillRect(x0 + (cubuk / 4) * i, y0, cubuk / 4, h);
     }
     ctx.strokeStyle = token("--not-siyah");
-    ctx.lineWidth = Math.max(1, 0.2 * mm);
+    ctx.lineWidth = Math.max(1, 0.2 * ob);
     ctx.strokeRect(x0, y0, cubuk, h);
     ctx.fillStyle = token("--not-siyah");
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    ctx.fillText("0", x0, y0 - 1 * mm);
-    if (cubuk > 24 * mm) ctx.fillText(uzunlukMetni(metre / 2), x0 + cubuk / 2, y0 - 1 * mm); // kısa çubukta sığmaz
-    ctx.fillText(uzunlukMetni(metre), x0 + cubuk, y0 - 1 * mm);
-    if (olcekMetni) { ctx.font = `600 ${2.8 * mm}px Inter, sans-serif`; ctx.fillText(olcekMetni, x0 + cubuk / 2, y0 + h + 4.2 * mm); }
+    ctx.fillText("0", x0, y0 - 1 * ob);
+    if (cubuk > 24 * ob) ctx.fillText(uzunlukMetni(metre / 2), x0 + cubuk / 2, y0 - 1 * ob); // kısa çubukta sığmaz
+    ctx.fillText(uzunlukMetni(metre), x0 + cubuk, y0 - 1 * ob);
+    if (olcekMetni) { ctx.font = `600 ${2.8 * ob}px Inter, sans-serif`; ctx.fillText(olcekMetni, x0 + cubuk / 2, y0 + h + 4.2 * ob); }
     ctx.restore();
   }
 
@@ -770,12 +782,13 @@ async function onizlemeCiz() {
       el.className = "onizleme-kutu";
       el.dataset.id = k.id;
       el.title = "Sürükleyerek yerleştir";
+      el.innerHTML = `<span class="onizleme-tutamac" title="Sürükleyerek büyüt ya da küçült"></span>`;
       Object.assign(el.style, { left: `${(100 * k.x) / sayfa.en}%`, top: `${(100 * k.y) / sayfa.boy}%`, width: `${(100 * k.en) / sayfa.en}%`, height: `${(100 * k.boy) / sayfa.boy}%` });
       return el;
     }));
     kap.style.aspectRatio = `${sayfa.en} / ${sayfa.boy}`;
     kap.style.setProperty("--oran", (sayfa.en / sayfa.boy).toFixed(4));
-    $("onizlemeDurum").textContent = kutular.length ? "Başlık, lejant, kuzey oku, ölçek ve sayfaya eklenenler sürüklenerek yerleştirilir." : "";
+    $("onizlemeDurum").textContent = kutular.length ? "Öğeleri sürükleyerek taşı; köşedeki tutamaçla büyüt ya da küçült." : "";
   } catch (e) {
     $("onizlemeDurum").textContent = e.message;
   }
@@ -786,18 +799,29 @@ function onizlemeZamanla() {
   onizleme.zamanlayici = setTimeout(onizlemeCiz, 120);
 }
 
+// Kutunun kendisi taşır; köşedeki tutamaç en/boy oranını koruyarak büyütür (sol üst köşe yerinde kalır).
 $("onizlemeSayfa").addEventListener("pointerdown", (e) => {
   const el = e.target.closest(".onizleme-kutu");
   if (!el || e.button !== 0) return;
   e.preventDefault();
   el.setPointerCapture(e.pointerId);
   const r = $("onizlemeSayfa").getBoundingClientRect(), k = onizleme.kutular.find((x) => x.id === el.dataset.id);
-  onizleme.surukle = { el, k, r, bas: [e.clientX, e.clientY] };
+  onizleme.surukle = { el, k, r, bas: [e.clientX, e.clientY], boyut: !!e.target.closest(".onizleme-tutamac") };
   el.classList.add("suruklenen");
 });
 $("onizlemeSayfa").addEventListener("pointermove", (e) => {
   const s = onizleme.surukle;
   if (!s) return;
+  if (s.boyut) {
+    const sayfa = onizleme.sayfa, k = s.k;
+    const dx = ((e.clientX - s.bas[0]) * sayfa.en) / s.r.width, dy = ((e.clientY - s.bas[1]) * sayfa.boy) / s.r.height;
+    // Sürükleme köşegen boyunca izdüşürülür; kutu sayfadan taşmaz.
+    const enFazla = Math.min((sayfa.en - k.x) / k.en, (sayfa.boy - k.y) / k.boy);
+    s.carpan = Math.max(0.2, Math.min(enFazla, 1 + (dx * k.en + dy * k.boy) / (k.en ** 2 + k.boy ** 2)));
+    s.el.style.width = `${(100 * k.en * s.carpan) / sayfa.en}%`;
+    s.el.style.height = `${(100 * k.boy * s.carpan) / sayfa.boy}%`;
+    return;
+  }
   const dx = (e.clientX - s.bas[0]) / s.r.width, dy = (e.clientY - s.bas[1]) / s.r.height;
   const x = Math.max(0, Math.min(1 - s.k.en / onizleme.sayfa.en, s.k.x / onizleme.sayfa.en + dx));
   const y = Math.max(0, Math.min(1 - s.k.boy / onizleme.sayfa.boy, s.k.y / onizleme.sayfa.boy + dy));
@@ -811,14 +835,30 @@ $("onizlemeSayfa").addEventListener("pointerup", () => {
   if (!s) return;
   s.el.classList.remove("suruklenen");
   if (s.konum) { cikti.konumlar[s.k.id] = s.konum; onizlemeZamanla(); }
+  if (s.carpan && Math.abs(s.carpan - 1) > 0.01) {
+    cikti.konumlar[s.k.id] = { x: s.k.x / onizleme.sayfa.en, y: s.k.y / onizleme.sayfa.boy };
+    ogeyiBuyut(s.k.id, s.carpan);
+    onizlemeZamanla();
+  }
 });
+
+const sinirla = (v, [alt, ust, adim = 0.01]) => Math.min(ust, Math.max(alt, Math.round(v / adim) * adim));
+
+// Sayfaya konanlarda boyut (mm) değişir, paneldeki kaydırıcı da güncellenir; hazır öğelerde çarpan değişir.
+function ogeyiBuyut(id, carpan) {
+  const o = cikti.sayfaOgeleri.find((x) => x.id === id);
+  if (o?.tur === "gorsel") o.genislikMm = sinirla(o.genislikMm * carpan, SAYFA_OGE_SINIRI.gorsel);
+  else if (o) o.boyutMm = sinirla(o.boyutMm * carpan, SAYFA_OGE_SINIRI[o.tur]);
+  else cikti.boyutlar[id] = sinirla((cikti.boyutlar[id] ?? 1) * carpan, HAZIR_OGE_SINIRI);
+  sayfaOgeleriCiz();
+}
 
 $("ciktiOnizle").addEventListener("click", () => {
   $("onizleme").showModal();
   onizlemeCiz();
 });
 $("onizlemeKapat").addEventListener("click", () => $("onizleme").close());
-$("onizlemeSifirla").addEventListener("click", () => { cikti.konumlar = {}; onizlemeCiz(); });
+$("onizlemeSifirla").addEventListener("click", () => { cikti.konumlar = {}; cikti.boyutlar = {}; onizlemeCiz(); });
 for (const [id, bicim] of [["ciktiPng", "png"], ["ciktiPdf", "pdf"], ["onizlemePng", "png"], ["onizlemePdf", "pdf"]]) {
   $(id).addEventListener("click", (e) => ciktiIndir(bicim, e.currentTarget));
 }
@@ -887,8 +927,9 @@ $("ciktiLejantGit").addEventListener("click", () => {
 let sayfaSayac = 0;
 function sayfaOgeleriCiz() {
   $("sayfaOgeleri").innerHTML = cikti.sayfaOgeleri.map((o) => {
-    const boyut = o.tur === "gorsel" ? `<input type="range" data-is="boyut" min="10" max="200" step="1" value="${o.genislikMm}" aria-label="${esc(o.ad)} genişliği, mm"><output>${o.genislikMm} mm</output>`
-      : `<input type="range" data-is="boyut" min="1.5" max="${o.tur === "yazi" ? 12 : 5}" step="0.1" value="${o.boyutMm}" aria-label="${esc(o.ad)} yazı boyutu, mm"><output>${sayi(o.boyutMm, 1)} mm</output>`;
+    const [enAz, enCok, adim] = SAYFA_OGE_SINIRI[o.tur];
+    const boyut = o.tur === "gorsel" ? `<input type="range" data-is="boyut" min="${enAz}" max="${enCok}" step="${adim}" value="${o.genislikMm}" aria-label="${esc(o.ad)} genişliği, mm"><output>${sayi(o.genislikMm)} mm</output>`
+      : `<input type="range" data-is="boyut" min="${enAz}" max="${enCok}" step="${adim}" value="${o.boyutMm}" aria-label="${esc(o.ad)} yazı boyutu, mm"><output>${sayi(o.boyutMm, 1)} mm</output>`;
     const ust = o.tur === "yazi"
       ? `<textarea class="metin-girdi not-metin" data-is="metin" rows="2" maxlength="300" aria-label="Sayfadaki yazı">${esc(o.metin)}</textarea>`
       : `<span class="sayfa-oge-ad">${esc(o.ad)}</span>`;
@@ -934,7 +975,7 @@ $("sayfaOgeleri").addEventListener("input", (e) => {
   if (e.target.dataset.is === "metin") { o.metin = e.target.value; o.ad = o.metin.split("\n")[0].slice(0, 30) || "Yazı"; return; }
   if (e.target.dataset.is !== "boyut") return;
   const v = Number(e.target.value);
-  if (o.tur === "gorsel") { o.genislikMm = v; e.target.nextElementSibling.textContent = `${v} mm`; }
+  if (o.tur === "gorsel") { o.genislikMm = v; e.target.nextElementSibling.textContent = `${sayi(v)} mm`; }
   else { o.boyutMm = v; e.target.nextElementSibling.textContent = `${sayi(v, 1)} mm`; }
   kaydiriciDoldur(e.target);
 });

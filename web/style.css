@@ -1150,3 +1150,13 @@ body:not(.gorsel-acik) .not-katmani, body:not(.gorsel-acik) .not-katmani * { poi
 @media (max-width: 760px) {
   .sekmeler [role=tab] { padding: var(--b-2) var(--b-3); }
 }
+/* Önizlemede boyut tutamacı: kutunun sağ alt köşesi; üzerine gelince görünür */
+.onizleme-tutamac {
+  position: absolute; right: calc(var(--b-1-5) * -1); bottom: calc(var(--b-1-5) * -1);
+  width: var(--b-3); height: var(--b-3); border-radius: var(--r-2xs);
+  background: var(--vurgu); box-shadow: 0 0 0 2px var(--not-beyaz), 0 1px 3px rgba(0, 0, 0, .35);
+  cursor: nwse-resize; opacity: 0; transition: opacity var(--sure-hizli) var(--yay);
+}
+.onizleme-tutamac::before { content: ""; position: absolute; inset: calc(var(--b-1-5) * -1); } /* tutması kolay olsun */
+.onizleme-kutu:hover .onizleme-tutamac, .onizleme-kutu.suruklenen .onizleme-tutamac { opacity: 1; }
+@media (hover: none) { .onizleme-tutamac { opacity: 1; } }
