@@ -174,6 +174,34 @@ class IceAktarmaTest(GeciciStore):
         self.assertIsNone(self.store.noktadaki(31.5, 41.5))
 
 
+class IzgaraTest(unittest.TestCase):
+    def test_izgara(self):
+        # Çumra çevresinde ~1,2 km x 1,5 km
+        iz = coords.izgara(32.798, 37.585, 32.812, 37.599)
+        self.assertEqual((iz["sistem"], iz["dom"]), ("ITRF96 3°", 33))
+        self.assertIn(iz["aralik"], coords.IZGARA_ARALIKLARI)
+        self.assertTrue(1 <= len(iz["yler"]) <= 7 and 1 <= len(iz["xler"]) <= 7)
+        for cizgi in iz["yler"] + iz["xler"]:
+            self.assertEqual(cizgi["deger"] % iz["aralik"], 0)
+            for lon, lat in cizgi["noktalar"]:
+                self.assertTrue(32.79 < lon < 32.82 and 37.58 < lat < 37.61)
+        # Y çizgisi boyunca dilim düzleminde Y sabit kalır
+        y = iz["yler"][0]
+        for lon, lat in y["noktalar"][::4]:
+            self.assertAlmostEqual(coords.donustur(lon, lat, "itrf96", 33)[0], y["deger"], delta=0.01)
+
+    def test_izgara_ucu(self):
+        from parselapp.server import Hata, Uygulama
+        with tempfile.TemporaryDirectory() as k:
+            uyg = Uygulama(Store(Path(k) / "t.db"))
+            iz = uyg.yonlendir("POST", ["izgara"], json.dumps({"bbox": [32.798, 37.585, 32.812, 37.599], "sistem": "ed50"}).encode(), {})
+            self.assertEqual(iz["sistem"], "ED50 3°")
+            for bozuk in ({"bbox": [1, 2, 3, 4]}, {"bbox": [32.8, 37.6, 32.7, 37.5]}, {"bbox": [32.79, 37.58, 32.81, 37.6], "sistem": "utm"}, {}):
+                with self.subTest(govde=bozuk), self.assertRaises(Hata):
+                    uyg.yonlendir("POST", ["izgara"], json.dumps(bozuk).encode(), {})
+            uyg.store._db.close()
+
+
 class KoordinatTest(unittest.TestCase):
     def test_dilim(self):
         self.assertEqual(coords.dilim_sec(31.42), 30)

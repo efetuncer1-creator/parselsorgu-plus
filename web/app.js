@@ -413,7 +413,7 @@ async function parselGuncelle(key, buton) {
 
 // ---- sekmeler ------------------------------------------------------------------
 
-const SAYFALAR = { parsel: "Parsel sorgu", alan: "Alandan parsel tespiti", gorsel: "Alan görünümü" };
+const SAYFALAR = { parsel: "Parsel sorgu", alan: "Alandan parsel tespiti", gorsel: "Alan görünümü", cikti: "Çıktı al" };
 
 function sekmeAc(ad) {
   document.querySelectorAll("[role=tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.sekme === ad));
@@ -428,6 +428,7 @@ function sekmeAc(ad) {
   notlariSekmeyeUydur();
   if (ad === "gorsel") { katmanSirasiCiz(); gorselDuzenDoldur(); notDuzenDoldur(); }
   try { localStorage.setItem("sekme", ad); } catch { /* tercih saklanamazsa önemli değil */ }
+  document.dispatchEvent(new CustomEvent("sekme", { detail: ad })); // cikti.js çerçeveyi açar/kapatır
 }
 
 document.querySelectorAll("[role=tab]").forEach((b) => b.addEventListener("click", () => sekmeAc(b.dataset.sekme)));
@@ -621,7 +622,7 @@ $("ilce").addEventListener("change", async () => {
 // Uzun listelerde (il/ilçe/mahalle) yazarak arama vardır; kısa listelerde arama kutusu gizlenir.
 
 const SECICILER = ["il", "ilce", "mahalle"];
-const TUM_SECICILER = [...SECICILER, "sistem", "dilim", "hesapKatmani"];
+const TUM_SECICILER = [...SECICILER, "sistem", "dilim", "hesapKatmani", "ciktiOlcek"];
 const secici = { acik: null, aktif: 0, gorunen: [], sonraki: null, odak: null };
 
 function seciciEsitle(ad) {

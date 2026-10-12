@@ -2,6 +2,21 @@
   "aciklama": "Güncelleme geçmişi. En yeni sürüm en üstte. tur: yeni | iyilestirme | duzeltme. Henüz yayınlanmamış bir sürüm 'taslak': true ile yazılabilir; sitede görünmez, etiketi gönderilmeden önce kaldırılır. GitHub derlemesi, etiketin sürüm notunu buradan alır; not yoksa sürüm yayınlanmaz.",
   "surumler": [
     {
+      "surum": "0.2.0",
+      "tarih": "2026-10-12",
+      "taslak": true,
+      "baslik": "Görsel sekmesi, lejant ve çıktı",
+      "notlar": [
+        { "tur": "yeni", "metin": "Görsel sekmesi: her alan için renk (hazır ya da özel), kenar kalınlığı ve çizgi tipi, dokuz tarama tipi, aralık ve opaklık." },
+        { "tur": "yeni", "metin": "Katman listesi: alanlar, yazılar, oklar, görseller ve tablolar sürükleyerek sıralanır; listede üstteki haritada da üstte durur." },
+        { "tur": "yeni", "metin": "Haritaya yazı ve ok ekleme; görsel ya da PDF'i (ör. taranmış plan) haritaya oturtma: taşı, döndür, büyüt, beyazı saydam yap." },
+        { "tur": "yeni", "metin": "Excel ve CSV tabloları haritaya ya da çıktı sayfasına eklenir." },
+        { "tur": "yeni", "metin": "Lejant: haritada açılıp kapanır; öğeler eklenir, çıkarılır, adlandırılır ve sıralanır; özel öğe de eklenebilir." },
+        { "tur": "yeni", "metin": "Çıktı: seçilen alan ya da A4/A3 sayfa (yön, ölçek, 150/300 dpi); başlık ve tarih, lejant, kuzey oku ve ölçek, ITRF96/ED50 koordinat ızgarası; logo, tablo ve yazı. PNG ve PDF." },
+        { "tur": "iyilestirme", "metin": "Ada/parsel numaraları ve alan adları haritada gösterilip gizlenebilir." }
+      ]
+    },
+    {
       "surum": "0.1.1",
       "tarih": "2026-10-09",
       "baslik": "Liste sıralaması düzeltildi",

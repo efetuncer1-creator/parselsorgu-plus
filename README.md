@@ -13,6 +13,8 @@ TKGM parsel sorgulama ve dışa aktarma aracı. [parselsorgu.tkgm.gov.tr](https:
 - Haritaya tıklayarak sorguda, tıklanan nokta kayıtlı bir parselin içindeyse sorgu harcanmaz.
 - Alan Yöneticisi (cadplugin) ve parselsorgu'nun kendi KML'leri, `fav_list.json` dosyaları içe aktarılabilir.
 - **Alandan parsel tespiti:** OSB/plan sınırını (KML/KMZ, çok katmanlı Netcad projesi dahil) yükle ya da haritada pinle çiz; içindeki/kesişen parselleri seç, kaplanmamış boşlukları gör ve sorgu bütçesiyle TKGM'den tara; sınırla birlikte KML'e, alan içi m²'leriyle Excel'e aktar.
+- **Görsel:** alan renkleri (özel renk dahil), çizgi kalınlığı ve tipi, dokuz tarama tipi; katman sırası, alan adları, ada/parsel numaraları. Haritaya yazı, ok, görsel/PDF (taranmış planı döndürüp oturtma, beyazı saydam yapma) ve Excel/CSV tablosu eklenir; lejant öğeleri seçilir.
+- **Çıktı:** seçilen alan ya da A4/A3 sayfa (yön, ölçek, 150/300 dpi); başlık ve tarih, lejant, kuzey oku ve ölçek, ITRF96/ED50 koordinat ızgarası; sayfaya logo, tablo ve yazı. PNG ve PDF olarak indirilir.
 - Excel çıktısında köşe koordinatları **ITRF96 3°** (TUREF, EPSG:5253–5259) ya da **ED50 3°** (EPSG:2319–2325) olarak verilir. Y = sağa, X = yukarı.
 
 **Tanıtım sitesi:** https://parselsorgu-plus.vercel.app

@@ -4,6 +4,7 @@ Dilimler (orta meridyen, DOM): 27, 30, 33, 36, 39, 42, 45.
 Y = sağa (doğu), X = yukarı (kuzey); Türkiye'deki alışkanlıkla aynı.
 """
 
+import math
 from functools import lru_cache
 
 from pyproj import Transformer
@@ -62,3 +63,45 @@ def metrik(geom, dom):
 def cografi(geom, dom):
     """metrik()'in tersi: metre -> boylam/enlem."""
     return shapely_transform(_geri_transformer(dom).transform, geom)
+
+
+# ---- çıktı sayfası için koordinat ızgarası --------------------------------------------
+
+IZGARA_ARALIKLARI = (10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 50000, 100000)
+
+
+@lru_cache(maxsize=None)
+def _cografyaya(sistem, dom):
+    epsg = SISTEMLER[sistem]["epsg"][dom]
+    return Transformer.from_crs(f"EPSG:{epsg}", "EPSG:4326", always_xy=True, area_of_interest=_TURKIYE)
+
+
+def izgara(bati, guney, dogu, kuzey, sistem="itrf96", dom=None, en_cok=6):
+    """Coğrafi kutuyu kesen yuvarlak Y (doğu) ve X (kuzey) değerlerindeki çizgiler.
+
+    Aralık, kısa kenara en fazla `en_cok` çizgi düşecek en küçük yuvarlak değerdir. Çizgiler dilim
+    düzleminde düzdür, haritada hafif eğridir; bu yüzden ara noktalarla [boylam, enlem] olarak döner.
+    """
+    dom = dom or dilim_sec((bati + dogu) / 2)
+    ileri, geri = _transformer(sistem, dom), _cografyaya(sistem, dom)
+    koseler = [ileri.transform(x, y) for x, y in ((bati, guney), (bati, kuzey), (dogu, guney), (dogu, kuzey))]
+    y0, y1 = min(k[0] for k in koseler), max(k[0] for k in koseler)
+    x0, x1 = min(k[1] for k in koseler), max(k[1] for k in koseler)
+    kisa = min(y1 - y0, x1 - x0)
+    aralik = next((a for a in IZGARA_ARALIKLARI if kisa / a <= en_cok), IZGARA_ARALIKLARI[-1])
+
+    def degerler(alt, ust):
+        d = math.ceil(alt / aralik) * aralik
+        while d <= ust:
+            yield d
+            d += aralik
+
+    def cizgi(noktalar):
+        return [[round(lon, 7), round(lat, 7)] for lon, lat in (geri.transform(y, x) for y, x in noktalar)]
+
+    adim = 16
+    return {
+        "sistem": SISTEMLER[sistem]["ad"], "dom": dom, "aralik": aralik,
+        "yler": [{"deger": y, "noktalar": cizgi((y, x0 + (x1 - x0) * i / adim) for i in range(adim + 1))} for y in degerler(y0, y1)],
+        "xler": [{"deger": x, "noktalar": cizgi((y0 + (y1 - y0) * i / adim, x) for i in range(adim + 1))} for x in degerler(x0, x1)],
+    }

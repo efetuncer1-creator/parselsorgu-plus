@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
 
-from . import analiz, exporters, referans, tablo
+from . import analiz, coords, exporters, referans, tablo
 from .importers import ice_aktar
 from .store import Store
 from .tkgm import Bulunamadi, LimitAsildi, Tkgm, TkgmHatasi
@@ -90,6 +90,8 @@ class Uygulama:
                 return self._disa_aktar(_json(govde))
             case ("GET", ["referanslar"]):
                 return self.store.referanslar()
+            case ("POST", ["izgara"]):
+                return self._izgara(_json(govde))
             case ("POST", ["tablo-oku"]):
                 ad = unquote(basliklar.get("X-Dosya-Adi", "tablo.xlsx"))
                 try:
@@ -132,6 +134,20 @@ class Uygulama:
             case ("POST", ["referanslar", ref_id, "sil"]):
                 return {"silinen": self.store.referans_sil(int(ref_id))}
         raise Hata(HTTPStatus.NOT_FOUND, "Bilinmeyen adres")
+
+    def _izgara(self, g):
+        """Çıktı sayfasındaki koordinat ızgarası. bbox: [batı, güney, doğu, kuzey] (WGS84)."""
+        try:
+            bati, guney, dogu, kuzey = (float(v) for v in g["bbox"])
+            sistem = g.get("sistem", "itrf96")
+            dom = int(g["dilim"]) if g.get("dilim") not in (None, "", "otomatik") else None
+            if sistem not in coords.SISTEMLER or (dom is not None and dom not in coords.DILIMLER):
+                raise ValueError
+            if not (bati < dogu and guney < kuzey and 25 <= bati and dogu <= 46 and 35 <= guney and kuzey <= 43):
+                raise ValueError
+        except (KeyError, TypeError, ValueError) as e:
+            raise Hata(HTTPStatus.BAD_REQUEST, "Izgara için Türkiye içinde geçerli bir alan gerekli.") from e
+        return coords.izgara(bati, guney, dogu, kuzey, sistem, dom)
 
     def _referans_al(self, ref_id):
         r = self.store.referans(int(ref_id), dokun=True)
