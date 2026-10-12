@@ -9,7 +9,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from parselapp import analiz, coords, exporters, referans
+from parselapp import analiz, coords, exporters, referans, tablo
 from parselapp.importers import dosya_oku, ice_aktar, kml_oku
 from parselapp.store import Store
 from parselapp.tkgm import Bulunamadi, LimitAsildi, Tkgm
@@ -447,3 +447,40 @@ class TkgmTest(GeciciStore):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TabloTest(unittest.TestCase):
+    def test_excel(self):
+        from datetime import date
+        from openpyxl import Workbook
+        kitap = Workbook()
+        s = kitap.active
+        s.title = "Parseller"
+        s.append(["Ada", "Parsel", "Alan (m²)", "Tarih", None])
+        s.append([512, 15, 12683.71, date(2026, 10, 9), None])
+        s.append([513, 2, 1250.0, None, None])
+        s.append([None, None, None, None, None])
+        kitap.create_sheet("Boş")
+        tampon = io.BytesIO()
+        kitap.save(tampon)
+        sonuc = tablo.oku("liste.xlsx", tampon.getvalue())
+        self.assertEqual([x["ad"] for x in sonuc["sayfalar"]], ["Parseller"])  # boş sayfa atlanır
+        self.assertEqual(sonuc["sayfalar"][0]["satirlar"], [
+            ["Ada", "Parsel", "Alan (m²)", "Tarih"],
+            ["512", "15", "12.683,71", "09.10.2026"],
+            ["513", "2", "1250", ""],
+        ])
+        self.assertFalse(sonuc["sayfalar"][0]["kesildi"])
+
+    def test_csv_noktali_virgul_ve_sinir(self):
+        satirlar = ["Ada;Parsel"] + [f"{i};{i + 1}" for i in range(tablo.EN_FAZLA_SATIR + 5)]
+        sonuc = tablo.oku("liste.csv", "\n".join(satirlar).encode("utf-8-sig"))
+        sayfa = sonuc["sayfalar"][0]
+        self.assertEqual(sayfa["satirlar"][:2], [["Ada", "Parsel"], ["0", "1"]])
+        self.assertEqual(len(sayfa["satirlar"]), tablo.EN_FAZLA_SATIR)
+        self.assertTrue(sayfa["kesildi"])
+
+    def test_desteklenmeyen(self):
+        for ad, icerik in (("eski.xls", b"x"), ("resim.png", b"x"), ("bozuk.xlsx", b"PK bozuk")):
+            with self.subTest(ad=ad), self.assertRaises(ValueError):
+                tablo.oku(ad, icerik)

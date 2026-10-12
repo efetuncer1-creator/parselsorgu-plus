@@ -893,12 +893,15 @@ let surukle = 0;
 window.addEventListener("dragenter", (e) => { e.preventDefault(); surukle++; $("birak").hidden = false; });
 window.addEventListener("dragleave", () => { if (--surukle <= 0) { surukle = 0; $("birak").hidden = true; } });
 window.addEventListener("dragover", (e) => e.preventDefault());
-window.addEventListener("drop", (e) => {
+window.addEventListener("drop", async (e) => {
   e.preventDefault();
   surukle = 0;
   $("birak").hidden = true;
-  // Parsel içeren dosyalar listeye; parsel içermeyenler alan sekmesinde doğrudan alan olur.
-  dosyalariAktar(e.dataTransfer.files);
+  // Görsel sekmesinde görsel, PDF ve tablolar haritaya eklenir. Parsel içeren dosyalar listeye;
+  // parsel içermeyenler alan sekmesinde doğrudan alan olur.
+  let dosyalar = [...e.dataTransfer.files];
+  if (gorselSekmesinde()) dosyalar = await notDosyalariniAl(dosyalar);
+  if (dosyalar.length) dosyalariAktar(dosyalar);
 });
 
 // ================================================================================
@@ -1001,8 +1004,8 @@ function alanAdiIsareti(r) {
   }).addTo(harita);
 }
 
-// Her katmanın kendi bölmesi var; bölmelerin z-sırası listedeki sırayı izler. Alanlar parsellerin
-// altında kalır (300'ler), yazı ve oklar parsellerin ve alan adlarının üstünde (470'ler).
+// Her katmanın kendi bölmesi var; bölmelerin z-sırası listedeki sırayı izler. Alanlar ve haritaya
+// oturan görseller parsellerin altında kalır (300'ler); yazı, ok ve tablolar üstünde (470'ler).
 function katmanBolmesi(id) {
   const ad = `katman-${id}`;
   if (!harita.getPane(ad)) harita.createPane(ad);
@@ -1014,7 +1017,7 @@ function sirayiUygula() {
   for (let i = katmanSirasi.length - 1; i >= 0; i--) {
     const id = katmanSirasi[i];
     const bolme = harita.getPane(`katman-${id}`);
-    if (typeof id === "number") {
+    if (typeof id === "number" || notlar.get(id)?.tur === "gorsel") { // haritaya oturan görseller alanlarla aynı bantta
       if (bolme) bolme.style.zIndex = Math.min(349, 300 + alt);
       referanslar.get(id)?.etiket?.setZIndexOffset(alt * 100000);
       alt++;
@@ -1686,7 +1689,8 @@ function katmanSirasiCiz() {
 
 function notSatiri(n) {
   const secili = n.id === seciliNot;
-  const ozet = !n.gorunur ? "Haritada gizli" : n.tur === "yazi" ? `Yazı · ${n.boyut} px` : `Ok · ${kalinlikMetni(n.kalinlik)}`;
+  const ozet = !n.gorunur ? "Haritada gizli" : n.tur === "yazi" ? `Yazı · ${n.boyut} px` : n.tur === "ok" ? `Ok · ${kalinlikMetni(n.kalinlik)}`
+    : n.tur === "gorsel" ? `${n.pdf ? `PDF · sayfa ${n.sayfa}` : "Görsel"} · %${n.opaklik}` : `Tablo · ${n.sayfalar[n.sayfa].satirlar.length} satır`;
   return `
     <li data-id="${n.id}" class="${secili ? "secili" : ""}${n.gorunur ? "" : " gizli"}">
       <button type="button" class="tutamac" aria-label="${esc(notAdi(n))} katmanını taşı" title="Sürükle ya da yukarı/aşağı okla taşı">${ikon("tutamac")}</button>
@@ -2231,7 +2235,8 @@ const kimlik = (s) => (/^\d+$/.test(s) ? Number(s) : s);
 
 const NOT_RENKLERI = [["--not-beyaz", "Beyaz"], ["--not-siyah", "Siyah"], ...ALAN_RENKLERI];
 const acikRenk = (hex) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)); return 0.299 * r + 0.587 * g + 0.114 * b > 150; };
-const notAdi = (n) => n.ad || (n.tur === "yazi" ? n.metin.split("\n")[0].slice(0, 40) || "Yazı" : "Ok");
+const notAdi = (n) => n.ad || (n.tur === "yazi" ? n.metin.split("\n")[0].slice(0, 40) || "Yazı"
+  : { ok: "Ok", gorsel: "Görsel", tablo: "Tablo" }[n.tur]);
 
 // Listede ve lejantta okun küçük örneği (uçlar elle hesaplandı: 7 boy, 7 taban).
 function okOrnegi(renk, uc = "tek", cizgi = "duz") {
@@ -2243,6 +2248,11 @@ function okOrnegi(renk, uc = "tek", cizgi = "duz") {
 
 function notOrnegi(n) {
   if (n.tur === "ok") return okOrnegi(n.renk, n.uc, n.cizgi);
+  if (n.tur === "gorsel") return `<img class="katman-ornek gorsel-ornek" src="${esc(n.url)}" alt="">`;
+  if (n.tur === "tablo") {
+    return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-opacity=".5"/>` +
+      `<path d="M2.5 13.5h27M11.5 8v11.5M20.5 8v11.5" stroke="currentColor" stroke-opacity=".3"/><path d="M5 2.5h22a2.5 2.5 0 0 1 2.5 2.5v3h-27V5A2.5 2.5 0 0 1 5 2.5z" fill="${esc(n.renk)}"/></svg>`;
+  }
   return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true"><rect x="2" y="2" width="28" height="18" rx="3" fill="none" stroke="currentColor" stroke-opacity=".25"/>
     <text x="16" y="15.5" text-anchor="middle" font-size="12" font-weight="700" fill="${esc(n.renk)}" stroke="${acikRenk(n.renk) ? token("--harita-yazi-hale") : "transparent"}" stroke-width="2" paint-order="stroke">Aa</text></svg>`;
 }
@@ -2279,14 +2289,17 @@ function notCiz(n) {
   if (n.gorunur) {
     const pane = katmanBolmesi(n.id);
     harita.getPane(pane).classList.add("not-katmani");
-    if (n.tur === "yazi") {
+    harita.getPane(pane).style.mixBlendMode = n.tur === "gorsel" && n.karistir ? "multiply" : "";
+    if (n.tur === "yazi" || n.tur === "tablo") {
       n.katman = L.marker(n.konum, {
         pane, draggable: true, keyboard: false,
-        icon: L.divIcon({ className: "harita-yazi-ikon", html: yaziHtml(n), iconSize: null }),
+        icon: L.divIcon({ className: "harita-yazi-ikon", html: n.tur === "yazi" ? yaziHtml(n) : tabloHtml(n), iconSize: null }),
       });
       n.katman.on("dragend", () => { const p = n.katman.getLatLng(); n.konum = [p.lat, p.lng]; });
       n.katman.on("click", () => notSec(n.id));
-      n.katman.on("dblclick", (e) => { L.DomEvent.stop(e); notSec(n.id); $("notMetin").focus(); });
+      n.katman.on("dblclick", (e) => { L.DomEvent.stop(e); notSec(n.id); if (n.tur === "yazi") $("notMetin").focus(); });
+    } else if (n.tur === "gorsel") {
+      n.katman = new DonukGorsel(n, { pane });
     } else {
       n.katman = L.polyline(n.noktalar, {
         pane, color: n.renk, weight: n.kalinlik, opacity: 1, lineCap: "round", bubblingMouseEvents: false,
@@ -2302,8 +2315,9 @@ function notCiz(n) {
 }
 
 // Seçili okun uçlarında ve ortasında sürüklenebilir noktalar: uçlar yönü, ortadaki yeri değiştirir.
+// Görselde ortadaki nokta taşır, köşedeki büyütür ve döndürür.
 function tutamaclariCiz(n) {
-  if (n.tur !== "ok" || !n.katman) return;
+  if (!n.katman || n.tur === "yazi" || n.tur === "tablo") return;
   const tutamac = (konum, tasi, sinif) => {
     const t = L.marker(konum, {
       draggable: true, keyboard: false, zIndexOffset: 1000,
@@ -2313,6 +2327,11 @@ function tutamaclariCiz(n) {
     n.tutamaclar.push(t);
     return t;
   };
+  if (n.tur === "gorsel") {
+    const kose = tutamac(gorselKosesi(n), (p) => { gorselKoseyeGore(n, p); n.katman.guncelle(); notDuzenDoldur(); }, "kose");
+    tutamac(n.merkez, (p) => { n.merkez = [p.lat, p.lng]; n.katman.guncelle(); kose.setLatLng(gorselKosesi(n)); }, "orta");
+    return;
+  }
   const yenile = () => { n.katman.setLatLngs(n.noktalar); orta.setLatLng(ortaNokta(n)); };
   const bas = tutamac(n.noktalar[0], (p) => { n.noktalar[0] = [p.lat, p.lng]; yenile(); }, "uc");
   const son = tutamac(n.noktalar[1], (p) => { n.noktalar[1] = [p.lat, p.lng]; yenile(); }, "uc");
@@ -2367,6 +2386,8 @@ function notSil(id) {
   notlar.delete(id);
   if (katmanSirasi.includes(id)) katmanSirasi.splice(katmanSirasi.indexOf(id), 1);
   document.getElementById(`ok-ucu-${id}`)?.remove();
+  harita.getPane(`katman-${id}`)?.style.removeProperty("mix-blend-mode");
+  if (n.tur === "gorsel") { URL.revokeObjectURL(n.url); n.pdf?.destroy(); }
   lejantAlanCikar(id);
   if (seciliNot === id) seciliNot = null;
   katmanSirasiCiz();
@@ -2437,23 +2458,38 @@ function notDuzenDoldur() {
   const n = notlar.get(seciliNot);
   $("notDuzen").hidden = !n;
   if (!n) return;
-  document.querySelectorAll("#notDuzen [data-not]").forEach((el) => { el.hidden = el.dataset.not !== n.tur; });
-  $("notBaslik").textContent = n.tur === "yazi" ? "Yazı" : notAdi(n);
-  [...$("notRenkler").children].forEach((b) => b.setAttribute("aria-pressed", b.dataset.renk.toLowerCase() === n.renk.toLowerCase()));
+  document.querySelectorAll("#notDuzen [data-not]").forEach((el) => { el.hidden = !el.dataset.not.split(" ").includes(n.tur); });
+  $("notBaslik").textContent = notAdi(n);
+  [...$("notRenkler").children].forEach((b) => b.setAttribute("aria-pressed", b.dataset.renk.toLowerCase() === (n.renk || "").toLowerCase()));
+  if (document.activeElement !== $("notAd")) $("notAd").value = n.ad;
+  $("notAd").placeholder = notAdi({ ...n, ad: "" });
+  const kaydirici = (id, deger, metin) => { $(id).value = deger; $(`${id}Deger`).textContent = metin; kaydiriciDoldur($(id)); };
   if (n.tur === "yazi") {
     if (document.activeElement !== $("notMetin")) $("notMetin").value = n.metin;
-    $("notBoyut").value = n.boyut;
-    $("notBoyutDeger").textContent = `${n.boyut} px`;
-    kaydiriciDoldur($("notBoyut"));
+    kaydirici("notBoyut", n.boyut, `${n.boyut} px`);
     document.querySelectorAll("input[name=notStil]").forEach((x) => { x.checked = x.value === n.stil; });
     $("notKalin").checked = n.kalin;
-  } else {
-    if (document.activeElement !== $("notAd")) $("notAd").value = n.ad;
-    $("notKalinlik").value = n.kalinlik;
-    $("notKalinlikDeger").textContent = kalinlikMetni(n.kalinlik);
-    kaydiriciDoldur($("notKalinlik"));
+  } else if (n.tur === "ok") {
+    kaydirici("notKalinlik", n.kalinlik, kalinlikMetni(n.kalinlik));
     document.querySelectorAll("input[name=notUc]").forEach((x) => { x.checked = x.value === n.uc; });
     document.querySelectorAll("input[name=notCizgi]").forEach((x) => { x.checked = x.value === n.cizgi; });
+  } else if (n.tur === "gorsel") {
+    kaydirici("notOpaklik", n.opaklik, `%${n.opaklik}`);
+    kaydirici("notAci", n.aci, `${String(n.aci).replace(".", ",")}°`);
+    $("notKaristir").checked = n.karistir;
+  } else {
+    kaydirici("notTabloBoyut", n.boyut, `${n.boyut} px`);
+    $("notBaslikSatiri").checked = n.baslikSatiri;
+    $("notKesildi").hidden = !n.sayfalar[n.sayfa].kesildi;
+  }
+  // PDF'in sayfaları ya da Excel'in çalışma sayfaları arasında gezinme
+  const sayfali = (n.tur === "gorsel" && n.sayfaSayisi > 1) || (n.tur === "tablo" && n.sayfalar.length > 1);
+  $("notSayfa").hidden = !sayfali;
+  if (sayfali) {
+    const [no, toplam, ad] = n.tur === "gorsel" ? [n.sayfa, n.sayfaSayisi, "Sayfa"] : [n.sayfa + 1, n.sayfalar.length, n.sayfalar[n.sayfa].ad];
+    $("notSayfaAd").textContent = `${ad} · ${no}/${toplam}`;
+    $("notSayfaGeri").disabled = no <= 1;
+    $("notSayfaIleri").disabled = no >= toplam;
   }
 }
 
@@ -2473,6 +2509,201 @@ $("notRenkler").addEventListener("click", (e) => {
   if (b) notGuncelle(seciliNot, { renk: b.dataset.renk });
 });
 $("notSil").addEventListener("click", () => notSil(seciliNot));
+
+// ---- haritaya görsel, PDF ve tablo --------------------------------------------------------
+
+// Bu enlemde ve yakınlıkta bir ekran pikselinin metre karşılığı (Web Mercator).
+const metrePiksel = (enlem) => (40075016.686 * Math.cos((enlem * Math.PI) / 180)) / (256 * 2 ** harita.getZoom());
+
+// Haritaya oturan görsel: merkez, genişlik (metre) ve açıyla yerleşir; harita yakınlaşınca birlikte büyür.
+// Yakınlaşma animasyonu sırasında gizlenir, bitince yeni ölçeğe göre yeniden konur.
+const DonukGorsel = L.Layer.extend({
+  initialize(n, secenek) {
+    this._n = n;
+    L.setOptions(this, secenek);
+  },
+  onAdd() {
+    this._img = L.DomUtil.create("img", "harita-gorsel leaflet-zoom-hide");
+    this._img.alt = "";
+    this._img.draggable = false;
+    this.getPane().append(this._img);
+    this.guncelle();
+  },
+  onRemove() { this._img.remove(); },
+  getEvents() { return { zoomend: this.guncelle, viewreset: this.guncelle }; },
+  boyut() {
+    const n = this._n, en = n.genislik / metrePiksel(n.merkez[0]);
+    return { en, boy: (en * n.boy) / n.en };
+  },
+  guncelle() {
+    if (!this._map) return;
+    const n = this._n, m = this._map.latLngToLayerPoint(n.merkez), { en, boy } = this.boyut();
+    if (this._img.getAttribute("src") !== n.url) this._img.src = n.url;
+    Object.assign(this._img.style, {
+      width: `${en}px`, height: `${boy}px`, left: `${m.x - en / 2}px`, top: `${m.y - boy / 2}px`,
+      transform: `rotate(${n.aci}deg)`, opacity: n.opaklik / 100,
+    });
+  },
+});
+
+// Görselin sağ üst köşesi (döndürülmüş): ölçek ve açı tutamacı burada durur.
+function gorselKosesi(n) {
+  const m = harita.latLngToLayerPoint(n.merkez), en = n.genislik / metrePiksel(n.merkez[0]), boy = (en * n.boy) / n.en;
+  const a = (n.aci * Math.PI) / 180, x = en / 2, y = -boy / 2;
+  return harita.layerPointToLatLng(L.point(m.x + x * Math.cos(a) - y * Math.sin(a), m.y + x * Math.sin(a) + y * Math.cos(a)));
+}
+
+// Köşe tutamacı sürüklenince: merkezden uzaklık ölçeği, yön açıyı verir (en/boy oranı korunur).
+function gorselKoseyeGore(n, p) {
+  const m = harita.latLngToLayerPoint(n.merkez), h = harita.latLngToLayerPoint(p);
+  const en = n.genislik / metrePiksel(n.merkez[0]), boy = (en * n.boy) / n.en;
+  const vx = h.x - m.x, vy = h.y - m.y;
+  n.genislik = Math.max(1, n.genislik * (Math.hypot(vx, vy) / Math.hypot(en / 2, boy / 2)));
+  let aci = ((Math.atan2(vy, vx) - Math.atan2(-boy / 2, en / 2)) * 180) / Math.PI;
+  aci = ((aci + 540) % 360) - 180;
+  n.aci = Math.round(aci * 10) / 10;
+}
+
+// Yeni görsel ekranın ortasına, görünen genişliğin yarısı kadar konur.
+function gorseliEkranaSigdir(n) {
+  const sinir = harita.getBounds(), merkez = harita.getCenter();
+  const genislik = harita.distance([merkez.lat, sinir.getWest()], [merkez.lat, sinir.getEast()]);
+  Object.assign(n, { merkez: [merkez.lat, merkez.lng], genislik: Math.round(genislik * 0.5), aci: 0 });
+}
+
+const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174";
+let pdfjsSozu = null;
+function pdfjsYukle() {
+  pdfjsSozu ??= new Promise((coz, red) => {
+    const betik = Object.assign(document.createElement("script"), { src: `${PDFJS}/pdf.min.js` });
+    betik.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS}/pdf.worker.min.js`; coz(window.pdfjsLib); };
+    betik.onerror = () => { pdfjsSozu = null; red(new Error("PDF okuyucu yüklenemedi; internet bağlantısını kontrol et.")); };
+    document.head.append(betik);
+  });
+  return pdfjsSozu;
+}
+
+// PDF sayfası, uzun kenarı ~2600 piksel olacak şekilde görsele çevrilir (haritada ve çıktıda yeterli).
+async function pdfSayfasi(belge, no) {
+  const sayfa = await belge.getPage(no);
+  const temel = sayfa.getViewport({ scale: 1 });
+  const gorunum = sayfa.getViewport({ scale: Math.min(4, 2600 / Math.max(temel.width, temel.height)) });
+  const tuval = Object.assign(document.createElement("canvas"), { width: Math.round(gorunum.width), height: Math.round(gorunum.height) });
+  const ctx = tuval.getContext("2d");
+  ctx.fillStyle = token("--not-beyaz"); // kağıt
+  ctx.fillRect(0, 0, tuval.width, tuval.height);
+  await sayfa.render({ canvasContext: ctx, viewport: gorunum }).promise;
+  const blob = await new Promise((coz) => tuval.toBlob(coz, "image/png"));
+  return { url: URL.createObjectURL(blob), en: tuval.width, boy: tuval.height };
+}
+
+const resimYukle = (url) => new Promise((coz, red) => {
+  const img = new Image();
+  img.onload = () => coz(img);
+  img.onerror = () => red(new Error("Görsel açılamadı."));
+  img.src = url;
+});
+
+const PDF_MI = (f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+const GORSEL_MI = (f) => PDF_MI(f) || /^image\/(png|jpe?g|webp|gif|svg\+xml)$/.test(f.type) || /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name);
+const TABLO_MI = (f) => /\.(xlsx|xlsm|csv)$/i.test(f.name);
+
+async function gorselOku(dosya) {
+  if (PDF_MI(dosya)) {
+    const pdfjs = await pdfjsYukle();
+    const belge = await pdfjs.getDocument({ data: new Uint8Array(await dosya.arrayBuffer()) }).promise;
+    return { ...(await pdfSayfasi(belge, 1)), pdf: belge, sayfa: 1, sayfaSayisi: belge.numPages };
+  }
+  const url = URL.createObjectURL(dosya);
+  try {
+    const img = await resimYukle(url);
+    return { url, en: img.naturalWidth || 1000, boy: img.naturalHeight || 1000 };
+  } catch (e) { URL.revokeObjectURL(url); throw e; }
+}
+
+async function gorselNotuEkle(dosya) {
+  const ad = dosya.name.replace(/\.[^.]+$/, "");
+  const veri = await gorselOku(dosya);
+  const n = { opaklik: 85, karistir: false, ...veri, ad };
+  gorseliEkranaSigdir(n);
+  return notEkle("gorsel", n);
+}
+
+async function tabloNotuEkle(dosya) {
+  const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(dosya.name) }, body: dosya });
+  const merkez = harita.getCenter();
+  return notEkle("tablo", { ad: dosya.name.replace(/\.[^.]+$/, ""), sayfalar: r.sayfalar, sayfa: 0, baslikSatiri: true, boyut: 12,
+    konum: [merkez.lat, merkez.lng], renk: token("--not-siyah") });
+}
+
+// Görsel, PDF ve tablo dosyalarını not olarak ekler; kalanları (KML, JSON...) geri verir.
+async function notDosyalariniAl(dosyalar) {
+  const kalan = [];
+  for (const f of dosyalar) {
+    try {
+      if (GORSEL_MI(f)) await gorselNotuEkle(f);
+      else if (TABLO_MI(f)) await tabloNotuEkle(f);
+      else kalan.push(f);
+    } catch (e) { mesaj(`${f.name}: ${e.message}`, true); }
+  }
+  return kalan;
+}
+
+function tabloHtml(n) {
+  const s = n.sayfalar[n.sayfa];
+  const [ilk, ...kalan] = s.satirlar;
+  const satir = (h, et) => `<tr>${h.map((x) => `<${et}>${esc(x)}</${et}>`).join("")}</tr>`;
+  const govde = (n.baslikSatiri ? kalan : s.satirlar).map((h) => satir(h, "td")).join("");
+  const secili = n.id === seciliNot && gorselSekmesinde();
+  return `<div class="harita-tablo${secili ? " secili" : ""}" style="--tablo-boyut:${n.boyut}px;--tablo-renk:${esc(n.renk)};--tablo-yazi:${acikRenk(n.renk) ? "var(--not-siyah)" : "var(--not-beyaz)"}">` +
+    `<table>${n.baslikSatiri ? `<thead>${satir(ilk, "th")}</thead>` : ""}<tbody>${govde}</tbody></table></div>`;
+}
+
+$("gorselEkle").addEventListener("click", () => $("gorselSec").click());
+$("tabloEkle").addEventListener("click", () => $("tabloSec").click());
+$("gorselSec").addEventListener("change", async (e) => {
+  const dosyalar = [...e.target.files];
+  e.target.value = "";
+  yukleniyor($("gorselEkle"), true);
+  try { await notDosyalariniAl(dosyalar); } finally { yukleniyor($("gorselEkle"), false); }
+});
+$("tabloSec").addEventListener("change", async (e) => {
+  const dosyalar = [...e.target.files];
+  e.target.value = "";
+  yukleniyor($("tabloEkle"), true);
+  try { await notDosyalariniAl(dosyalar); } finally { yukleniyor($("tabloEkle"), false); }
+});
+
+// Düzenleyicideki sayfa gezgini: PDF'te sayfa, Excel'de çalışma sayfası.
+$("notSayfaGeri").addEventListener("click", () => notSayfaDegistir(-1));
+$("notSayfaIleri").addEventListener("click", () => notSayfaDegistir(1));
+async function notSayfaDegistir(fark) {
+  const n = notlar.get(seciliNot);
+  if (!n) return;
+  if (n.tur === "tablo") return notGuncelle(n.id, { sayfa: Math.min(n.sayfalar.length - 1, Math.max(0, n.sayfa + fark)) });
+  const no = Math.min(n.sayfaSayisi, Math.max(1, n.sayfa + fark));
+  if (!n.pdf || no === n.sayfa) return;
+  try {
+    const eski = n.url;
+    const s = await pdfSayfasi(n.pdf, no);
+    // Yeni sayfanın en/boy oranı farklı olabilir; genişlik aynı kalır.
+    notGuncelle(n.id, { ...s, sayfa: no });
+    URL.revokeObjectURL(eski);
+  } catch (e) { mesaj(e.message, true); }
+}
+
+$("notOpaklik").addEventListener("input", (e) => notGuncelle(seciliNot, { opaklik: Number(e.target.value) }));
+$("notAci").addEventListener("input", (e) => notGuncelle(seciliNot, { aci: Number(e.target.value) }));
+$("notKaristir").addEventListener("change", (e) => notGuncelle(seciliNot, { karistir: e.target.checked }));
+$("notBaslikSatiri").addEventListener("change", (e) => notGuncelle(seciliNot, { baslikSatiri: e.target.checked }));
+$("notTabloBoyut").addEventListener("input", (e) => notGuncelle(seciliNot, { boyut: Number(e.target.value) }));
+$("notSigdir").addEventListener("click", () => {
+  const n = notlar.get(seciliNot);
+  if (!n) return;
+  gorseliEkranaSigdir(n);
+  notGuncelle(n.id, {});
+});
+
 
 
 // ---- başlangıç -----------------------------------------------------------------

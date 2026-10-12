@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
 
-from . import analiz, exporters, referans
+from . import analiz, exporters, referans, tablo
 from .importers import ice_aktar
 from .store import Store
 from .tkgm import Bulunamadi, LimitAsildi, Tkgm, TkgmHatasi
@@ -90,6 +90,12 @@ class Uygulama:
                 return self._disa_aktar(_json(govde))
             case ("GET", ["referanslar"]):
                 return self.store.referanslar()
+            case ("POST", ["tablo-oku"]):
+                ad = unquote(basliklar.get("X-Dosya-Adi", "tablo.xlsx"))
+                try:
+                    return tablo.oku(ad, govde)
+                except ValueError as e:
+                    raise Hata(HTTPStatus.BAD_REQUEST, str(e)) from e
             case ("POST", ["referanslar"]):
                 return self._referans_ekle(govde, basliklar)
             case ("POST", ["referanslar", "cizim"]):
