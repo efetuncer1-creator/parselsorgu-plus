@@ -209,6 +209,11 @@ $("hepsiniGoster").addEventListener("click", () => {
 // Referanslar ve boşluklar parsellerin altında çizilir ve tıklamayı engellemez.
 harita.createPane("referans").style.zIndex = 350;
 harita.createPane("bosluk").style.zIndex = 360;
+// Haritadaki yazılar (ada/parsel numaraları, alan adları) parsellerin üstünde durur ve tıklamayı engellemez.
+for (const [ad, z] of [["parselNo", 450], ["alanAdi", 460]]) {
+  harita.createPane(ad).style.zIndex = z;
+  harita.getPane(ad).style.pointerEvents = "none";
+}
 const parselKatmani = L.featureGroup().addTo(harita);
 
 const HR = {
@@ -224,6 +229,7 @@ function stilUygula(key) {
   if (!k) return;
   const temel = durum.secili.has(key) ? STIL_SECILI : STIL;
   k.setStyle(key === durum.aktif ? { ...temel, color: HR.aktif, weight: 3 } : temel);
+  if (parselNo.isaretler.has(key)) parselNoSigdir(key);
 }
 
 function imlecGuncelle() {
@@ -265,6 +271,7 @@ function katmanEkle(f) {
   });
   k.addTo(parselKatmani);
   durum.katmanlar.set(key, k);
+  parselNoCiz(f);
   stilUygula(key);
 }
 
@@ -286,9 +293,12 @@ function poligonIcinde(lng, lat, pol) {
   return halkaIcinde(lng, lat, pol[0]) && !pol.slice(1).some((h) => halkaIcinde(lng, lat, h));
 }
 
-// Düğmenin konacağı nokta: sınır kutusunun ortası parselin içindeyse o, değilse içeride kalan ilk ızgara noktası.
+// Düğmenin ve numaranın konacağı nokta: sınır kutusunun ortası parselin içindeyse o, değilse içeride kalan ilk ızgara noktası.
 function icNokta(f) {
-  const pol = f.geometry.coordinates.reduce((a, b) => (b[0].length > a[0].length ? b : a));
+  return poligonIcNokta(f.geometry.coordinates.reduce((a, b) => (b[0].length > a[0].length ? b : a)));
+}
+
+function poligonIcNokta(pol) {
   const xs = pol[0].map((p) => p[0]), ys = pol[0].map((p) => p[1]);
   const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
   const orta = [(x0 + x1) / 2, (y0 + y1) / 2];
@@ -318,6 +328,43 @@ function menuGoster(key) {
   }).addTo(harita);
   menuIsareti.bindPopup(() => bilgiTablosu(p), { offset: [0, -12], maxWidth: 280, minWidth: 264 });
 }
+
+// ---- ada/parsel numaraları: Parsel sekmesindeki anahtarla açılır -------------------------
+
+const parselNo = { acik: false, isaretler: new Map() }; // key -> Leaflet işareti
+try { parselNo.acik = localStorage.getItem("parselNo") === "1"; } catch { /* varsayılan kapalı */ }
+
+function parselNoCiz(f) {
+  const key = f.properties.key;
+  parselNo.isaretler.get(key)?.remove();
+  parselNo.isaretler.delete(key);
+  if (!parselNo.acik) return;
+  const p = f.properties;
+  parselNo.isaretler.set(key, L.marker(icNokta(f), {
+    pane: "parselNo", interactive: false, keyboard: false,
+    icon: L.divIcon({ className: "harita-yazi-ikon", html: `<span class="parsel-no">${esc(p.ada)}/${esc(p.parsel)}</span>`, iconSize: null }),
+  }).addTo(harita));
+  parselNoSigdir(key);
+}
+
+// Numara, parsel ekranda ona yetecek kadar büyükse görünür; uzaktan bakınca yazılar üst üste binmez.
+// Aktif parselde aynı noktada menü düğmesi durduğu için numara biraz aşağı kayar.
+function parselNoSigdir(key) {
+  const el = parselNo.isaretler.get(key)?.getElement();
+  const sinir = durum.katmanlar.get(key)?.getBounds();
+  if (!el || !sinir) return;
+  const a = harita.latLngToLayerPoint(sinir.getSouthWest()), b = harita.latLngToLayerPoint(sinir.getNorthEast());
+  el.classList.toggle("sigmaz", b.x - a.x < 40 || a.y - b.y < 16);
+  el.classList.toggle("aktif", key === durum.aktif);
+}
+
+harita.on("zoomend", () => parselNo.isaretler.forEach((_, key) => parselNoSigdir(key)));
+$("parselNoGoster").checked = parselNo.acik;
+$("parselNoGoster").addEventListener("change", (e) => {
+  parselNo.acik = e.target.checked;
+  try { localStorage.setItem("parselNo", parselNo.acik ? "1" : "0"); } catch { /* tercih saklanamazsa önemli değil */ }
+  durum.parseller.forEach(parselNoCiz);
+});
 
 // ---- tek parseli TKGM'den güncelleme (bilgi kartındaki düğme) -----------------------
 // Parseller normalde önbellekten gelir; TKGM'deki hali değişmiş olabilecek bir parsel (ifraz, tevhit,
@@ -366,17 +413,19 @@ async function parselGuncelle(key, buton) {
 
 // ---- sekmeler ------------------------------------------------------------------
 
+const SAYFALAR = { parsel: "Parsel sorgu", alan: "Alandan parsel tespiti", gorsel: "Alan görünümü" };
+
 function sekmeAc(ad) {
   document.querySelectorAll("[role=tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.sekme === ad));
-  $("panel-parsel").hidden = ad !== "parsel";
-  $("panel-alan").hidden = ad !== "alan";
-  $("sayfaAlt").textContent = ad === "alan" ? "Alandan parsel tespiti" : "Parsel sorgu";
-  const yuva = document.querySelector(`.yuva[data-yuva="${ad}"]`);
-  yuva.append($("bolumDisa"));
+  for (const sayfa in SAYFALAR) $(`panel-${sayfa}`).hidden = ad !== sayfa;
+  $("sayfaAlt").textContent = SAYFALAR[ad];
+  // Görsel sayfasında dışa aktarma yok; kutu önceki sayfanın yuvasında gizli kalır.
+  document.querySelector(`.yuva[data-yuva="${ad}"]`)?.append($("bolumDisa"));
   disaSecenekleriGuncelle();
   if (ad !== "parsel" && durum.mod === "sorgu") sorguModu(false);
   if (ad !== "alan" && durum.mod === "cizim") cizimIptal();
   if (ad === "alan" && aktifAlan) ozetYukle();
+  if (ad === "gorsel") { katmanSirasiCiz(); gorselDuzenDoldur(); }
   try { localStorage.setItem("sekme", ad); } catch { /* tercih saklanamazsa önemli değil */ }
 }
 
@@ -469,7 +518,10 @@ $("secimiKaldir").addEventListener("click", () => {
 $("seciliSil").addEventListener("click", () => {
   const keys = [...durum.secili];
   if (!keys.length) return mesaj("Listeden çıkarılacak parsel seçilmedi.", true);
-  keys.forEach((k) => { durum.katmanlar.get(k)?.remove(); durum.katmanlar.delete(k); durum.parseller.delete(k); });
+  keys.forEach((k) => {
+    durum.katmanlar.get(k)?.remove(); durum.katmanlar.delete(k); durum.parseller.delete(k);
+    parselNo.isaretler.get(k)?.remove(); parselNo.isaretler.delete(k);
+  });
   if (keys.includes(durum.aktif)) { durum.aktif = null; menuGoster(null); }
   durum.secili.clear();
   listeCiz();
@@ -856,52 +908,130 @@ let aktifAlan = null; // referans id
 let sonOzet = null;
 
 const katmanAdi = (f) => (f.properties && f.properties.katman) || "";
+const katmanSirasi = []; // alan kimlikleri, haritada en üstteki başta; alanlar gibi sadece bu sayfa açıkken yaşar
+const gorselKayit = { bekleyen: new Map(), kuyruk: Promise.resolve() }; // sunucuya yazılmayı bekleyen görünümler
 
-// Alanların içi çapraz çizgili taranır. Desen her renk ve yoğunluk için bir kez oluşturulur ve
-// sayfadaki gizli SVG'ye eklenir; Leaflet'in SVG yolları ona url(#...) ile başvurur.
-function taramaDeseni(renk, aktif) {
-  const id = `tarama-${renk.replace(/[^0-9a-z]/gi, "")}${aktif ? "-aktif" : ""}`;
-  if (!document.getElementById(id)) {
-    const NS = "http://www.w3.org/2000/svg";
-    const desen = document.createElementNS(NS, "pattern");
-    desen.id = id;
-    desen.setAttribute("patternUnits", "userSpaceOnUse");
-    desen.setAttribute("width", "9");
-    desen.setAttribute("height", "9");
-    desen.setAttribute("patternTransform", "rotate(45)");
-    const cizgi = document.createElementNS(NS, "line");
-    Object.entries({ x1: 0, y1: 0, x2: 0, y2: 9, stroke: renk, "stroke-width": aktif ? 2.4 : 1.6, "stroke-opacity": aktif ? 0.75 : 0.55 })
-      .forEach(([k, v]) => cizgi.setAttribute(k, v));
-    desen.append(cizgi);
+const SVG_NS = "http://www.w3.org/2000/svg";
+function svgEl(ad, nitelikler) {
+  const el = document.createElementNS(SVG_NS, ad);
+  for (const [k, v] of Object.entries(nitelikler)) el.setAttribute(k, v);
+  return el;
+}
+
+// Tarama deseni sayfadaki gizli SVG'de durur; Leaflet'in SVG yolları ona url(#...) ile başvurur.
+// Aynı kimlikle tekrar çağrılınca yerinde güncellenir, kaydırıcı sürüklenirken desen birikmez.
+function desenYaz(id, renk, g, kalin = false) {
+  let desen = document.getElementById(id);
+  if (!desen) {
+    desen = svgEl("pattern", { id, patternUnits: "userSpaceOnUse" });
     $("desenler").append(desen);
   }
+  const a = g.aralik, orta = a / 2;
+  const opaklik = Math.min(1, g.opaklik / 100 + (kalin ? 0.2 : 0));
+  const cizgi = { stroke: renk, "stroke-width": kalin ? 1.4 : 1, "stroke-opacity": opaklik };
+  const aci = { capraz: 45, ters: -45, "capraz-kareli": 45 }[g.desen];
+  desen.setAttribute("width", a);
+  desen.setAttribute("height", a);
+  if (aci) desen.setAttribute("patternTransform", `rotate(${aci})`); else desen.removeAttribute("patternTransform");
+  const parcalar = [];
+  if (["capraz", "ters", "dikey", "kareli", "capraz-kareli"].includes(g.desen)) parcalar.push(svgEl("line", { x1: orta, y1: 0, x2: orta, y2: a, ...cizgi }));
+  if (["yatay", "kareli", "capraz-kareli"].includes(g.desen)) parcalar.push(svgEl("line", { x1: 0, y1: orta, x2: a, y2: orta, ...cizgi }));
+  if (g.desen === "nokta") parcalar.push(svgEl("circle", { cx: orta, cy: orta, r: Math.max(1, a / 7) * (kalin ? 1.25 : 1), fill: renk, "fill-opacity": opaklik }));
+  desen.replaceChildren(...parcalar);
   return `url(#${id})`;
+}
+
+function cizgiDizisi(cizgi, kalinlik) {
+  if (cizgi === "kesik") return `${Math.max(8, kalinlik * 2.6)} ${Math.max(6, kalinlik * 2)}`;
+  if (cizgi === "nokta") return `0 ${Math.max(5, kalinlik * 2.2)}`; // yuvarlak uçlu, boyu sıfır çizgi = nokta
+  return null;
+}
+
+// Alanın stili Görsel sekmesindeki ayarlardan (r.gorsel) gelir. Üzerinde çalışılan alan biraz daha belirgin çizilir.
+function referansStili(r) {
+  const g = r.gorsel, aktif = r.id === aktifAlan, hesap = r.hesap_katmani;
+  const kalinlik = g.kalinlik ? g.kalinlik + (aktif ? 1 : 0) : 0;
+  const dolgu = g.desen === "yok" ? { fillOpacity: 0 }
+    : g.desen === "dolu" ? { fillColor: r.renk, fillOpacity: Math.min(1, g.opaklik / 100 + (aktif ? 0.1 : 0)) }
+    : { fillColor: desenYaz(`desen-${r.id}${aktif ? "-aktif" : ""}`, r.renk, g, aktif), fillOpacity: 1 };
+  const sinir = { color: r.renk, opacity: 1, stroke: kalinlik > 0, weight: kalinlik, dashArray: cizgiDizisi(g.cizgi, kalinlik), ...dolgu };
+  return (f) => {
+    if (/Point$/.test(f.geometry.type)) return { color: r.renk, fillColor: r.renk, fillOpacity: 0.8, weight: 2, opacity: 1, stroke: true, dashArray: null };
+    // Sınır dışındaki katmanlar (proje dosyasının geri kalanı) ince ve taramasız çizilir.
+    if (hesap != null && katmanAdi(f) !== hesap) return { color: r.renk, weight: 1, opacity: 0.7, fillOpacity: 0, stroke: true, dashArray: null };
+    return sinir;
+  };
 }
 
 function referansKatmani(r) {
   const gizli = new Set(r.gizli || []);
-  const aktif = r.id === aktifAlan;
   const hesap = r.hesap_katmani;
   return L.geoJSON(r.geojson, {
     pane: "referans",
     interactive: false,
     // Sınır katmanı gizli olsa da çizilir: hesap ona göre yapılıyor, görünmesi gerekir.
     filter: (f) => !gizli.has(katmanAdi(f)) || katmanAdi(f) === hesap,
-    style: (f) => {
-      const sinir = hesap == null || katmanAdi(f) === hesap;
-      return sinir
-        ? { color: r.renk, weight: aktif ? 4 : 3, dashArray: "8 6", fillColor: taramaDeseni(r.renk, aktif), fillOpacity: 1 }
-        : { color: r.renk, weight: 1, opacity: 0.7, fillOpacity: 0 };
-    },
-    pointToLayer: (_, latlng) => L.circleMarker(latlng, { pane: "referans", radius: 5, color: r.renk, fillOpacity: 0.8, interactive: false }),
+    style: referansStili(r),
+    pointToLayer: (_, latlng) => L.circleMarker(latlng, { pane: "referans", radius: 5, interactive: false }),
   });
 }
 
+const halkaAlani = (h) => Math.abs(h.reduce((t, [x, y], i) => { const [x2, y2] = h[(i + 1) % h.length]; return t + x * y2 - x2 * y; }, 0));
+
+// Ad etiketinin yeri: açık sınır katmanlarındaki en büyük poligonun içi; poligon yoksa sınırların ortası.
+function alanIcNokta(r) {
+  const gizli = new Set(r.gizli || []);
+  const ozellikler = sinirFc(r).features.filter((f) => !gizli.has(katmanAdi(f)) || katmanAdi(f) === r.hesap_katmani);
+  const poligonlar = ozellikler.flatMap((f) => (f.geometry.type === "Polygon" ? [f.geometry.coordinates]
+    : f.geometry.type === "MultiPolygon" ? f.geometry.coordinates : []));
+  if (poligonlar.length) return poligonIcNokta(poligonlar.reduce((a, b) => (halkaAlani(b[0]) > halkaAlani(a[0]) ? b : a)));
+  const sinir = L.geoJSON({ type: "FeatureCollection", features: ozellikler }).getBounds();
+  return sinir.isValid() ? sinir.getCenter() : null;
+}
+
+function alanAdiIsareti(r) {
+  if (!r.gorunur || !r.gorsel.etiket) return null;
+  const nokta = alanIcNokta(r);
+  if (!nokta) return null;
+  return L.marker(nokta, {
+    pane: "alanAdi", interactive: false, keyboard: false,
+    icon: L.divIcon({ className: "harita-yazi-ikon", html: `<span class="alan-adi" style="--alan-renk:${esc(r.renk)}">${esc(r.ad)}</span>`, iconSize: null }),
+  }).addTo(harita);
+}
+
+// Leaflet aynı bölmedeki şekilleri ekleniş sırasıyla çizer: alttakinden başlayarak öne alınır,
+// listenin başındaki en üstte kalır. Ad etiketleri de aynı sırayla üst üste biner.
+function sirayiUygula() {
+  for (let i = katmanSirasi.length - 1; i >= 0; i--) {
+    const ref = referanslar.get(katmanSirasi[i]);
+    if (!ref) continue;
+    if (harita.hasLayer(ref.katman)) ref.katman.bringToFront();
+    ref.etiket?.setZIndexOffset((katmanSirasi.length - i) * 100000);
+  }
+}
+
 function referansCiz(r) {
-  referanslar.get(r.id)?.katman.remove();
+  const eski = referanslar.get(r.id);
+  // Henüz kaydedilmemiş görünüm değişikliği sunucunun daha eski cevabıyla ezilmesin.
+  if (eski && gorselKayit.bekleyen.has(r.id)) r = { ...r, renk: eski.veri.renk, gorsel: eski.veri.gorsel };
+  eski?.katman.remove();
+  eski?.etiket?.remove();
   const katman = referansKatmani(r);
   if (r.gorunur) katman.addTo(harita);
-  referanslar.set(r.id, { veri: r, katman });
+  referanslar.set(r.id, { veri: r, katman, etiket: alanAdiIsareti(r) });
+  if (!katmanSirasi.includes(r.id)) katmanSirasi.unshift(r.id); // yeni alan en üste
+  sirayiUygula();
+}
+
+function referansKaldir(id) {
+  const ref = referanslar.get(id);
+  ref?.katman.remove();
+  ref?.etiket?.remove();
+  referanslar.delete(id);
+  if (katmanSirasi.includes(id)) katmanSirasi.splice(katmanSirasi.indexOf(id), 1);
+  clearTimeout(gorselKayit.bekleyen.get(id));
+  gorselKayit.bekleyen.delete(id);
+  for (const ad of [`desen-${id}`, `desen-${id}-aktif`, `ornek-${id}`]) document.getElementById(ad)?.remove();
 }
 
 function katmanListesi(r) {
@@ -933,6 +1063,7 @@ function referansListeCiz() {
       ${katmanListesi(r)}
     </li>`;
   }).join("");
+  katmanSirasiCiz();
 }
 
 // Sınır katmanı seçiliyse sadece o; pafta indeksi gibi büyük katmanlar haritayı uzaklaştırmasın.
@@ -1035,8 +1166,7 @@ $("referansListe").addEventListener("click", async (e) => {
   if (!(await onayla(`"${ref.veri.ad}" alanı kaldırılsın mı? Dosyanın kendisi silinmez, parseller listede kalır.`, "Kaldır"))) return;
   try {
     await postJson(`referanslar/${id}/sil`, {});
-    ref.katman.remove();
-    referanslar.delete(id);
+    referansKaldir(id);
     if (id === aktifAlan) alanSec(null);
     else referansListeCiz();
   } catch (err) { mesaj(err.message, true); }
@@ -1408,7 +1538,7 @@ function renkPaletiAc(dugme, id) {
   panel.innerHTML = ALAN_RENKLERI.map(([ad, isim]) => {
     const renk = token(ad);
     return `<button type="button" data-renk="${renk}" style="background:${renk}" aria-label="${isim}" data-ipucu="${isim}" aria-pressed="${renk.toLowerCase() === mevcut}"></button>`;
-  }).join("");
+  }).join("") + `<button type="button" class="palet-daha" data-gorsel>${ikon("gorsel")}Diğer görünüm ayarları</button>`;
   renkPaleti.id = id;
   renkPaleti.dugme = dugme;
   panel.hidden = false;
@@ -1432,6 +1562,11 @@ function renkPaletiKapat(odakGeri = true) {
 }
 
 $("renkPaleti").addEventListener("click", async (e) => {
+  if (e.target.closest("[data-gorsel]")) {
+    gorselAlan = renkPaleti.id;
+    renkPaletiKapat(false);
+    return sekmeAc("gorsel");
+  }
   const secilen = e.target.closest("button[data-renk]");
   if (!secilen) return;
   const id = renkPaleti.id;
@@ -1455,12 +1590,357 @@ document.addEventListener("pointerdown", (e) => {
 document.querySelector(".cekmece-govde").addEventListener("scroll", () => renkPaletiKapat(false), { passive: true });
 addEventListener("resize", () => renkPaletiKapat(false));
 
+// ================================================================================
+// Görsel: alanların görünümü ve katman sırası
+// ================================================================================
+// Ayarların doğrulanması ve varsayılanları sunucudadır (referans.GORSEL); her alan kendi ayarlarıyla gelir.
+// Değişiklik önce haritaya uygulanır, sunucuya kısa bir beklemeden sonra yazılır: kaydırıcı sürüklenirken
+// her adımda istek gitmez, harita da beklemeden tepki verir.
+
+let gorselAlan = null; // Görsel sekmesinde düzenlenen alan
+const ozel = { h: 0, s: 1, v: 1 }; // özel renk seçicinin durumu (ton, doygunluk, parlaklık)
+const surukleme = { li: null, y: 0 };
+
+const DESENLER = [["yok", "Yok"], ["dolu", "Dolu"], ["capraz", "Çapraz"], ["ters", "Ters çapraz"], ["yatay", "Yatay"],
+  ["dikey", "Dikey"], ["kareli", "Kareli"], ["capraz-kareli", "Çapraz kareli"], ["nokta", "Noktalı"]];
+const DESEN_ADI = Object.fromEntries(DESENLER);
+const CIZGI_ADI = { duz: "Düz", kesik: "Kesik", nokta: "Noktalı" };
+const kalinlikMetni = (k) => (k ? `${String(k).replace(".", ",")} px` : "Çizgisiz");
+
+$("gorselRenkler").innerHTML = ALAN_RENKLERI.map(([ad, isim]) => {
+  const renk = token(ad);
+  return `<button type="button" data-renk="${renk}" style="--ornek:${renk}" aria-label="${isim}" data-ipucu="${isim}" aria-pressed="false"></button>`;
+}).join("") + `<button type="button" class="ozel" data-renk="ozel" aria-label="Özel renk" data-ipucu="Özel renk" aria-pressed="false" aria-expanded="false" aria-controls="ozelRenk"></button>`;
+
+$("gorselDesenler").innerHTML = DESENLER.map(([deger, ad]) => `
+  <label class="desen-karo"><input type="radio" name="desen" value="${deger}">
+    <svg viewBox="0 0 44 28" aria-hidden="true"><rect x="1.5" y="1.5" width="41" height="25" rx="5" stroke-width="1.5" data-onizleme="${deger}"/></svg>
+    <span>${ad}</span></label>`).join("");
+
+// Katman listesindeki küçük örnek: alanın gerçek rengi, çizgisi ve taraması.
+function katmanOrnegi(r) {
+  const g = r.gorsel;
+  const dolgu = g.desen === "yok" ? `fill="none"`
+    : g.desen === "dolu" ? `fill="${esc(r.renk)}" fill-opacity="${g.opaklik / 100}"`
+    : `fill="${desenYaz(`ornek-${r.id}`, r.renk, g)}"`;
+  const k = g.kalinlik ? Math.min(Math.max(g.kalinlik, 1), 3) : 0;
+  const dizi = { kesik: ` stroke-dasharray="4 3"`, nokta: ` stroke-dasharray="0 3.5"` }[g.cizgi] || "";
+  const kenar = k ? `stroke="${esc(r.renk)}" stroke-width="${k}" stroke-linecap="round"${dizi}` : `stroke="none"`;
+  return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true"><rect x="2" y="2" width="28" height="18" rx="3" ${dolgu} ${kenar}/></svg>`;
+}
+
+function katmanSirasiCiz() {
+  if (surukleme.li) return; // sürükleme bitince çizilir
+  const liste = katmanSirasi.filter((id) => referanslar.has(id));
+  if (!referanslar.has(gorselAlan)) {
+    gorselAlan = referanslar.has(aktifAlan) ? aktifAlan : liste[0] ?? null;
+    gorselDuzenDoldur();
+  }
+  $("katmanAdet").textContent = liste.length;
+  $("gorselBos").hidden = liste.length > 0;
+  $("katmanIpucu").hidden = liste.length < 2;
+  const gorunenler = liste.map((id) => referanslar.get(id).veri).filter((r) => r.gorunur);
+  $("adlarHepsi").hidden = !gorunenler.length;
+  $("adlarHepsi").lastElementChild.textContent = gorunenler.some((r) => r.gorsel.etiket) ? "Adları gizle" : "Adları göster";
+  $("katmanSirasi").innerHTML = liste.map((id) => {
+    const r = referanslar.get(id).veri, g = r.gorsel, secili = id === gorselAlan;
+    const kenar = g.kalinlik ? `${CIZGI_ADI[g.cizgi]} ${kalinlikMetni(g.kalinlik)}` : "Çizgisiz";
+    const ozet = r.gorunur ? `${kenar} · ${DESEN_ADI[g.desen]}` : "Haritada gizli";
+    return `
+    <li data-id="${id}" class="${secili ? "secili" : ""}${r.gorunur ? "" : " gizli"}">
+      <button type="button" class="tutamac" aria-label="${esc(r.ad)} katmanını taşı" title="Sürükle ya da yukarı/aşağı okla taşı">${ikon("tutamac")}</button>
+      ${katmanOrnegi(r)}
+      <button type="button" class="ad" data-is="duzenle" aria-pressed="${secili}" title="${secili ? "Alana git" : "Görünümünü düzenle"}">${esc(r.ad)}<small>${esc(ozet)}</small></button>
+      <button type="button" class="ikon-dugme" data-is="etiket" aria-pressed="${g.etiket}" aria-label="${esc(r.ad)} adı haritada" title="Adı haritada göster ya da gizle"${r.gorunur ? "" : " disabled"}>${ikon("etiket")}</button>
+      <label class="ikon-dugme gorunur-anahtar" title="Haritada göster ya da gizle">
+        <input type="checkbox" data-is="gorunur" ${r.gorunur ? "checked" : ""} aria-label="${esc(r.ad)} haritada görünsün">${ikon("goz", "ikon acik")}${ikon("goz-kapali", "ikon kapali")}
+      </label>
+    </li>`;
+  }).join("");
+}
+
+function gorselDuzenDoldur(kaynak = null) {
+  const ref = referanslar.get(gorselAlan);
+  $("gorselDuzen").hidden = !ref;
+  if (!ref) return;
+  const { renk, ad, gorsel: g } = ref.veri;
+  $("gorselBaslik").textContent = ad;
+  $("gorselBaslikRenk").style.background = renk;
+  const dugmeler = [...$("gorselRenkler").children];
+  const hazir = dugmeler.find((b) => b.dataset.renk.toLowerCase() === renk.toLowerCase());
+  dugmeler.forEach((b) => b.setAttribute("aria-pressed", b === hazir));
+  const ozelDugme = $("gorselRenkler").querySelector(".ozel");
+  ozelDugme.setAttribute("aria-pressed", !hazir);
+  ozelDugme.style.setProperty("--ornek", hazir ? "transparent" : renk);
+  if (kaynak !== "ozel") ozelRenkEsitle(renk);
+
+  $("gorselKalinlik").value = g.kalinlik;
+  $("gorselKalinlikDeger").textContent = kalinlikMetni(g.kalinlik);
+  document.querySelectorAll("input[name=cizgi]").forEach((x) => { x.checked = x.value === g.cizgi; x.disabled = !g.kalinlik; });
+
+  document.querySelectorAll("input[name=desen]").forEach((x) => { x.checked = x.value === g.desen; });
+  $("gorselDesenler").querySelectorAll("[data-onizleme]").forEach((sekil) => {
+    const d = sekil.dataset.onizleme;
+    sekil.setAttribute("stroke", renk);
+    sekil.setAttribute("fill", d === "yok" ? "none" : d === "dolu" ? renk : desenYaz(`onizleme-${d}`, renk, { desen: d, aralik: 6, opaklik: 90 }));
+    sekil.setAttribute("fill-opacity", d === "dolu" ? 0.45 : 1);
+  });
+  $("gorselAralik").value = g.aralik;
+  $("gorselAralikDeger").textContent = `${g.aralik} px`;
+  $("gorselAralik").disabled = g.desen === "yok" || g.desen === "dolu";
+  $("gorselOpaklik").value = g.opaklik;
+  $("gorselOpaklikDeger").textContent = `%${g.opaklik}`;
+  $("gorselOpaklik").disabled = g.desen === "yok";
+  $("gorselEtiket").checked = g.etiket;
+  for (const id of ["gorselKalinlik", "gorselAralik", "gorselOpaklik"]) kaydiriciDoldur($(id));
+}
+
+// Kaydırıcının dolu kısmı; çubuğun kendisi CSS'te çizilir.
+function kaydiriciDoldur(k) {
+  k.style.setProperty("--dolum", `${(100 * (k.value - k.min)) / (k.max - k.min)}%`);
+}
+
+function gorselDegistir(id, { renk, ...ayar }, kaynak = null) {
+  const ref = referanslar.get(id);
+  if (!ref) return;
+  const r = ref.veri;
+  if (renk) r.renk = renk;
+  r.gorsel = { ...r.gorsel, ...ayar };
+  ref.katman.setStyle(referansStili(r));
+  if (renk || "etiket" in ayar) {
+    ref.etiket?.remove();
+    ref.etiket = alanAdiIsareti(r);
+    sirayiUygula();
+  }
+  renk ? referansListeCiz() : katmanSirasiCiz(); // renk Alan sekmesindeki listede de görünür
+  if (id === gorselAlan) gorselDuzenDoldur(kaynak);
+  gorselKaydet(id);
+}
+
+// İstekler sırayla gider; sonuncusu en son yazılır. Hata olursa sunucudaki hali geri yüklenir.
+function gorselKaydet(id) {
+  clearTimeout(gorselKayit.bekleyen.get(id));
+  const zamanlayici = setTimeout(() => {
+    gorselKayit.kuyruk = gorselKayit.kuyruk.then(async () => {
+      const ref = referanslar.get(id);
+      let hata = null;
+      try {
+        if (ref) await postJson(`referanslar/${id}/guncelle`, { renk: ref.veri.renk, gorsel: ref.veri.gorsel });
+      } catch (e) { hata = e; }
+      if (gorselKayit.bekleyen.get(id) === zamanlayici) gorselKayit.bekleyen.delete(id);
+      if (!hata || !referanslar.has(id)) return;
+      mesaj(hata.message, true);
+      await referansTazele(id).catch(() => {});
+      referansListeCiz();
+      gorselDuzenDoldur();
+    });
+  }, 350);
+  gorselKayit.bekleyen.set(id, zamanlayici);
+}
+
+// ---- renk: hazır renkler ve özel renk seçici ----------------------------------------
+
+function hsvHex({ h, s, v }) {
+  const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+  return "#" + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+}
+
+// Gri tonlarda ton belirsizdir; seçicideki ton kaybolmasın diye eskisi kalır.
+function hexHsv(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const v = Math.max(r, g, b), c = v - Math.min(r, g, b);
+  const h = !c ? ozel.h : 60 * (v === r ? ((g - b) / c + 6) % 6 : v === g ? (b - r) / c + 2 : (r - g) / c + 4);
+  return { h: Math.round(h) % 360, s: v ? c / v : 0, v };
+}
+
+function ozelCiz(hex) {
+  const alan = $("ozelAlan");
+  alan.style.setProperty("--ton", `hsl(${ozel.h} 100% 50%)`);
+  alan.style.setProperty("--x", `${ozel.s * 100}%`);
+  alan.style.setProperty("--y", `${(1 - ozel.v) * 100}%`);
+  alan.style.setProperty("--secilen", hex);
+  alan.setAttribute("aria-valuenow", Math.round(ozel.s * 100));
+  alan.setAttribute("aria-valuetext", `Doygunluk %${Math.round(ozel.s * 100)}, parlaklık %${Math.round(ozel.v * 100)}`);
+  $("ozelTon").value = ozel.h;
+  if (document.activeElement !== $("ozelHex")) $("ozelHex").value = hex;
+}
+
+function ozelRenkEsitle(hex) {
+  Object.assign(ozel, hexHsv(hex));
+  ozelCiz(hex);
+}
+
+function ozelUygula() {
+  const hex = hsvHex(ozel);
+  ozelCiz(hex);
+  if (gorselAlan) gorselDegistir(gorselAlan, { renk: hex }, "ozel");
+}
+
+$("gorselRenkler").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-renk]");
+  if (!b || !gorselAlan) return;
+  if (b.dataset.renk !== "ozel") return gorselDegistir(gorselAlan, { renk: b.dataset.renk });
+  const ac = $("ozelRenk").hidden;
+  $("ozelRenk").hidden = !ac;
+  b.setAttribute("aria-expanded", ac);
+  if (ac) ozelRenkEsitle(referanslar.get(gorselAlan).veri.renk);
+});
+
+function ozelAlandan(e) {
+  const k = $("ozelAlan").getBoundingClientRect();
+  if (!k.width || !k.height) return; // seçici kapalıyken boyu sıfır
+  ozel.s =Math.min(1, Math.max(0, (e.clientX - k.left) / k.width));
+  ozel.v = 1 - Math.min(1, Math.max(0, (e.clientY - k.top) / k.height));
+  ozelUygula();
+}
+$("ozelAlan").addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.currentTarget.setPointerCapture(e.pointerId);
+  e.currentTarget.focus();
+  ozelAlandan(e);
+});
+$("ozelAlan").addEventListener("pointermove", (e) => { if (e.currentTarget.hasPointerCapture(e.pointerId)) ozelAlandan(e); });
+$("ozelAlan").addEventListener("keydown", (e) => {
+  const adim = e.shiftKey ? 0.1 : 0.02;
+  const [ad, fark] = { ArrowLeft: ["s", -adim], ArrowRight: ["s", adim], ArrowDown: ["v", -adim], ArrowUp: ["v", adim] }[e.key] || [];
+  if (!ad) return;
+  e.preventDefault();
+  ozel[ad] = Math.min(1, Math.max(0, ozel[ad] + fark));
+  ozelUygula();
+});
+$("ozelTon").addEventListener("input", (e) => { ozel.h = Number(e.target.value); ozelUygula(); });
+$("ozelHex").addEventListener("input", (e) => {
+  const m = e.target.value.trim().match(/^#?([0-9a-f]{6})$/i);
+  if (!m || !gorselAlan) return;
+  const hex = `#${m[1].toLowerCase()}`;
+  ozelRenkEsitle(hex);
+  gorselDegistir(gorselAlan, { renk: hex }, "ozel");
+});
+// Yarım kalan ya da hatalı kod, kutudan çıkınca geçerli renge döner.
+$("ozelHex").addEventListener("change", (e) => {
+  const ref = referanslar.get(gorselAlan);
+  if (ref) e.target.value = ref.veri.renk;
+});
+
+// ---- çizgi, tarama, ad -------------------------------------------------------------
+
+for (const [id, ayar] of [["gorselKalinlik", "kalinlik"], ["gorselAralik", "aralik"], ["gorselOpaklik", "opaklik"]]) {
+  $(id).addEventListener("input", (e) => { if (gorselAlan) gorselDegistir(gorselAlan, { [ayar]: Number(e.target.value) }); });
+}
+document.querySelectorAll("input[name=cizgi]").forEach((x) => x.addEventListener("change", () => {
+  if (gorselAlan) gorselDegistir(gorselAlan, { cizgi: x.value });
+}));
+$("gorselDesenler").addEventListener("change", (e) => {
+  if (e.target.name === "desen" && gorselAlan) gorselDegistir(gorselAlan, { desen: e.target.value });
+});
+$("gorselEtiket").addEventListener("change", (e) => { if (gorselAlan) gorselDegistir(gorselAlan, { etiket: e.target.checked }); });
+
+// Varsayılanlar sunucuda: boş görünüm gönderilir, sunucu varsayılanla doldurup döndürür.
+$("gorselVarsayilan").addEventListener("click", () => {
+  const id = gorselAlan;
+  if (!id) return;
+  clearTimeout(gorselKayit.bekleyen.get(id));
+  gorselKayit.bekleyen.delete(id);
+  gorselKayit.kuyruk = gorselKayit.kuyruk.then(async () => {
+    try {
+      referansCiz(await postJson(`referanslar/${id}/guncelle`, { gorsel: {} }));
+      referansListeCiz();
+      if (id === gorselAlan) gorselDuzenDoldur();
+    } catch (err) { mesaj(err.message, true); }
+  });
+});
+
+// ---- katman listesi: seçme, ad ve görünürlük, sıralama ---------------------------------
+
+$("katmanSirasi").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-is]");
+  if (!b) return;
+  const id = Number(b.closest("li").dataset.id);
+  if (b.dataset.is === "etiket") gorselDegistir(id, { etiket: b.getAttribute("aria-pressed") !== "true" });
+  else if (id === gorselAlan) return alanaYaklas(id);
+  else {
+    gorselAlan = id;
+    katmanSirasiCiz();
+    gorselDuzenDoldur();
+  }
+  document.querySelector(`#katmanSirasi li[data-id="${id}"] [data-is="${b.dataset.is}"]`)?.focus();
+});
+
+$("katmanSirasi").addEventListener("change", async (e) => {
+  if (e.target.dataset.is !== "gorunur") return;
+  const id = Number(e.target.closest("li").dataset.id);
+  try {
+    referansCiz(await postJson(`referanslar/${id}/guncelle`, { gorunur: e.target.checked }));
+    referansListeCiz();
+    document.querySelector(`#katmanSirasi li[data-id="${id}"] [data-is=gorunur]`)?.focus();
+  } catch (err) { mesaj(err.message, true); }
+});
+
+$("adlarHepsi").addEventListener("click", () => {
+  const gorunenler = katmanSirasi.map((id) => referanslar.get(id)?.veri).filter((r) => r?.gorunur);
+  const ac = !gorunenler.some((r) => r.gorsel.etiket);
+  gorunenler.forEach((r) => gorselDegistir(r.id, { etiket: ac }));
+});
+
+$("alanSekmesineGit").addEventListener("click", () => sekmeAc("alan"));
+
+function siraOku() {
+  const yeni = [...$("katmanSirasi").children].map((li) => Number(li.dataset.id));
+  katmanSirasi.splice(0, katmanSirasi.length, ...yeni, ...katmanSirasi.filter((id) => !yeni.includes(id)));
+  sirayiUygula();
+}
+
+// Tutamaçtan sürükleme. Komşu öğe yer değiştirir, sürüklenen öğe DOM'da kalır; yoksa işaretçi yakalaması kopar.
+$("katmanSirasi").addEventListener("pointerdown", (e) => {
+  const tutamac = e.target.closest(".tutamac");
+  if (!tutamac || e.button !== 0) return;
+  e.preventDefault();
+  $("katmanSirasi").setPointerCapture(e.pointerId);
+  surukleme.li = tutamac.closest("li");
+  surukleme.y = e.clientY;
+  surukleme.li.classList.add("suruklenen");
+});
+$("katmanSirasi").addEventListener("pointermove", (e) => {
+  const li = surukleme.li;
+  if (!li) return;
+  let fark = e.clientY - surukleme.y;
+  const komsu = fark > 0 ? li.nextElementSibling : li.previousElementSibling;
+  if (komsu && Math.abs(fark) > komsu.offsetHeight / 2) {
+    const once = li.offsetTop;
+    fark > 0 ? li.before(komsu) : li.after(komsu);
+    surukleme.y += li.offsetTop - once;
+    fark = e.clientY - surukleme.y;
+    siraOku();
+  }
+  li.style.transform = `translateY(${fark}px)`;
+});
+function suruklemeBitti() {
+  const li = surukleme.li;
+  if (!li) return;
+  surukleme.li = null;
+  li.classList.remove("suruklenen");
+  li.style.transform = "";
+}
+$("katmanSirasi").addEventListener("pointerup", suruklemeBitti);
+$("katmanSirasi").addEventListener("pointercancel", suruklemeBitti);
+$("katmanSirasi").addEventListener("keydown", (e) => {
+  const tutamac = e.target.closest(".tutamac");
+  if (!tutamac || !["ArrowUp", "ArrowDown"].includes(e.key)) return;
+  e.preventDefault();
+  const li = tutamac.closest("li");
+  const komsu = e.key === "ArrowUp" ? li.previousElementSibling : li.nextElementSibling;
+  if (!komsu) return;
+  e.key === "ArrowUp" ? li.after(komsu) : li.before(komsu);
+  siraOku();
+});
+
 // ---- başlangıç -----------------------------------------------------------------
 
 (() => {
   let sekme = "parsel";
   try { sekme = localStorage.getItem("sekme") || "parsel"; } catch { /* yoksa varsayılan */ }
-  sekmeAc(sekme === "alan" ? "alan" : "parsel");
+  sekmeAc(Object.hasOwn(SAYFALAR, sekme) ? sekme : "parsel");
 })();
 // Sayfa açılışı = yeni oturum: liste ve alanlar boş başlar. Önbellek (daha önce sorgulanan
 // parseller, il/ilçe/mahalle listeleri) sunucuda kalır; tekrar sorgulanınca TKGM'ye gidilmez.

@@ -296,6 +296,53 @@ class ReferansTest(GeciciStore):
         self.assertEqual(self.store.referans_sil(ref_id), 1)
         self.assertEqual(self.store.referanslar(), [])
 
+    def test_gorsel_varsayilan_ve_kayit(self):
+        ref_id = self.store.referans_ekle("Deneme OSB", "#2b7bff", self.fc)
+        self.assertEqual(self.store.referans(ref_id)["gorsel"], referans.GORSEL)
+        g = referans.gorsel_duzelt({"kalinlik": 3.3, "desen": "kareli", "aralik": 100, "opaklik": 0, "etiket": False})
+        self.store.referans_guncelle(ref_id, gorsel=g)
+        self.assertEqual(self.store.referans(ref_id)["gorsel"],
+                         {"kalinlik": 3.5, "cizgi": "kesik", "desen": "kareli", "aralik": 24, "opaklik": 5, "etiket": False})
+
+    def test_gorsel_dogrulama(self):
+        for bozuk in ({"desen": "zigzag"}, {"cizgi": None}, {"kalinlik": "3"}, {"kalinlik": True},
+                      {"aralik": float("nan")}, {"etiket": "evet"}, ["kalinlik"]):
+            with self.subTest(bozuk=bozuk), self.assertRaises(ValueError):
+                referans.gorsel_duzelt(bozuk)
+        self.assertEqual(referans.renk_duzelt("#AABBCC"), "#aabbcc")
+        for bozuk in ("red", "#abc", "#aabbcc; x", None):
+            with self.subTest(renk=bozuk), self.assertRaises(ValueError):
+                referans.renk_duzelt(bozuk)
+        self.assertEqual(referans.gorsel_oku("bozuk json"), referans.GORSEL)
+
+    def test_eski_veritabanina_gorsel_eklenir(self):
+        import sqlite3
+        db = Path(self.klasor.name) / "eski.db"
+        c = sqlite3.connect(db)
+        c.execute("CREATE TABLE referanslar (id INTEGER PRIMARY KEY AUTOINCREMENT, ad TEXT NOT NULL, renk TEXT NOT NULL,"
+                  " gorunur INTEGER NOT NULL DEFAULT 1, geojson TEXT NOT NULL, eklenme TEXT NOT NULL)")
+        c.execute("INSERT INTO referanslar (ad, renk, geojson, eklenme) VALUES ('Eski', '#bf5af2', ?, '2026-10-01')",
+                  (json.dumps(self.fc),))
+        c.execute("PRAGMA user_version = 1"); c.commit(); c.close()
+        s = Store(db)
+        r = s.referanslar()[0]
+        s._db.close()
+        self.assertEqual((r["ad"], r["gorsel"]), ("Eski", referans.GORSEL))
+
+    def test_guncelle_ucu(self):
+        from parselapp.server import Hata, Uygulama
+        uyg = Uygulama(self.store)
+        ref_id = str(self.store.referans_ekle("Deneme OSB", "#2b7bff", self.fc))
+        govde = json.dumps({"renk": "#FF9F0A", "gorsel": {"desen": "nokta", "kalinlik": 5}}).encode()
+        r = uyg.yonlendir("POST", ["referanslar", ref_id, "guncelle"], govde, {})
+        self.assertEqual((r["renk"], r["gorsel"]["desen"], r["gorsel"]["kalinlik"], r["gorsel"]["cizgi"]),
+                         ("#ff9f0a", "nokta", 5, "kesik"))
+        for bozuk in ({"renk": "kırmızı"}, {"gorsel": {"desen": "yok-boyle"}}):
+            with self.subTest(govde=bozuk), self.assertRaises(Hata) as h:
+                uyg.yonlendir("POST", ["referanslar", ref_id, "guncelle"], json.dumps(bozuk).encode(), {})
+            self.assertEqual(h.exception.durum, 400)
+        self.assertEqual(self.store.referans(int(ref_id))["gorsel"]["desen"], "nokta")  # hatalı istek kaydı bozmaz
+
     def test_bos_dosya_hata_verir(self):
         with self.assertRaises(ValueError):
             referans.dosya_oku("bos.kml", b'<kml xmlns="http://www.opengis.net/kml/2.2"><Document/></kml>')

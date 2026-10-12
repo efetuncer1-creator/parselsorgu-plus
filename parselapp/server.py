@@ -114,8 +114,13 @@ class Uygulama:
                 return self._referans_al(ref_id)
             case ("POST", ["referanslar", ref_id, "guncelle"]):
                 g = _json(govde)
-                self.store.referans_guncelle(int(ref_id), ad=g.get("ad"), renk=g.get("renk"), gizli=g.get("gizli"),
-                                             hesap_katmani=g.get("hesapKatmani"),
+                try:
+                    renk = None if g.get("renk") is None else referans.renk_duzelt(g["renk"])
+                    gorsel = None if g.get("gorsel") is None else referans.gorsel_duzelt(g["gorsel"])
+                except ValueError as e:
+                    raise Hata(HTTPStatus.BAD_REQUEST, str(e)) from e
+                self.store.referans_guncelle(int(ref_id), ad=g.get("ad"), renk=renk, gizli=g.get("gizli"),
+                                             hesap_katmani=g.get("hesapKatmani"), gorsel=gorsel,
                                              gorunur=None if g.get("gorunur") is None else int(bool(g["gorunur"])))
                 return self._referans_al(ref_id)
             case ("POST", ["referanslar", ref_id, "sil"]):

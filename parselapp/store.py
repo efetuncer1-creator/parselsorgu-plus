@@ -12,6 +12,7 @@ from pathlib import Path
 
 from shapely.geometry import Point, Polygon
 
+from .referans import gorsel_oku
 from .util import fmt_alan, iyi_yazim, katla, parcel_key, parse_alan
 
 ALANLAR = ("il", "ilce", "mahalle", "ada", "parsel", "il_id", "ilce_id", "mahalle_id",
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS referanslar (
     gizli    TEXT NOT NULL DEFAULT '[]',   -- gizlenen katman adları (JSON liste)
     taranan  TEXT NOT NULL DEFAULT '[]',   -- taramada parsel çıkmayan noktalar [[boylam, enlem, yarıçap_m]]
     hesap_katmani TEXT,                    -- alan hesabında kullanılan tek katman (NULL: tüm açık katmanlar)
+    gorsel   TEXT NOT NULL DEFAULT '{}',   -- haritadaki görünüm: çizgi, tarama, ad etiketi (JSON)
     geojson  TEXT NOT NULL,
     eklenme  TEXT NOT NULL,
     son_erisim TEXT                        -- son kullanım; eski oturumların alanları buna göre temizlenir
@@ -74,6 +76,8 @@ class Store:
         for kolon in ("gizli", "taranan"):
             if kolon not in kolonlar:
                 self._db.execute(f"ALTER TABLE referanslar ADD COLUMN {kolon} TEXT NOT NULL DEFAULT '[]'")
+        if "gorsel" not in kolonlar:
+            self._db.execute("ALTER TABLE referanslar ADD COLUMN gorsel TEXT NOT NULL DEFAULT '{}'")
         if "hesap_katmani" not in kolonlar:
             self._db.execute("ALTER TABLE referanslar ADD COLUMN hesap_katmani TEXT")
         if "son_erisim" not in kolonlar:
@@ -284,11 +288,13 @@ class Store:
 
     def referans_guncelle(self, ref_id, **alanlar):
         izinli = {k: v for k, v in alanlar.items()
-                  if k in ("ad", "renk", "gorunur", "gizli", "hesap_katmani") and v is not None}
+                  if k in ("ad", "renk", "gorunur", "gizli", "hesap_katmani", "gorsel") and v is not None}
         if "hesap_katmani" in izinli and izinli["hesap_katmani"] == "*":
             izinli["hesap_katmani"] = None  # "*": tüm açık katmanlar
         if "gizli" in izinli:
             izinli["gizli"] = json.dumps(sorted(set(izinli["gizli"])), ensure_ascii=False)
+        if "gorsel" in izinli:
+            izinli["gorsel"] = json.dumps(izinli["gorsel"], ensure_ascii=False)
         if not izinli:
             return
         with self._lock:
@@ -350,6 +356,7 @@ def _referans(r):
     d["gorunur"] = bool(d["gorunur"])
     d["gizli"] = json.loads(d.get("gizli") or "[]")
     d["taranan"] = json.loads(d.get("taranan") or "[]")
+    d["gorsel"] = gorsel_oku(d.get("gorsel"))
     return d
 
 

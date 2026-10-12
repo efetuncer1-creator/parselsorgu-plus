@@ -49,10 +49,12 @@
     <symbol id="i-asagi" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol>
     <symbol id="i-ok" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-tik" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-gorsel" viewBox="0 0 24 24"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+    <symbol id="i-tutamac" viewBox="0 0 24 24"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></symbol>
     <symbol id="i-tarama" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol>
   </svg>
 
-  <!-- Alan tarama desenleri (app.js taramaDeseni ekler) -->
+  <!-- Alan tarama desenleri (app.js desenYaz ekler) -->
   <svg class="ikon-seti" aria-hidden="true" focusable="false"><defs id="desenler"></defs></svg>
 
   <div id="harita" aria-label="Harita"></div>
@@ -67,9 +69,13 @@
       <svg class="ikon"><use href="#i-alan"/></svg>
       <span>Alan</span>
     </button>
+    <button type="button" role="tab" id="sekme-gorsel" data-sekme="gorsel" aria-controls="panel-gorsel" aria-selected="false">
+      <svg class="ikon"><use href="#i-gorsel"/></svg>
+      <span>Görsel</span>
+    </button>
   </nav>
 
-  <!-- Çekmece: iki sayfanın içeriği -->
+  <!-- Çekmece: sayfaların içeriği -->
   <div class="cekmece cam">
     <header class="cekmece-ust">
       <!-- Marka: işaret (artı = parsel köşe noktası) ve elle çizilmiş yazı. Kaynak: araclar/marka_uret.py.
@@ -148,6 +154,11 @@
             </button>
           </div>
           <ul id="liste" class="liste"></ul>
+          <label class="anahtar liste-anahtari">
+            <input type="checkbox" id="parselNoGoster" role="switch">
+            <span class="anahtar-izi" aria-hidden="true"></span>
+            <span>Ada/parsel numaraları haritada<small>Yakınlaştıkça, numaranın sığdığı parsellerde görünür</small></span>
+          </label>
         </div>
 
         <!-- Dışa aktar iki sayfada ortak: açık sayfanın yuvasına taşınır. -->
@@ -283,6 +294,64 @@
         </div>
 
         <div class="yuva" data-yuva="alan"></div>
+      </section>
+
+      <!-- ===================== Sayfa 3: Alanların görünümü ===================== -->
+      <section class="panel" id="panel-gorsel" role="tabpanel" aria-labelledby="sekme-gorsel" hidden>
+        <div class="kutu">
+          <div class="kutu-baslik">
+            <h2>Katmanlar <span id="katmanAdet" class="rozet">0</span></h2>
+            <button type="button" id="adlarHepsi" class="metin-dugme" hidden><svg class="ikon"><use href="#i-etiket"/></svg><span>Adları gizle</span></button>
+          </div>
+          <ol id="katmanSirasi" class="katman-sirasi" aria-label="Alan katmanları; listenin başındaki haritada en üstte"></ol>
+          <p id="katmanIpucu" class="ikincil-metin katman-ipucu" hidden>Listede üstteki alan haritada da üstte durur. Sırayı tutamaçtan sürükleyerek ya da ok tuşlarıyla değiştir.</p>
+          <div id="gorselBos" class="bos-durum">
+            <svg class="ikon ikon-buyuk" aria-hidden="true"><use href="#i-alan"/></svg>
+            <p>Henüz alan yok</p>
+            <span>Alan sekmesinde sınır dosyası yükle ya da haritada çiz; görünümünü burada düzenlersin.</span>
+            <button type="button" class="dugme ikincil kucuk" id="alanSekmesineGit">Alan sekmesine git</button>
+          </div>
+        </div>
+
+        <div class="kutu gorsel-duzen" id="gorselDuzen" hidden>
+          <div class="kutu-baslik">
+            <h2><span id="gorselBaslikRenk" class="baslik-renk" aria-hidden="true"></span><span id="gorselBaslik">Görünüm</span></h2>
+            <button type="button" id="gorselVarsayilan" class="metin-dugme" title="Çizgi, tarama ve ad ayarları varsayılana döner; renk kalır"><svg class="ikon"><use href="#i-geri"/></svg>Varsayılan</button>
+          </div>
+
+          <fieldset class="ayar">
+            <legend>Renk</legend>
+            <div id="gorselRenkler" class="renk-izgara" role="group" aria-label="Alan rengi"></div>
+            <div id="ozelRenk" class="ozel-renk" hidden>
+              <div id="ozelAlan" class="ozel-alan" role="slider" tabindex="0" aria-label="Doygunluk ve parlaklık" aria-valuemin="0" aria-valuemax="100"><span class="ozel-imlec"></span></div>
+              <input type="range" id="ozelTon" class="ozel-ton" min="0" max="359" step="1" aria-label="Renk tonu">
+              <label class="ozel-kod"><span>Kod</span><input id="ozelHex" maxlength="7" autocomplete="off" spellcheck="false" aria-label="Renk kodu, #RRGGBB"></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="ayar">
+            <legend>Kenar çizgisi</legend>
+            <label class="kaydirici"><span>Kalınlık</span><input type="range" id="gorselKalinlik" min="0" max="10" step="0.5"><output id="gorselKalinlikDeger" for="gorselKalinlik"></output></label>
+            <div class="bolumlu cizgi-tipi" role="radiogroup" aria-label="Çizgi tipi">
+              <label><input type="radio" name="cizgi" value="duz"><span><svg class="cizgi-ornek" viewBox="0 0 24 4" aria-hidden="true"><path d="M2 2h20"/></svg>Düz</span></label>
+              <label><input type="radio" name="cizgi" value="kesik"><span><svg class="cizgi-ornek" viewBox="0 0 24 4" aria-hidden="true"><path d="M2 2h20" stroke-dasharray="5 3.5"/></svg>Kesik</span></label>
+              <label><input type="radio" name="cizgi" value="nokta"><span><svg class="cizgi-ornek" viewBox="0 0 24 4" aria-hidden="true"><path d="M2 2h20" stroke-dasharray="0 4"/></svg>Noktalı</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="ayar">
+            <legend>Tarama</legend>
+            <div id="gorselDesenler" class="desen-izgara" role="radiogroup" aria-label="Tarama tipi"></div>
+            <label class="kaydirici"><span>Aralık</span><input type="range" id="gorselAralik" min="4" max="24" step="1"><output id="gorselAralikDeger" for="gorselAralik"></output></label>
+            <label class="kaydirici"><span>Opaklık</span><input type="range" id="gorselOpaklik" min="5" max="100" step="5"><output id="gorselOpaklikDeger" for="gorselOpaklik"></output></label>
+          </fieldset>
+
+          <label class="anahtar">
+            <input type="checkbox" id="gorselEtiket" role="switch">
+            <span class="anahtar-izi" aria-hidden="true"></span>
+            <span>Alan adını haritada göster</span>
+          </label>
+        </div>
       </section>
     </div>
   </div>

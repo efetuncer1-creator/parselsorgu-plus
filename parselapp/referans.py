@@ -6,6 +6,7 @@ alan olarak kullanılır.
 
 import io
 import json
+import math
 import re
 import xml.etree.ElementTree as ET
 import zipfile
@@ -191,3 +192,52 @@ def alan(fc, gizli=(), hesap_katmani=None):
 # kalmaması için oranlarda küçük pay bırakılır.
 ICINDE_ORAN = 0.98
 KESISEN_ORAN = 0.01
+
+
+# ---- görünüm (Görsel sekmesi) ----------------------------------------------------
+# Kayıtta olmayan ayar varsayılanla tamamlanır; böylece eski kayıtlar da sonradan eklenen ayarlar da çalışır.
+
+GORSEL = {"kalinlik": 3, "cizgi": "kesik", "desen": "capraz", "aralik": 9, "opaklik": 55, "etiket": True}
+CIZGILER = ("duz", "kesik", "nokta")
+DESENLER = ("yok", "dolu", "capraz", "ters", "yatay", "dikey", "kareli", "capraz-kareli", "nokta")
+_GORSEL_SAYILAR = {"kalinlik": (0, 10, 0.5), "aralik": (4, 24, 1), "opaklik": (5, 100, 1)}
+_RENK = re.compile(r"#[0-9a-fA-F]{6}")
+
+
+def renk_duzelt(renk):
+    if not isinstance(renk, str) or not _RENK.fullmatch(renk):
+        raise ValueError("Renk #RRGGBB biçiminde olmalı.")
+    return renk.lower()
+
+
+def gorsel_duzelt(g):
+    """İstemciden gelen görünümü doğrular: eksik ayar varsayılan olur, sayılar sınırlarına çekilir."""
+    if not isinstance(g, dict):
+        raise ValueError("Görünüm ayarları okunamadı.")
+    sonuc = dict(GORSEL)
+    for ad, (alt, ust, adim) in _GORSEL_SAYILAR.items():
+        if ad not in g:
+            continue
+        deger = g[ad]
+        if isinstance(deger, bool) or not isinstance(deger, (int, float)) or not math.isfinite(deger):
+            raise ValueError(f"Görünüm ayarı sayı olmalı: {ad}")
+        deger = round(min(ust, max(alt, deger)) / adim) * adim
+        sonuc[ad] = int(deger) if float(deger).is_integer() else deger
+    for ad, secenekler in (("cizgi", CIZGILER), ("desen", DESENLER)):
+        if ad in g:
+            if g[ad] not in secenekler:
+                raise ValueError(f"Bilinmeyen {ad}: {g[ad]!r}")
+            sonuc[ad] = g[ad]
+    if "etiket" in g:
+        if not isinstance(g["etiket"], bool):
+            raise ValueError("etiket true ya da false olmalı.")
+        sonuc["etiket"] = g["etiket"]
+    return sonuc
+
+
+def gorsel_oku(metin):
+    """Kayıttaki görünüm. Bozuk bir değer varsayılana döner; alan yine açılır."""
+    try:
+        return gorsel_duzelt(json.loads(metin or "{}"))
+    except ValueError:
+        return dict(GORSEL)
