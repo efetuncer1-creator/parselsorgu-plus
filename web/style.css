@@ -43,11 +43,13 @@
   --boy-xs: 28px; --boy-s: 30px; --boy-m: 32px; --boy-arama: 34px; --boy: 36px; --boy-l: 38px; --boy-xl: 40px; --boy-2xl: 48px;
   --boy-butce: 56px; --boy-nitelik: 72px; --boy-diyalog-dugme: 96px; --boy-karo: 104px; --boy-liste: 340px;
   --boy-ornek-g: 32px; --boy-ornek-y: 22px; --boy-desen-g: 44px; --boy-desen-y: 28px; --boy-kod: 88px; --boy-ozel: 132px;
+  --boy-lejant-g: 28px; --boy-lejant-y: 19px; --boy-cip-g: 22px; --boy-cip-y: 15px;
 
   /* Yerleşim */
   --mesaj-alt: 84px; --mesaj-genislik: 440px; --diyalog-genislik: 360px; --kart-genislik: 264px; --ipucu-genislik: 260px;
   --mobil-alt: 68px; --mobil-cubuk-ust: 58px; --mobil-mesaj-ust: 112px;
   --kenar: 12px;
+  --lejant-alt: 44px; --lejant-min: 168px; --lejant-max: 300px; --lejant-yukseklik: 56vh; --lejant-mobil: 62vw; --lejant-mobil-yukseklik: 34vh;
   --sekme-genislik: 64px;
   --cekmece-genislik: 372px;
   --harita-sol: calc(var(--kenar) * 2 + var(--sekme-genislik) + var(--b-2) + var(--cekmece-genislik));
@@ -913,7 +915,7 @@ input[type=checkbox].kutucuk:checked {
 .baslik-renk { flex: none; width: var(--boy-renk); height: var(--boy-renk); border-radius: var(--r-xs); box-shadow: inset 0 0 0 1px var(--kutu-kenar); }
 
 .ayar { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--b-3); }
-.ayar legend { padding: 0; margin-bottom: var(--b-2-5); font: var(--t-dipnot); letter-spacing: .04em; text-transform: uppercase; color: var(--metin-2); }
+.ayar legend, .ayar-baslik { padding: 0; margin-bottom: var(--b-2-5); font: var(--t-dipnot); letter-spacing: .04em; text-transform: uppercase; color: var(--metin-2); }
 
 /* Renk */
 .renk-izgara { display: grid; grid-template-columns: repeat(9, 1fr); gap: var(--b-1-5); }
@@ -991,3 +993,70 @@ input[type=checkbox].kutucuk:checked {
 .desen-karo:hover { background: var(--dolgu-2); color: var(--metin); }
 .desen-karo:has(input:checked) { background: var(--kutu-ust); color: var(--metin); box-shadow: inset 0 0 0 1.5px var(--vurgu-metin), var(--golge-secim); }
 .desen-karo:has(input:focus-visible) { outline: 2px solid var(--vurgu-metin); outline-offset: 2px; }
+
+/* ---- Lejant: haritada ------------------------------------------------------ */
+.lejant {
+  position: fixed; z-index: 900; right: var(--kenar); bottom: var(--lejant-alt);
+  min-width: var(--lejant-min); max-width: var(--lejant-max); max-height: var(--lejant-yukseklik);
+  display: flex; flex-direction: column; border-radius: var(--r-kutu); overflow: hidden;
+  animation: secici-gir var(--sure-hizli) var(--yay);
+}
+.lejant-ust {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--b-3); flex: none;
+  padding: var(--b-2-5) var(--b-2-5) var(--b-2) var(--b-3); border: 0; background: none;
+  font: var(--t-baslik); color: var(--metin); text-align: left;
+}
+.lejant-ust span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lejant-ust .ikon { width: var(--ikon-xs); height: var(--ikon-xs); color: var(--metin-2); transition: transform var(--sure-hizli) var(--yay); }
+.lejant.dar .lejant-ust { padding-bottom: var(--b-2-5); }
+.lejant.dar .lejant-ust .ikon { transform: rotate(-90deg); }
+.lejant.dar .lejant-liste { display: none; }
+.lejant-liste {
+  list-style: none; margin: 0; padding: 0 var(--b-3) var(--b-3); overflow-y: auto; scrollbar-width: thin;
+  display: flex; flex-direction: column; gap: var(--b-2);
+}
+.lejant-liste li { display: flex; align-items: center; gap: var(--b-2-5); font: var(--t-ikincil); color: var(--metin); }
+.lejant-liste .katman-ornek { width: var(--boy-lejant-g); height: var(--boy-lejant-y); }
+
+/* ---- Lejant: Görsel sekmesindeki düzenleyici --------------------------------- */
+.lejant-baslik-alan { display: flex; align-items: center; gap: var(--b-2-5); margin-bottom: var(--b-2-5); font: var(--t-ikincil); color: var(--metin-2); }
+.lejant-baslik-alan input, .metin-girdi {
+  flex: 1; min-width: 0; height: var(--boy-s); padding: 0 var(--b-2-5);
+  border: 0; border-radius: var(--r-kucuk); background: var(--dolgu); font: var(--t-govde); color: var(--metin);
+}
+:is(.lejant-baslik-alan input, .metin-girdi, .oge-ad)::placeholder { color: var(--metin-3); }
+:is(.lejant-baslik-alan input, .metin-girdi, .oge-ad):focus { outline: 2px solid var(--vurgu-metin); outline-offset: 0; background: var(--kutu-ust); }
+.metin-girdi[aria-invalid=true] { outline: 2px solid var(--tehlike); background: var(--tehlike-zayif); }
+.lejant-ogeleri .oge-ad {
+  flex: 1; min-width: 0; height: var(--boy-xs); padding: 0 var(--b-2); margin-left: calc(var(--b-1) * -1);
+  border: 0; border-radius: var(--r-kucuk); background: transparent; font: var(--t-vurgulu); color: var(--metin);
+  text-overflow: ellipsis;
+}
+.lejant-ogeleri .oge-ad:hover { background: var(--dolgu); }
+.lejant-ogeleri li { padding-right: var(--b-yarim); }
+.ornek-dugme { display: grid; flex: none; padding: 0; border: 0; border-radius: var(--r-xs); background: none; cursor: pointer; }
+.ornek-dugme:hover .katman-ornek { transform: scale(1.06); }
+.ornek-dugme .katman-ornek { transition: transform var(--sure-hizli) var(--yay); }
+.lejant-bos { padding: var(--b-1) 0; }
+.lejant-ekle { display: flex; flex-direction: column; gap: var(--b-2); margin-top: var(--b-3-5); }
+.cipler { display: flex; flex-wrap: wrap; gap: var(--b-1-5); }
+.cip {
+  display: inline-flex; align-items: center; gap: var(--b-1-5); max-width: 100%; height: var(--boy-s);
+  padding: 0 var(--b-2) 0 var(--b-1-5); border: 0; border-radius: var(--r-hap); background: var(--dolgu);
+  font: 500 12.5px/1 var(--yazi); color: var(--metin);
+  transition: background var(--sure-hizli) var(--yay);
+}
+.cip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cip .katman-ornek { width: var(--boy-cip-g); height: var(--boy-cip-y); }
+.cip .ikon { width: var(--ikon-xs); height: var(--ikon-xs); color: var(--vurgu-metin); }
+.cip:hover { background: var(--dolgu-2); }
+.ozel-oge { margin-top: 0; font: var(--t-ikincil); }
+.ozel-oge-form { display: flex; flex-direction: column; gap: var(--b-2-5); padding: var(--b-2) 0 var(--b-1); }
+.ozel-oge-form .renk-izgara { grid-template-columns: repeat(8, 1fr); }
+.ozel-oge-form > .dugme { align-self: flex-start; }
+
+@media (max-width: 760px) {
+  /* Üstte harita kontrolleri ve seçim çubuğu var; lejant onların altında durur. */
+  .lejant { top: calc(var(--mobil-cubuk-ust) + var(--boy-xl) + var(--b-2)); left: var(--kenar); right: auto; bottom: auto; max-width: var(--lejant-mobil); max-height: var(--lejant-mobil-yukseklik); }
+}
+.lejant-ekle .ayar-baslik { margin-bottom: 0; }

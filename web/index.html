@@ -352,6 +352,37 @@
             <span>Alan adını haritada göster</span>
           </label>
         </div>
+
+        <div class="kutu" id="lejantKutu">
+          <div class="kutu-baslik">
+            <h2>Lejant</h2>
+            <label class="anahtar">
+              <input type="checkbox" id="lejantAcik" role="switch">
+              <span class="anahtar-izi" aria-hidden="true"></span>
+              <span>Haritada</span>
+            </label>
+          </div>
+          <label class="lejant-baslik-alan"><span>Başlık</span><input id="lejantBaslikGirdi" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Lejant"></label>
+          <ol id="lejantOgeleri" class="katman-sirasi lejant-ogeleri" aria-label="Lejant öğeleri, haritadaki sırayla"></ol>
+          <p id="lejantBos" class="ikincil-metin lejant-bos">Lejantta öğe yok. Aşağıdan ekle.</p>
+          <div class="lejant-ekle">
+            <p class="ayar-baslik">Ekle</p>
+            <div id="lejantCipler" class="cipler"></div>
+            <details class="katmanlar ozel-oge">
+              <summary><svg class="ikon"><use href="#i-ok"/></svg>Özel öğe</summary>
+              <div class="ozel-oge-form">
+                <input id="ozelOgeAd" class="metin-girdi" maxlength="60" autocomplete="off" placeholder="Ad, ör. Dere yatağı" aria-label="Özel öğenin adı">
+                <div class="bolumlu" role="radiogroup" aria-label="Şekil">
+                  <label><input type="radio" name="ozelSekil" value="alan" checked><span>Alan</span></label>
+                  <label><input type="radio" name="ozelSekil" value="cizgi"><span>Çizgi</span></label>
+                  <label><input type="radio" name="ozelSekil" value="nokta"><span>Nokta</span></label>
+                </div>
+                <div id="ozelOgeRenkler" class="renk-izgara" role="group" aria-label="Özel öğenin rengi"></div>
+                <button type="button" id="ozelOgeEkle" class="dugme ikincil kucuk"><svg class="ikon"><use href="#i-arti"/></svg>Lejanta ekle</button>
+              </div>
+            </details>
+          </div>
+        </div>
       </section>
     </div>
   </div>
@@ -387,6 +418,12 @@
       <span>Parsel KML'leri listeye, sınır dosyaları alan olarak eklenir</span>
     </div>
   </div>
+
+  <!-- Lejant: öğeleri Görsel sekmesinde seçilir -->
+  <aside id="lejant" class="lejant cam" aria-label="Lejant" hidden>
+    <button type="button" id="lejantUst" class="lejant-ust" aria-expanded="true" aria-controls="lejantListe"><span id="lejantBaslik">Lejant</span><svg class="ikon"><use href="#i-ok"/></svg></button>
+    <ul id="lejantListe" class="lejant-liste"></ul>
+  </aside>
 
   <div id="mesajlar" class="mesajlar" aria-live="polite"></div>
 
