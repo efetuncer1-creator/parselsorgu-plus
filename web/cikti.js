@@ -12,8 +12,12 @@ const KAGITLAR = { A4: [210, 297], A3: [297, 420] }; // mm, dikey
 const EN_BUYUK_KENAR = 8000; // serbest çıktının uzun kenarı, piksel
 const EN_COK_KARO = 2500; // bir katman için; aşılırsa çıktı çizilmez (tarayıcı kilitlenmesin)
 // Sayfaya konanların boyut sınırları (mm): paneldeki kaydırıcı ve önizlemedeki köşe tutamacı aynı sınırları kullanır.
-const SAYFA_OGE_SINIRI = { gorsel: [10, 400, 1], grafik: [30, 300, 1], tablo: [1.5, 10, 0.1], yazi: [1.5, 30, 0.1] };
-const HAZIR_OGE_SINIRI = [0.5, 3]; // başlık, lejant, kuzey oku ve ölçeğin büyütme çarpanı
+// Boyutlar: kaydırıcı alışılmış aralıkta gezer; yanındaki kutuya elle yazılan ya da köşeden sürüklenen değer
+// o aralıkla sınırlı değil. Yalnızca sıfıra inmesin, anlamsız büyümesin diye geniş bir sınır var (5 m, 50 kat).
+const SAYFA_OGE_ARALIGI = { gorsel: [10, 400, 1], grafik: [30, 300, 1], tablo: [1.5, 10, 0.1], yazi: [1.5, 30, 0.1] }; // mm
+const SAYFA_OGE_SINIRI = [0.5, 5000]; // mm
+const HAZIR_OGE_ARALIGI = [25, 300, 5]; // % — başlık, lejant, kuzey oku ve ölçeğin büyütme çarpanı
+const HAZIR_OGE_SINIRI = [0.1, 50]; // çarpan
 const OLCEKLER = [500, 1000, 2000, 2500, 5000, 10000, 25000, 50000];
 const MERKATOR_R = 20037508.342789244;
 const ciktiSekmesinde = () => !$("panel-cikti").hidden;
@@ -733,7 +737,8 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
       const { svg, en: gEn, boy: gBoy } = dilimGrafigiSvg(o.veri, "kagit", o.ad);
       const en = o.genislikMm * mm, boy = (en * gBoy) / gEn;
       const k = yerlestir(o.id, en, boy, varsayilan);
-      ctx.drawImage(await svgResmi(svg, Math.round(en), Math.round(boy)), k.x, k.y, en, boy);
+      const r = Math.min(1, (2 * Math.max(sayfa.en, sayfa.boy)) / Math.max(en, boy)); // sayfadan çok büyükse resim küçük üretilir
+      ctx.drawImage(await svgResmi(svg, Math.round(en * r), Math.round(boy * r)), k.x, k.y, en, boy);
     } else if (o.tur === "tablo") {
       const olcu = tabloCiz(ctx, o, 0, 0, o.boyutMm * mm, true);
       const k = yerlestir(o.id, olcu.en, olcu.boy, varsayilan);
@@ -879,16 +884,86 @@ function duzenleyiciBagla(kap, yuzey, yenile) {
 }
 duzenleyiciBagla($("onizlemeSayfa"), onizleme, onizlemeZamanla);
 
-const sinirla = (v, [alt, ust, adim = 0.01]) => Math.min(ust, Math.max(alt, Math.round(v / adim) * adim));
+const sinirla = (v, [alt, ust], adim = 0.01) => Math.min(ust, Math.max(alt, Math.round(v / adim) * adim));
+const genislikli = (o) => o.tur === "gorsel" || o.tur === "grafik";
 
-// Sayfaya konanlarda boyut (mm) değişir, paneldeki kaydırıcı da güncellenir; hazır öğelerde çarpan değişir.
+// Sayfaya konanlarda boyut (mm) değişir, hazır öğelerde çarpan; paneldeki kaydırıcı ve kutu da güncellenir.
 function ogeyiBuyut(id, carpan) {
   const o = cikti.sayfaOgeleri.find((x) => x.id === id);
-  if (o?.tur === "gorsel" || o?.tur === "grafik") o.genislikMm = sinirla(o.genislikMm * carpan, SAYFA_OGE_SINIRI[o.tur]);
-  else if (o) o.boyutMm = sinirla(o.boyutMm * carpan, SAYFA_OGE_SINIRI[o.tur]);
+  if (o && genislikli(o)) o.genislikMm = sinirla(o.genislikMm * carpan, SAYFA_OGE_SINIRI, 0.1);
+  else if (o) o.boyutMm = sinirla(o.boyutMm * carpan, SAYFA_OGE_SINIRI, 0.1);
   else cikti.boyutlar[id] = sinirla((cikti.boyutlar[id] ?? 1) * carpan, HAZIR_OGE_SINIRI);
   sayfaOgeleriCiz();
+  hazirBoyutlariDoldur();
 }
+
+// ---- kaydırıcı + elle yazılan sayı (Photoshop'taki gibi) --------------------------------------------------
+// Kaydırıcı alışılmış aralıkta gezer; kutuya her değer yazılabilir (virgül ya da nokta), ↑/↓ adım adım
+// değiştirir (Shift ile 10 adım). Kaydırıcı aralığın dışındaki değerde ucunda durur.
+const sayiYaz = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
+const sayiOku = (s) => { const v = Number(String(s).trim().replace(/\s/g, "").replace(",", ".")); return Number.isFinite(v) && v > 0 ? v : null; };
+
+function sayiliKaydirici({ is, etiket, aralik: [enAz, enCok, adim], deger, birim, ad }) {
+  return `<div class="kaydirici sayili"><span>${etiket}</span>`
+    + `<input type="range" data-is="${is}" min="${enAz}" max="${enCok}" step="${adim}" value="${deger}" aria-label="${esc(ad)}">`
+    + `<span class="sayi-kutusu"><input type="text" inputmode="decimal" data-is="${is}" data-adim="${adim}" data-deger="${deger}" value="${sayiYaz(deger)}" aria-label="${esc(ad)}, ${birim}"><span aria-hidden="true">${birim}</span></span></div>`;
+}
+
+// Kaydırıcı ya da kutu değişince öbürü eşitlenir. Dönüş: yeni değer; kutu henüz geçerli değilse null.
+function sayiliDegisti(el, sinir) {
+  const kap = el.closest(".sayili"), kaydirici = kap.querySelector("input[type=range]"), kutu = kap.querySelector("input[type=text]");
+  let v;
+  if (el === kutu) {
+    v = sayiOku(kutu.value);
+    kutu.setAttribute("aria-invalid", String(v === null));
+    if (v === null) return null;
+    v = Math.min(sinir[1], Math.max(sinir[0], v));
+    kaydirici.value = v;
+  } else {
+    v = Number(kaydirici.value);
+    kutu.value = sayiYaz(v);
+    kutu.removeAttribute("aria-invalid");
+  }
+  kutu.dataset.deger = v; // kutudan geçersiz değerle çıkılırsa buna döner
+  kaydiriciDoldur(kaydirici);
+  return v;
+}
+
+// Kutudan çıkınca yazılan değer düzgün biçimde gösterilir; ↑/↓ ile adım adım
+document.addEventListener("focusout", (e) => {
+  const kutu = e.target.closest?.(".sayili input[type=text]");
+  if (!kutu) return;
+  kutu.value = sayiYaz(Number(kutu.dataset.deger));
+  kutu.removeAttribute("aria-invalid");
+});
+document.addEventListener("keydown", (e) => {
+  const kutu = e.target.closest?.(".sayili input[type=text]");
+  if (!kutu || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+  e.preventDefault();
+  const adim = Number(kutu.dataset.adim) * (e.shiftKey ? 10 : 1), v = sayiOku(kutu.value) ?? 0;
+  kutu.value = sayiYaz(Math.max(adim, v + (e.key === "ArrowUp" ? adim : -adim)));
+  kutu.dispatchEvent(new Event("input", { bubbles: true }));
+});
+
+// Hazır öğelerin (başlık, lejant, kuzey oku, ölçek) boyutu, yüzde
+const HAZIR_OGE_ADLARI = { baslik: "Başlık boyutu", lejant: "Lejant boyutu", kuzey: "Kuzey oku boyutu", olcek: "Ölçek boyutu" };
+function hazirBoyutlariDoldur() {
+  document.querySelectorAll("#panel-cikti [data-hazir-boyut]").forEach((el) => {
+    const id = el.dataset.hazirBoyut, deger = Math.round((cikti.boyutlar[id] ?? 1) * 1000) / 10;
+    el.hidden = !cikti.ogeler[id === "olcek" ? "kuzey" : id];
+    const kutu = el.querySelector("input[type=text]");
+    if (kutu && document.activeElement === kutu) return; // yazılırken bozulmasın
+    el.innerHTML = sayiliKaydirici({ is: "hazir", etiket: { kuzey: "Kuzey oku", olcek: "Ölçek" }[id] || "Boyut", aralik: HAZIR_OGE_ARALIGI, deger, birim: "%", ad: HAZIR_OGE_ADLARI[id] });
+    kaydiriciDoldur(el.querySelector("input[type=range]"));
+  });
+}
+$("panel-cikti").addEventListener("input", (e) => {
+  if (e.target.dataset.is !== "hazir") return;
+  const v = sayiliDegisti(e.target, [HAZIR_OGE_SINIRI[0] * 100, HAZIR_OGE_SINIRI[1] * 100]);
+  if (v === null) return;
+  cikti.boyutlar[e.target.closest("[data-hazir-boyut]").dataset.hazirBoyut] = v / 100;
+  canliZamanla();
+});
 
 $("ciktiOnizle").addEventListener("click", () => {
   $("onizleme").showModal();
@@ -896,7 +971,7 @@ $("ciktiOnizle").addEventListener("click", () => {
 });
 $("onizlemeKapat").addEventListener("click", () => $("onizleme").close());
 $("onizleme").addEventListener("close", () => canliZamanla()); // önizlemede yapılan değişiklik haritadaki sayfaya da gelsin
-$("onizlemeSifirla").addEventListener("click", () => { cikti.konumlar = {}; cikti.boyutlar = {}; onizlemeCiz(); });
+$("onizlemeSifirla").addEventListener("click", () => { cikti.konumlar = {}; cikti.boyutlar = {}; hazirBoyutlariDoldur(); onizlemeCiz(); });
 for (const [id, bicim] of [["ciktiPng", "png"], ["ciktiPdf", "pdf"], ["onizlemePng", "png"], ["onizlemePdf", "pdf"]]) {
   $(id).addEventListener("click", (e) => ciktiIndir(bicim, e.currentTarget));
 }
@@ -923,6 +998,7 @@ function ciktiPaneliDoldur() {
   const lejantVar = lejant.ogeler.some((o) => lejantGecerli(o) && lejantGorunur(o));
   $("ciktiLejantUyari").hidden = !cikti.ogeler.lejant || lejantVar;
   sayfaOgeleriCiz();
+  hazirBoyutlariDoldur();
   ciktiBilgisi();
   canliZamanla();
 }
@@ -966,19 +1042,21 @@ $("ciktiLejantGit").addEventListener("click", () => {
 // ---- sayfaya konan öğeler: logo, tablo, açıklama yazısı --------------------------------------------
 
 let sayfaSayac = 0;
+// Grafiğin adı sayfada başlığı olarak yazılır (boş bırakılırsa başlıksız); görsel ve tablonun adı listede.
+const SAYFA_OGE_AD = { gorsel: "Görsel", tablo: "Tablo", grafik: "" };
 function sayfaOgeleriCiz() {
   $("sayfaOgeleri").innerHTML = cikti.sayfaOgeleri.map((o) => {
-    const [enAz, enCok, adim] = SAYFA_OGE_SINIRI[o.tur];
-    const genislikli = o.tur === "gorsel" || o.tur === "grafik";
-    const boyut = genislikli ? `<input type="range" data-is="boyut" min="${enAz}" max="${enCok}" step="${adim}" value="${o.genislikMm}" aria-label="${esc(o.ad)} genişliği, mm"><output>${sayi(o.genislikMm)} mm</output>`
-      : `<input type="range" data-is="boyut" min="${enAz}" max="${enCok}" step="${adim}" value="${o.boyutMm}" aria-label="${esc(o.ad)} yazı boyutu, mm"><output>${sayi(o.boyutMm, 1)} mm</output>`;
+    const boyut = sayiliKaydirici(genislikli(o)
+      ? { is: "boyut", etiket: "Genişlik", aralik: SAYFA_OGE_ARALIGI[o.tur], deger: o.genislikMm, birim: "mm", ad: `${o.ad || "Grafik"} genişliği` }
+      : { is: "boyut", etiket: "Boyut", aralik: SAYFA_OGE_ARALIGI[o.tur], deger: o.boyutMm, birim: "mm", ad: `${o.ad || "Yazı"} yazı boyutu` });
     const ust = o.tur === "yazi"
       ? `<textarea class="metin-girdi not-metin" data-is="metin" rows="2" maxlength="300" aria-label="Sayfadaki yazı">${esc(o.metin)}</textarea>`
-      : `<span class="sayfa-oge-ad">${esc(o.ad)}</span>`;
+      : `<input class="oge-ad" data-is="ad" maxlength="80" autocomplete="off" spellcheck="false" value="${esc(o.ad)}"
+          placeholder="${o.tur === "grafik" ? "Başlıksız grafik" : SAYFA_OGE_AD[o.tur]}" aria-label="${o.tur === "grafik" ? "Grafiğin başlığı" : "Adı"}">`;
     return `<li data-id="${o.id}">
       <div class="sayfa-oge-ust">${ikon({ gorsel: "resim", tablo: "tablo", grafik: "analiz" }[o.tur] || "yazi")}${ust}
-        <button type="button" class="ikon-dugme" data-is="sil" aria-label="${esc(o.ad)} sayfadan çıkar" title="Sayfadan çıkar">${ikon("kapat")}</button></div>
-      <label class="kaydirici">${genislikli ? "<span>Genişlik</span>" : "<span>Boyut</span>"}${boyut}</label>
+        <button type="button" class="ikon-dugme" data-is="sil" aria-label="${esc(o.ad || "Grafik")} sayfadan çıkar" title="Sayfadan çıkar">${ikon("kapat")}</button></div>
+      ${boyut}
     </li>`;
   }).join("");
   $("sayfaOgeleri").querySelectorAll("input[type=range]").forEach(kaydiriciDoldur);
@@ -1016,13 +1094,17 @@ const sayfaOgesi = (el) => cikti.sayfaOgeleri.find((o) => o.id === el.closest("l
 $("sayfaOgeleri").addEventListener("input", (e) => {
   const o = sayfaOgesi(e.target);
   if (e.target.dataset.is === "metin") { o.metin = e.target.value; o.ad = o.metin.split("\n")[0].slice(0, 30) || "Yazı"; return canliZamanla(); }
+  if (e.target.dataset.is === "ad") {
+    o.ad = o.tur === "grafik" ? e.target.value.trim() : e.target.value.trim() || SAYFA_OGE_AD[o.tur];
+    return canliZamanla();
+  }
   if (e.target.dataset.is !== "boyut") return;
-  const v = Number(e.target.value);
-  if (o.tur === "gorsel" || o.tur === "grafik") { o.genislikMm = v; e.target.nextElementSibling.textContent = `${sayi(v)} mm`; }
-  else { o.boyutMm = v; e.target.nextElementSibling.textContent = `${sayi(v, 1)} mm`; }
-  kaydiriciDoldur(e.target);
+  const v = sayiliDegisti(e.target, SAYFA_OGE_SINIRI);
+  if (v === null) return;
+  if (genislikli(o)) o.genislikMm = v; else o.boyutMm = v;
   canliZamanla();
 });
+$("sayfaOgeleri").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.dataset.is === "ad") e.target.blur(); });
 $("sayfaOgeleri").addEventListener("click", (e) => {
   const b = e.target.closest("[data-is=sil]");
   if (!b) return;

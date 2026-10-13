@@ -150,21 +150,21 @@ function sayfaOgesiniOku(o) {
   if (!o || typeof o !== "object") return null;
   if (o.tur === "gorsel" && typeof o.resim === "string" && o.resim.startsWith("data:image/")) {
     return { tur: "gorsel", ad: metinAl(o.ad, 80, "Görsel"), resim: o.resim, en: sayiAl(o.en, 1, 1e5, 1000), boy: sayiAl(o.boy, 1, 1e5, 1000),
-      genislikMm: sayiAl(o.genislikMm, ...SAYFA_OGE_SINIRI.gorsel.slice(0, 2), 40) };
+      genislikMm: sayiAl(o.genislikMm, ...SAYFA_OGE_SINIRI, 40) };
   }
   if (o.tur === "grafik") {
     const veri = grafikVerisiniOku(o.veri);
-    return veri && { tur: "grafik", ad: metinAl(o.ad, 80, "Grafik"), veri, genislikMm: sayiAl(o.genislikMm, ...SAYFA_OGE_SINIRI.grafik.slice(0, 2), 90) };
+    return veri && { tur: "grafik", ad: metinAl(o.ad, 80, "Grafik"), veri, genislikMm: sayiAl(o.genislikMm, ...SAYFA_OGE_SINIRI, 90) };
   }
   if (o.tur === "tablo") {
     const tablo = notKaydiniOku({ ...o, tur: "tablo", konum: [0, 0] });
     return tablo && { tur: "tablo", ad: metinAl(o.ad, 80, "Tablo"), sayfalar: tablo.sayfalar, sayfa: tablo.sayfa, baslikSatiri: tablo.baslikSatiri,
-      renk: tablo.renk, boyutMm: sayiAl(o.boyutMm, ...SAYFA_OGE_SINIRI.tablo.slice(0, 2), 2.6) };
+      renk: tablo.renk, boyutMm: sayiAl(o.boyutMm, ...SAYFA_OGE_SINIRI, 2.6) };
   }
   if (o.tur === "yazi") {
     const metin = metinAl(o.metin, 300, "Açıklama");
     return { tur: "yazi", ad: metin.split("\n")[0].slice(0, 30) || "Yazı", metin, kalin: o.kalin === true,
-      renk: renkAl(o.renk, token("--not-siyah")), boyutMm: sayiAl(o.boyutMm, ...SAYFA_OGE_SINIRI.yazi.slice(0, 2), 4) };
+      renk: renkAl(o.renk, token("--not-siyah")), boyutMm: sayiAl(o.boyutMm, ...SAYFA_OGE_SINIRI, 4) };
   }
   return null;
 }

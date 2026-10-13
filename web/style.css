@@ -41,7 +41,7 @@
   --boy-cizgi: 6px; --boy-nokta: 7px; --boy-cubuk: 8px; --boy-renk: 14px; --boy-topuz: 16px; --boy-kutucuk: 18px;
   --boy-anahtar: 20px; --boy-pin: 22px; --boy-kapat: 24px;
   --boy-xs: 28px; --boy-s: 30px; --boy-m: 32px; --boy-arama: 34px; --boy: 36px; --boy-l: 38px; --boy-xl: 40px; --boy-2xl: 48px;
-  --boy-butce: 56px; --boy-nitelik: 72px; --boy-diyalog-dugme: 96px; --boy-karo: 104px; --boy-liste: 340px;
+  --boy-butce: 56px; --boy-sayi-kutusu: 76px; --boy-nitelik: 72px; --boy-diyalog-dugme: 96px; --boy-karo: 104px; --boy-liste: 340px;
   --boy-ornek-g: 32px; --boy-ornek-y: 22px; --boy-desen-g: 44px; --boy-desen-y: 28px; --boy-kod: 88px; --boy-ozel: 132px;
   --boy-lejant-g: 28px; --boy-lejant-y: 19px; --boy-cip-g: 22px; --boy-cip-y: 15px;
   --boy-tarih: 112px; --onizleme-genislik: 1400px;
@@ -980,6 +980,18 @@ input[type=checkbox].kutucuk:checked {
 /* Kaydırıcılar: tarayıcının çubuğu yerine ince iz + beyaz topuz (anahtarla aynı dil) */
 .kaydirici { display: grid; grid-template-columns: var(--boy-nitelik) 1fr var(--boy-butce); align-items: center; gap: var(--b-2-5); font: var(--t-ikincil); color: var(--metin-2); }
 .kaydirici output { font: 500 12.5px/1 var(--yazi); font-variant-numeric: tabular-nums; color: var(--metin); text-align: right; }
+/* Kaydırıcı + elle yazılan sayı (cikti.js sayiliKaydirici) */
+.kaydirici.sayili { grid-template-columns: var(--boy-nitelik) 1fr var(--boy-sayi-kutusu); }
+.sayi-kutusu { display: flex; align-items: center; gap: var(--b-1); height: var(--boy-xs); padding: 0 var(--b-1-5) 0 0; border-radius: var(--r-kucuk); background: var(--dolgu-2); box-shadow: inset 0 0 0 1px var(--kutu-kenar); cursor: text; }
+.sayi-kutusu:focus-within { outline: 2px solid var(--vurgu-metin); background: var(--kutu-ust); }
+.sayi-kutusu input {
+  flex: 1; min-width: 0; height: 100%; padding: 0 0 0 var(--b-1-5); border: 0; background: none;
+  font: 500 12.5px/1 var(--yazi); font-variant-numeric: tabular-nums; color: var(--metin); text-align: right;
+}
+.sayi-kutusu input:focus { outline: none; }
+.sayi-kutusu input[aria-invalid=true] { color: var(--tehlike); }
+.sayi-kutusu span { font: var(--t-ikincil); color: var(--metin-3); }
+.sayfa-ogeleri .oge-ad { background: transparent; }
 .kaydirici:has(input:disabled), .bolumlu:has(input:disabled) { opacity: .45; }
 .bolumlu input:disabled { cursor: default; }
 .kaydirici input, .ozel-ton { -webkit-appearance: none; appearance: none; width: 100%; height: var(--boy-anahtar); margin: 0; background: none; cursor: pointer; }
@@ -1052,12 +1064,13 @@ input[type=checkbox].kutucuk:checked {
 :is(.lejant-baslik-alan input, .metin-girdi, .oge-ad)::placeholder { color: var(--metin-3); }
 :is(.lejant-baslik-alan input, .metin-girdi, .oge-ad):focus { outline: 2px solid var(--vurgu-metin); outline-offset: 0; background: var(--kutu-ust); }
 .metin-girdi[aria-invalid=true] { outline: 2px solid var(--tehlike); background: var(--tehlike-zayif); }
-.lejant-ogeleri .oge-ad {
+.lejant-ogeleri .oge-ad, .sayfa-ogeleri .oge-ad {
   flex: 1; min-width: 0; height: var(--boy-xs); padding: 0 var(--b-2); margin-left: calc(var(--b-1) * -1);
   border: 0; border-radius: var(--r-kucuk); background: transparent; font: var(--t-vurgulu); color: var(--metin);
   text-overflow: ellipsis;
 }
 .lejant-ogeleri .oge-ad:hover { background: var(--dolgu); }
+.sayfa-ogeleri .oge-ad:hover { background: var(--kutu-ust); }
 .lejant-ogeleri li { padding-right: var(--b-yarim); }
 .ornek-dugme { display: grid; flex: none; padding: 0; border: 0; border-radius: var(--r-xs); background: none; cursor: pointer; }
 .ornek-dugme:hover .katman-ornek { transform: scale(1.06); }
