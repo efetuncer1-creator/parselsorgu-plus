@@ -2868,7 +2868,7 @@ async function tabloNotuEkle(dosya) {
   const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(dosya.name) }, body: await dosyaIcerigi(dosya) });
   const merkez = harita.getCenter();
   return notEkle("tablo", { ad: dosya.name.replace(/\.[^.]+$/, ""), sayfalar: r.sayfalar, sayfa: 0, dizilis: r.sayfalar.length > 1 ? "alt" : "tek", baslikSatiri: true, boyut: 12,
-    konum: [merkez.lat, merkez.lng], renk: token("--not-siyah") });
+    konum: [merkez.lat, merkez.lng], renk: tabloRengi(r.sayfalar) });
 }
 
 // Görsel, PDF ve tablo dosyalarını not olarak ekler; kalanları (KML, JSON...) geri verir.
@@ -2889,41 +2889,64 @@ async function notDosyalariniAl(dosyalar) {
 const tabloDizilisi = (n) => (n.sayfalar.length < 2 ? "tek" : n.dizilis || "tek");
 const tabloSayfalari = (n) => (tabloDizilisi(n) === "tek" ? [n.sayfalar[n.sayfa]] : n.sayfalar);
 
-// Tablonun görünüşü (haritada ve çıktıda aynı):
+// Tablonun görünüşü (haritada ve çıktıda aynı), Excel'deki gibi:
+// - hücrelerin kalın/italik, yazı ve dolgu rengi, hizası (biçimsiz sayı sağa) ve sütun genişlikleri dosyadan
+//   (parselapp/tablo.py); CSV'de ve uygulamanın kendi tablolarında sayıya benzeyen metin sağa;
 // - hiç dolu hücresi olmayan sütunlar atılır;
 // - yalnız bir hücresi dolu satırlar (Excel'deki başlık, açıklama, "Koordinat sistemi: ..." gibi notlar) sütun
-//   genişliğini belirlemez, tablonun bütün enine yayılıp gerekirse alt satıra geçer;
-// - baştaki böyle satırlar tablonun üstünde durur; "İlk satır başlık" açıksa ilk çok hücreli satır başlıktır.
+//   genişliğini belirlemez, tablonun bütün enine yayılıp gerekirse alt satıra geçer (Excel'de de yandaki boş
+//   hücrelere taşar);
+// - baştaki böyle satırlar tablonun üstünde durur; "İlk satır başlık" açıksa ilk çok hücreli satır başlıktır,
+//   zemini katmanın rengi (yeni eklenen tabloda Excel'deki başlık rengi).
+const TABLO_HIZA = { l: "left", c: "center", r: "right" };
+const SAYI_METNI = /^[-+]?\d[\d.]*(,\d+)?%?$/;
+const TABLO_YAZI = "Calibri, Carlito, 'Segoe UI', Inter, sans-serif"; // Excel'in yazı tipi; yoksa benzeri
+// Excel'in sütun genişliği (karakter) -> yazı boyunun katı: Calibri 11'de rakam 7 px, yazı 14,67 px
+const excelGenisligi = (w) => (7 * w + 5) / 14.667;
+
 function tabloDuzeni(s, baslikSatiri) {
-  const satirlar = s.satirlar.filter((r) => r.some((h) => h !== ""));
-  const genis = Math.max(0, ...satirlar.map((r) => r.length)) > 1;
-  const tek = (r) => genis && r.filter((h) => h !== "").length === 1;
-  const cokHucreli = satirlar.filter((r) => !tek(r));
-  const sutunlar = [...Array(Math.max(1, ...cokHucreli.map((r) => r.length))).keys()]
-    .filter((j) => cokHucreli.some((r) => r[j]) || !cokHucreli.length && j === 0);
-  const yayilan = (r) => r.find((h) => h !== "");
-  let i = 0;
+  const excel = Array.isArray(s.stil);
+  const hucre = (i, j) => {
+    const m = s.satirlar[i][j] || "", st = (excel && s.stiller?.[s.stil[i]?.[j]]) || {};
+    return { m, k: st.k === 1, i: st.i === 1, r: st.r, d: st.d, h: st.h || (!excel && SAYI_METNI.test(m) ? "r" : "l") };
+  };
+  const sira = s.satirlar.map((_, i) => i).filter((i) => s.satirlar[i].some((h) => h !== ""));
+  const genis = Math.max(0, ...s.satirlar.map((r) => r.length)) > 1;
+  const tek = (i) => genis && s.satirlar[i].filter((h) => h !== "").length === 1;
+  const cok = sira.filter((i) => !tek(i));
+  const sutunlar = [...Array(Math.max(1, ...cok.map((i) => s.satirlar[i].length))).keys()]
+    .filter((j) => cok.some((i) => s.satirlar[i][j]) || (!cok.length && j === 0));
+  const yayilan = (i) => hucre(i, s.satirlar[i].findIndex((h) => h !== ""));
+  let k = 0;
   const ust = [];
-  while (i < satirlar.length && tek(satirlar[i])) ust.push(yayilan(satirlar[i++]));
-  const baslikHam = baslikSatiri && i < satirlar.length ? satirlar[i++] : null;
-  const baslik = baslikHam && sutunlar.map((j) => baslikHam[j] || "");
-  const govde = satirlar.slice(i).map((r) => (tek(r) ? { yayilan: yayilan(r) } : { hucreler: sutunlar.map((j) => r[j] || "") }));
-  return { ust, baslik, govde, sutunSayisi: sutunlar.length };
+  while (k < sira.length && tek(sira[k])) ust.push(yayilan(sira[k++]));
+  const baslik = baslikSatiri && k < sira.length ? sutunlar.map((j) => hucre(sira[k], j)) : null;
+  if (baslik) k++;
+  const govde = sira.slice(k).map((i) => (tek(i) ? { yayilan: yayilan(i) } : { hucreler: sutunlar.map((j) => hucre(i, j)) }));
+  return { ust, baslik, govde, sutunSayisi: sutunlar.length, genislikler: sutunlar.map((j) => s.genislikler?.[j] ?? null) };
 }
+
+// Yeni eklenen tablonun rengi: Excel'deki başlık satırının zemini, yoksa siyah
+const tabloRengi = (sayfalar) => tabloDuzeni(sayfalar[0], true).baslik?.find((h) => h.d)?.d || token("--not-siyah");
 
 function tabloHtml(n) {
   const sayfalar = tabloSayfalari(n), adli = sayfalar.length > 1;
-  const satir = (h, et) => `<tr>${h.map((x) => `<${et}>${esc(x)}</${et}>`).join("")}</tr>`;
+  // Başlıkta zemin ve yazı rengi katmanın renginden (okunur kalsın), hiza ve yazı Excel'den
+  const stil = (h, baslik = false) => [h.k && !baslik && "font-weight:700", h.i && "font-style:italic", !baslik && h.r && `color:${h.r}`,
+    !baslik && h.d && `background:${h.d}`, h.h !== "l" && `text-align:${TABLO_HIZA[h.h]}`].filter(Boolean).join(";");
+  const hucre = (h, et) => { const st = stil(h, et === "th"); return `<${et}${st ? ` style="${st}"` : ""}>${esc(h.m)}</${et}>`; };
   // Her sayfa: üst kısım (sayfa adı, Excel'deki baştaki notlar) ve tablo. Yan yanayken ızgaranın ilk satırında
   // üst kısımlar, ikincisinde tablolar durur; başlık satırları hep aynı hizada (style.css .harita-tablo.yan).
   // Üst kısım ve yayılan satırlar sütun genişliğini büyütmesin diye genişlikleri sıfır, en az kutu kadar.
   const tablo = (s, k) => {
     const d = tabloDuzeni(s, n.baslikSatiri), sonraki = k ? "sonraki" : "";
-    const ust = [...(adli ? [`<div class="tablo-ad">${esc(s.ad)}</div>`] : []), ...d.ust.map((m) => `<div class="tablo-not">${esc(m)}</div>`)];
-    const yay = (m) => `<tr class="tablo-ara"><td colspan="${d.sutunSayisi}"><div class="yayilan">${esc(m)}</div></td></tr>`;
-    const govde = d.govde.map((r) => (r.hucreler ? satir(r.hucreler, "td") : yay(r.yayilan))).join("");
+    const ust = [...(adli ? [`<div class="tablo-ad">${esc(s.ad)}</div>`] : []),
+      ...d.ust.map((h) => `<div class="tablo-not"${stil(h) ? ` style="${stil(h)}"` : ""}>${esc(h.m)}</div>`)];
+    const sutunlar = `<colgroup>${d.genislikler.map((w) => (w ? `<col style="width:${excelGenisligi(w).toFixed(2)}em">` : "<col>")).join("")}</colgroup>`;
+    const govde = d.govde.map((r) => (r.hucreler ? `<tr>${r.hucreler.map((h) => hucre(h, "td")).join("")}</tr>`
+      : `<tr class="tablo-ara"><td colspan="${d.sutunSayisi}"${stil(r.yayilan) ? ` style="${stil(r.yayilan)}"` : ""}><div class="yayilan">${esc(r.yayilan.m)}</div></td></tr>`)).join("");
     return `<div class="tablo-ust ${sonraki}">${ust.join("")}</div>`
-      + `<table class="${sonraki}">${d.baslik ? `<thead>${satir(d.baslik, "th")}</thead>` : ""}<tbody>${govde}</tbody></table>`;
+      + `<table class="${sonraki}">${sutunlar}${d.baslik ? `<thead><tr>${d.baslik.map((h) => hucre(h, "th")).join("")}</tr></thead>` : ""}<tbody>${govde}</tbody></table>`;
   };
   const secili = n.id === seciliNot && gorselSekmesinde();
   return `<div class="harita-tablo ${tabloDizilisi(n)}${secili ? " secili" : ""}" style="--tablo-boyut:${n.boyut}px;--tablo-renk:${esc(n.renk)};--tablo-yazi:${acikRenk(n.renk) ? "var(--not-siyah)" : "var(--not-beyaz)"}">`

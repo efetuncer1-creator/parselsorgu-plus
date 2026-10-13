@@ -111,6 +111,19 @@ function grafikVerisiniOku(v) {
   return dilimler.length >= 2 ? { dilimler, toplam: sayiAl(v.toplam, 0, 1e12, 0), birim: metinAl(v.birim, 40, "m²"), parsel: Math.round(sayiAl(v.parsel, 0, 1e7, 0)) } : null;
 }
 
+// Excel görünüşü (parselapp/tablo.py): stil tablosu, hücre başına stil numarası, sütun genişlikleri
+const STIL_ALANI = { k: (v) => v === 1, i: (v) => v === 1, r: (v) => RENK.test(v), d: (v) => RENK.test(v), h: (v) => ["l", "c", "r"].includes(v) };
+function tabloSayfasiniOku(s) {
+  const sayfa = { ad: metinAl(s.ad, 60, "Sayfa"), satirlar: s.satirlar, kesildi: s.kesildi === true };
+  if (Array.isArray(s.stiller) && Array.isArray(s.stil) && s.stil.length === s.satirlar.length
+    && s.stil.every((r) => Array.isArray(r) && r.every((v) => Number.isInteger(v) && v >= 0 && v < s.stiller.length))) {
+    sayfa.stiller = s.stiller.map((st) => Object.fromEntries(Object.entries(st && typeof st === "object" ? st : {}).filter(([a, v]) => STIL_ALANI[a]?.(v))));
+    sayfa.stil = s.stil;
+  }
+  if (Array.isArray(s.genislikler)) sayfa.genislikler = s.genislikler.map((w) => (Number.isFinite(w) && w > 0 && w < 300 ? w : null));
+  return sayfa;
+}
+
 function notKaydiniOku(k) {
   if (!k || typeof k !== "object") return null;
   const ortak = { ad: metinAl(k.ad, 60), gorunur: k.gorunur !== false };
@@ -139,7 +152,7 @@ function notKaydiniOku(k) {
   if (k.tur === "tablo") {
     const konum = noktaAl(k.konum);
     const sayfalar = Array.isArray(k.sayfalar) ? k.sayfalar.filter((s) => s && Array.isArray(s.satirlar) && s.satirlar.length
-      && s.satirlar.every((r) => Array.isArray(r) && r.every((h) => typeof h === "string"))).map((s) => ({ ad: metinAl(s.ad, 60, "Sayfa"), satirlar: s.satirlar, kesildi: s.kesildi === true })) : [];
+      && s.satirlar.every((r) => Array.isArray(r) && r.every((h) => typeof h === "string"))).map(tabloSayfasiniOku) : [];
     return konum && sayfalar.length && { ...ortak, tur: "tablo", konum, sayfalar, sayfa: Math.round(sayiAl(k.sayfa, 0, sayfalar.length - 1, 0)),
       dizilis: secenekAl(k.dizilis, ["tek", "alt", "yan"], k.tumSayfalar === true ? "alt" : "tek"), baslikSatiri: k.baslikSatiri !== false, boyut: sayiAl(k.boyut, 1, 500, 12), renk: renkAl(k.renk, token("--not-siyah")) };
   }

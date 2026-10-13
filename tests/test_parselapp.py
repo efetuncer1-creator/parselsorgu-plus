@@ -624,6 +624,29 @@ class TabloTest(unittest.TestCase):
         satirlar = tablo.oku("bicim.xlsx", tampon.getvalue())["sayfalar"][0]["satirlar"]
         self.assertEqual([r[0] for r in satirlar], [beklenen for *_, beklenen in ornekler])
 
+    def test_excel_gorunusu(self):
+        # Kalın/renkli başlık, sayılar sağa, açık hizalama, sütun genişliği Excel'deki gibi gelir
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+        kitap = Workbook()
+        s = kitap.active
+        s.append(["Ada", "Alan", "Not"])
+        s.append([512, 1250.5, "orta"])
+        for h in s[1]:
+            h.font = Font(b=True, color="FFFFFFFF")
+            h.fill = PatternFill("solid", fgColor="FF2F5D50")
+        s["C2"].alignment = Alignment(horizontal="center")
+        s.column_dimensions["A"].width = 6
+        tampon = io.BytesIO()
+        kitap.save(tampon)
+        sayfa = tablo.oku("gorunus.xlsx", tampon.getvalue())["sayfalar"][0]
+        stil = lambda i, j: sayfa["stiller"][sayfa["stil"][i][j]]
+        self.assertEqual(stil(0, 0), {"k": 1, "r": "#ffffff", "d": "#2f5d50"})
+        self.assertEqual(stil(1, 0), {"h": "r"})  # sayı sağa
+        self.assertEqual(stil(1, 2), {"h": "c"})  # açık hizalama
+        self.assertEqual(sayfa["genislikler"][0], 6)
+        self.assertEqual(sayfa["genislikler"][1], 8.43)  # tanımsız: Excel'in varsayılanı
+
     def test_csv_noktali_virgul_ve_sinir(self):
         satirlar = ["Ada;Parsel"] + [f"{i};{i + 1}" for i in range(tablo.EN_FAZLA_SATIR + 5)]
         sonuc = tablo.oku("liste.csv", "\n".join(satirlar).encode("utf-8-sig"))
