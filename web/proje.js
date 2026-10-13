@@ -71,11 +71,9 @@ async function projeOlustur() {
 async function projeKaydet(farkli = false) {
   const buton = $("projeKaydet");
   try {
-    let dosya = null;
-    if (window.showSaveFilePicker) {
-      const izinli = !farkli && proje.dosya && (await proje.dosya.requestPermission({ mode: "readwrite" })) === "granted";
-      dosya = izinli ? proje.dosya : await showSaveFilePicker({ suggestedName: projeDosyaAdi(), types: PROJE_DOSYA_TURU });
-    }
+    const izinli = !farkli && proje.dosya && (await proje.dosya.requestPermission({ mode: "readwrite" })) === "granted";
+    const dosya = izinli ? proje.dosya : await kayitYeriSor(projeDosyaAdi()); // app.js; null: indirilir
+    if (dosya === false) return; // vazgeçildi
     yukleniyor(buton, true);
     const metin = JSON.stringify(await projeOlustur());
     if (dosya) {
@@ -321,14 +319,18 @@ async function projeAc(dosya, tutamac = null) {
   } finally { yukleniyor(buton, false); }
 }
 
+// Açma penceresi yoksa (app.js dosyaPenceresi) tarayıcının dosya seçme kutusu açılır.
 async function projeSecVeAc() {
-  if (!window.showOpenFilePicker) return $("projeSec").click();
-  try {
-    const [tutamac] = await showOpenFilePicker({ types: [{ ...PROJE_DOSYA_TURU[0], accept: { "application/json": [PROJE_UZANTISI, ".json"] } }] });
-    await projeAc(await tutamac.getFile(), tutamac);
-  } catch (e) {
-    if (e.name !== "AbortError") mesaj(e.message, true);
+  const secim = await dosyaPenceresi("showOpenFilePicker", { types: [{ ...PROJE_DOSYA_TURU[0], accept: { "application/json": [PROJE_UZANTISI, ".json"] } }] });
+  if (secim === false) return;
+  if (!secim) {
+    // Pencere denenip kapandıysa tıklama hakkı bitmiş olabilir; o zaman bir kez daha tıklanır.
+    if (navigator.userActivation && !navigator.userActivation.isActive) return mesaj("Dosyayı seçmek için bir kez daha tıkla.");
+    return $("projeSec").click();
   }
+  try {
+    await projeAc(await secim[0].getFile(), secim[0]);
+  } catch (e) { mesaj(e.message, true); }
 }
 
 $("projeKaydet").addEventListener("click", () => projeKaydet());

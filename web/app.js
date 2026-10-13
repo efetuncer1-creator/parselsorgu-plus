@@ -110,6 +110,9 @@ const postJson = (yol, govde) =>
 // Chrome ve Edge'de kaydetme penceresi açılır (klasör ve ad seçilir). Pencere tıklamanın hemen ardından
 // açılmalı (tarayıcı kuralı); bu yüzden önce yer sorulur, dosya sonra hazırlanıp oraya yazılır.
 // Pencereyi desteklemeyen tarayıcıda dosya İndirilenler klasörüne iner.
+// Bazı gömülü tarayıcılar (ör. Claude masaüstü uygulamasının önizleme paneli) pencereyi hiç göstermeden
+// "vazgeçildi" der. Kullanıcı bu kadar çabuk vazgeçemeyeceği için o zaman pencere yok sayılır, bir daha da
+// denenmez; dosya indirilir.
 const DOSYA_TURLERI = {
   ".kml": ["KML (Google Earth)", "application/vnd.google-earth.kml+xml"],
   ".zip": ["ZIP arşivi", "application/zip"],
@@ -120,16 +123,28 @@ const DOSYA_TURLERI = {
 };
 const guvenliAd = (s) => String(s).replace(/[\\/:*?"<>|]+/g, "-").replace(/^[\s.-]+|[\s.-]+$/g, "") || "parsel";
 
-// Dönüş: dosya tutamacı; pencere yoksa (ya da açılamadıysa) null: indirilecek; vazgeçildiyse false.
-async function kayitYeriSor(ad) {
-  if (!window.showSaveFilePicker) return null;
+let dosyaPenceresiYok = false;
+
+// fn: "showSaveFilePicker" ya da "showOpenFilePicker". Dönüş: pencerenin sonucu; pencere yoksa ya da
+// açılamadıysa null; kullanıcı vazgeçtiyse false.
+async function dosyaPenceresi(fn, secenek) {
+  if (dosyaPenceresiYok || !window[fn]) return null;
+  const bas = performance.now();
+  try {
+    return await window[fn](secenek);
+  } catch (e) {
+    if (e.name !== "AbortError") return null;
+    if (performance.now() - bas > 400) return false;
+    dosyaPenceresiYok = true; // gösterilmeden kapandı
+    return null;
+  }
+}
+
+// Dönüş: dosya tutamacı; pencere yoksa null (indirilecek); vazgeçildiyse false.
+function kayitYeriSor(ad) {
   const uzanti = (ad.match(/\.[^.]+$/) || [""])[0].toLowerCase();
   const [aciklama, tur] = DOSYA_TURLERI[uzanti] || ["Dosya", "application/octet-stream"];
-  try {
-    return await showSaveFilePicker({ suggestedName: ad, types: uzanti ? [{ description: aciklama, accept: { [tur]: [uzanti] } }] : undefined });
-  } catch (e) {
-    return e.name === "AbortError" ? false : null;
-  }
+  return dosyaPenceresi("showSaveFilePicker", { suggestedName: ad, types: uzanti ? [{ description: aciklama, accept: { [tur]: [uzanti] } }] : undefined });
 }
 
 async function dosyaYaz(hedef, blob, ad) {
