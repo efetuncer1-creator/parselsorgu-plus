@@ -288,13 +288,14 @@ class Store:
 
     def referans_guncelle(self, ref_id, **alanlar):
         izinli = {k: v for k, v in alanlar.items()
-                  if k in ("ad", "renk", "gorunur", "gizli", "hesap_katmani", "gorsel") and v is not None}
+                  if k in ("ad", "renk", "gorunur", "gizli", "hesap_katmani", "gorsel", "taranan") and v is not None}
         if "hesap_katmani" in izinli and izinli["hesap_katmani"] == "*":
             izinli["hesap_katmani"] = None  # "*": tüm açık katmanlar
         if "gizli" in izinli:
             izinli["gizli"] = json.dumps(sorted(set(izinli["gizli"])), ensure_ascii=False)
-        if "gorsel" in izinli:
-            izinli["gorsel"] = json.dumps(izinli["gorsel"], ensure_ascii=False)
+        for kolon in ("gorsel", "taranan"):
+            if kolon in izinli:
+                izinli[kolon] = json.dumps(izinli[kolon], ensure_ascii=False)
         if not izinli:
             return
         with self._lock:

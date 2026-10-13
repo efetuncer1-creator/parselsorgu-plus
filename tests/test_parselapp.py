@@ -174,6 +174,63 @@ class IceAktarmaTest(GeciciStore):
         self.assertIsNone(self.store.noktadaki(31.5, 41.5))
 
 
+class ProjeTest(GeciciStore):
+    """Kaydedilen proje başka bir bilgisayarda (boş kayıtta) açılır."""
+
+    def setUp(self):
+        super().setUp()
+        ice_aktar(self.store, "alan_yoneticisi.kml", oku("alan_yoneticisi.kml"))
+        from parselapp.server import ozellik
+        self.parseller = [ozellik(p) for p in self.store.listele()]
+        fc = referans.dosya_oku("osb_sinir.kml", oku("osb_sinir.kml"))
+        self.alan = {"ad": "Deneme OSB", "renk": "#FF9F0A", "geojson": fc, "gizli": ["PL"], "hesap_katmani": None,
+                     "gorsel": {"desen": "kareli", "kalinlik": 5}, "gorunur": False, "taranan": [[31.4, 41.2, 12.5]]}
+
+    def _uygulama(self):
+        from parselapp.server import Uygulama
+        k = tempfile.TemporaryDirectory()
+        self.addCleanup(k.cleanup)
+        bos = Store(Path(k.name) / "bos.db")
+        self.addCleanup(bos._db.close)
+        return Uygulama(bos)
+
+    def test_yukle(self):
+        uyg = self._uygulama()
+        govde = json.dumps({"parseller": self.parseller, "alanlar": [self.alan]}).encode()
+        r = uyg.yonlendir("POST", ["proje", "yukle"], govde, {})
+        self.assertEqual(sorted(r["keys"]), sorted(p["properties"]["key"] for p in self.parseller))
+        geri = uyg.store.listele(r["keys"])
+        self.assertEqual({(p["ada"], p["parsel"], p["kaynak"]) for p in geri},
+                         {(p["properties"]["ada"], p["properties"]["parsel"], p["properties"]["kaynak"]) for p in self.parseller})
+        a = r["alanlar"][0]
+        self.assertEqual((a["ad"], a["renk"], a["gorunur"], a["gizli"], a["taranan"], a["gorsel"]["desen"], a["gorsel"]["kalinlik"]),
+                         ("Deneme OSB", "#ff9f0a", False, ["PL"], [[31.4, 41.2, 12.5]], "kareli", 5))
+
+    def test_bozuk_proje_yari_yuklenmez(self):
+        from parselapp.server import Hata
+        uyg = self._uygulama()
+        bozuklar = [
+            {"parseller": self.parseller, "alanlar": [dict(self.alan, renk="kırmızı")]},
+            {"parseller": self.parseller + [{"properties": {"ada": "1"}, "geometry": None}], "alanlar": []},
+            {"parseller": [], "alanlar": [dict(self.alan, geojson={"type": "Point"})]},
+            {"parseller": "yok", "alanlar": []},
+        ]
+        for govde in bozuklar:
+            with self.subTest(govde=str(govde)[:60]), self.assertRaises(Hata):
+                uyg.yonlendir("POST", ["proje", "yukle"], json.dumps(govde).encode(), {})
+        self.assertEqual(uyg.store.listele(), [])
+        self.assertEqual(uyg.store.referanslar(), [])
+
+    def test_tkgm_verisi_eski_projeyle_ezilmez(self):
+        uyg = self._uygulama()
+        p = json.loads(json.dumps(self.parseller[0]))
+        p["properties"].update(kaynak="tkgm", kaynak_tarih="2026-01-01T00:00:00", nitelik="Eski")
+        uyg.yonlendir("POST", ["proje", "yukle"], json.dumps({"parseller": [p], "alanlar": []}).encode(), {})
+        p["properties"].update(kaynak_tarih="2025-01-01T00:00:00", nitelik="Daha eski")
+        uyg.yonlendir("POST", ["proje", "yukle"], json.dumps({"parseller": [p], "alanlar": []}).encode(), {})
+        self.assertEqual(uyg.store.listele()[0]["nitelik"], "Eski")
+
+
 class IzgaraTest(unittest.TestCase):
     def test_izgara(self):
         # Çumra çevresinde ~1,2 km x 1,5 km

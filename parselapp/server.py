@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
 
-from . import analiz, coords, exporters, referans, tablo
+from . import analiz, coords, exporters, proje, referans, tablo
 from .importers import ice_aktar
 from .store import Store
 from .tkgm import Bulunamadi, LimitAsildi, Tkgm, TkgmHatasi
@@ -90,6 +90,14 @@ class Uygulama:
                 return self._disa_aktar(_json(govde))
             case ("GET", ["referanslar"]):
                 return self.store.referanslar()
+            case ("POST", ["proje", "yukle"]):
+                # Proje dosyasındaki parseller ve alanlar; dosyanın geri kalanını tarayıcı kurar.
+                g = _json(govde)
+                try:
+                    sonuc = proje.yukle(self.store, g.get("parseller") or [], g.get("alanlar") or [])
+                except ValueError as e:
+                    raise Hata(HTTPStatus.BAD_REQUEST, str(e)) from e
+                return {"keys": sonuc["keys"], "alanlar": [self.store.referans(i) for i in sonuc["alanlar"]]}
             case ("POST", ["izgara"]):
                 return self._izgara(_json(govde))
             case ("POST", ["tablo-oku"]):

@@ -901,6 +901,8 @@ window.addEventListener("drop", async (e) => {
   // Görsel sekmesinde görsel, PDF ve tablolar haritaya eklenir. Parsel içeren dosyalar listeye;
   // parsel içermeyenler alan sekmesinde doğrudan alan olur.
   let dosyalar = [...e.dataTransfer.files];
+  const projeDosyasi = dosyalar.find((f) => /\.parselsorgu$/i.test(f.name));
+  if (projeDosyasi) return projeAc(projeDosyasi); // proje.js
   if (gorselSekmesinde()) dosyalar = await notDosyalariniAl(dosyalar);
   if (dosyalar.length) dosyalariAktar(dosyalar);
 });
@@ -2612,8 +2614,9 @@ const TABLO_MI = (f) => /\.(xlsx|xlsm|csv)$/i.test(f.name);
 async function gorselOku(dosya) {
   if (PDF_MI(dosya)) {
     const pdfjs = await pdfjsYukle();
-    const belge = await pdfjs.getDocument({ data: new Uint8Array(await dosya.arrayBuffer()) }).promise;
-    return { ...(await pdfSayfasi(belge, 1)), pdf: belge, sayfa: 1, sayfaSayisi: belge.numPages };
+    const veri = new Uint8Array(await dosya.arrayBuffer());
+    const belge = await pdfjs.getDocument({ data: veri.slice() }).promise; // pdf.js veriyi devralır; aslı projeye kaydedilir
+    return { ...(await pdfSayfasi(belge, 1)), pdf: belge, pdfVeri: veri, sayfa: 1, sayfaSayisi: belge.numPages };
   }
   const url = URL.createObjectURL(dosya);
   try {
@@ -2683,8 +2686,9 @@ async function notSayfaDegistir(fark) {
   if (!n) return;
   if (n.tur === "tablo") return notGuncelle(n.id, { sayfa: Math.min(n.sayfalar.length - 1, Math.max(0, n.sayfa + fark)) });
   const no = Math.min(n.sayfaSayisi, Math.max(1, n.sayfa + fark));
-  if (!n.pdf || no === n.sayfa) return;
+  if (!(n.pdf || n.pdfVeri) || no === n.sayfa) return;
   try {
+    n.pdf ??= await (await pdfjsYukle()).getDocument({ data: n.pdfVeri.slice() }).promise; // projeden açılan PDF'te ilk kez
     const eski = n.url;
     const s = await pdfSayfasi(n.pdf, no);
     // Yeni sayfanın en/boy oranı farklı olabilir; genişlik aynı kalır.
