@@ -15,7 +15,7 @@ const EGIM_RENKLERI = ["#ffeda0", "#fed976", "#feb24c", "#fd8d3c", "#fc4e2a", "#
 const KOT_RENKLERI = ["#440154", "#472d7b", "#3b528b", "#2c728e", "#21918c", "#28ae80", "#5ec962", "#addc30", "#fde725"];
 const EGIM_SINIRLARI = [2, 5, 10, 15, 20, 30]; // %; imar ve jeolojik etütlerde yaygın sınırlar
 const KOT_ARALIKLARI = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500];
-const EGIM_KAYNAK = "Copernicus DEM GLO-30, 30 m";
+const EGIM_HUCRE = 3600, EGIM_EN_COK = 1500 * 1500, EGIM_KATLAR = [1, 2, 4, 8]; // parselapp/yukseklik.py ile aynı
 const EGIM_ONIZLEME_SATIR = 8;
 
 const egim = {
@@ -130,9 +130,25 @@ function ornekle(dizi, iz, enlem, boylam) {
   return (dizi[k] * (1 - fx) + dizi[k + 1] * fx) * (1 - fy) + (dizi[k + iz.en] * (1 - fx) + dizi[k + iz.en + 1] * fx) * fy;
 }
 
+// Sunucunun bu kutu için seçeceği nokta aralığı: büyük bölgede küçültülmüş kopya (yukseklik.py izgara ile aynı kural)
+function beklenenAdim([w, s, e, n]) {
+  for (const f of EGIM_KATLAR) {
+    const satir = Math.ceil(((n - s) * EGIM_HUCRE) / f) + 6, sutun = Math.ceil(((e - w) * EGIM_HUCRE) / f) + 6;
+    if (satir * sutun <= EGIM_EN_COK) return f / EGIM_HUCRE;
+  }
+  return Infinity;
+}
+
+// Izgaranın kuzey-güney nokta aralığı (10 m'ye yuvarlı): tam çözünürlükte ~30 m, büyük bölgede 60/120/240 m
+const egimCozunurlugu = (iz) => Math.max(10, Math.round((iz.adim * metreOlcegi(iz.kuzey)[1]) / 10) * 10);
+const egimKaynagi = () => `Copernicus DEM GLO-30, ${egim.iz?.kat > 1 ? `~${egimCozunurlugu(egim.iz)}` : 30} m`;
+
 // Kutu ızgaranın eğimi hesaplanmış (kenar dışı) kısmında mı?
 const izgaraKapsar = (iz, [w, s, e, n]) => !!iz && w >= iz.bati + iz.adim && e <= iz.bati + (iz.en - 2) * iz.adim
   && n <= iz.kuzey - iz.adim && s >= iz.kuzey - (iz.boy - 2) * iz.adim;
+
+// Izgara kutuyu kaplıyor ve kutuya göre yeterince ince mi (büyük bölgeden kalan kaba ızgara küçük bölgede kullanılmaz)
+const izgaraUygun = (iz, kutu) => izgaraKapsar(iz, kutu) && iz.adim <= beklenenAdim(kutu) * 1.0001;
 
 // Kutunun çevresine pay: harita görüntüsü kırpılmadığında çevre de görünsün
 function payliKutu([w, s, e, n]) {
@@ -261,7 +277,7 @@ async function egimHesapla() {
     }
   }
   const istek = payliKutu(b.kutu);
-  if (!izgaraKapsar(egim.iz, istek)) {
+  if (!izgaraUygun(egim.iz, istek)) {
     egim.sonuc = null;
     egimCiz();
     egimDurumYaz("Yükseklik modeli alınıyor… İlk kullanımda internetten indirilir (bölge başına birkaç MB).");
@@ -354,11 +370,12 @@ function egimCiz() {
     return;
   }
   const o = s.ozet, b = egim.bolge;
-  egimDurumYaz(o.n ? `${b.ad}: ${sayi(o.alan / 10000, 1)} ha${b.acik ? " (kapalı sınır yok; bütün kutu)" : ""}` : "Bölgede yükseklik verisi yok (deniz ya da bölge çok küçük).");
+  const kaba = egim.iz.kat > 1 ? ` · bölge büyük olduğu için ~${egimCozunurlugu(egim.iz)} m çözünürlük` : "";
+  egimDurumYaz(o.n ? `${b.ad}: ${sayi(o.alan / 10000, 1)} ha${b.acik ? " (kapalı sınır yok; bütün kutu)" : ""}${kaba}` : "Bölgede yükseklik verisi yok (deniz ya da bölge çok küçük).");
   $("egimOzetKutu").hidden = $("egimHaritaKutu").hidden = !o.n;
   $("egimParselKutu").hidden = !s.parseller.length;
   if (o.n) {
-    $("egimOzetAlt").textContent = EGIM_KAYNAK;
+    $("egimOzetAlt").textContent = egimKaynagi();
     const rakam = (ad, deger) => `<div><dt>${ad}</dt><dd>${deger}</dd></div>`;
     $("egimRakamlar").innerHTML = rakam("En düşük kot", `${sayi(o.kotMin, 1)} m`) + rakam("En yüksek kot", `${sayi(o.kotMax, 1)} m`)
       + rakam("Kot farkı", `${sayi(o.kotMax - o.kotMin, 1)} m`) + rakam("Ortalama kot", `${sayi(o.kotOrt, 1)} m`)
@@ -614,7 +631,7 @@ async function kesitBitir() {
   // Hat bölgenin ızgarasındaysa o; değilse hattın kendi ızgarası
   const hat = kesit.noktalar.map(([a, b]) => [b, a]);
   const kutu = payliKutu(kutusu([hat]));
-  let iz = izgaraKapsar(egim.iz, kutu) ? egim.iz : izgaraKapsar(kesit.iz, kutu) ? kesit.iz : null;
+  let iz = izgaraUygun(egim.iz, kutu) ? egim.iz : izgaraUygun(kesit.iz, kutu) ? kesit.iz : null;
   if (!iz) {
     try { iz = kesit.iz = await yukseklikAl(kutu); } catch (e) { $("kesitSonuc").innerHTML = `<p class="ikincil-metin">${esc(e.message)}</p>`; return; }
   }
@@ -633,19 +650,20 @@ async function kesitBitir() {
     d0 += u;
   });
   kesit.ornekler = ornekler;
+  kesit.pencere = egimCozunurlugu(iz);
   kesitCiz();
 }
 
-function kesitOzeti(o) {
+function kesitOzeti(o, pencere = 30) {
   const gecerli = o.filter((x) => Number.isFinite(x.kot));
   let cikis = 0, inis = 0, dik = 0;
   for (let i = 1; i < gecerli.length; i++) {
     const f = gecerli[i].kot - gecerli[i - 1].kot;
     if (f > 0) cikis += f; else inis -= f;
   }
-  // En dik bölüm: ~30 m'lik (bir piksel) pencerelerde
+  // En dik bölüm: bir ızgara aralığı (tam çözünürlükte ~30 m) uzunluğundaki pencerelerde
   for (let i = 0, j = 0; i < gecerli.length; i++) {
-    while (j < gecerli.length && gecerli[j].d - gecerli[i].d < 30) j++;
+    while (j < gecerli.length && gecerli[j].d - gecerli[i].d < pencere) j++;
     if (j < gecerli.length) dik = Math.max(dik, Math.abs(gecerli[j].kot - gecerli[i].kot) / (gecerli[j].d - gecerli[i].d));
   }
   const kotlar = gecerli.map((x) => x.kot), uzunluk = o.at(-1).d;
@@ -654,7 +672,7 @@ function kesitOzeti(o) {
 }
 
 function kesitCiz() {
-  const o = kesit.ornekler, z = kesitOzeti(o);
+  const o = kesit.ornekler, z = kesitOzeti(o, kesit.pencere);
   if (z.gecerli.length < 2) { $("kesitSonuc").innerHTML = `<p class="ikincil-metin">Bu hatta yükseklik verisi yok.</p>`; return; }
   const E = 320, B = 150, sol = 44, sag = 8, ust = 10, alt = 22;
   const yAlt = Math.floor(z.enAz - Math.max(1, (z.enCok - z.enAz) * 0.1)), yUst = Math.ceil(z.enCok + Math.max(1, (z.enCok - z.enAz) * 0.1));
@@ -664,7 +682,7 @@ function kesitCiz() {
   const yEt = [yUst, (yUst + yAlt) / 2, yAlt].map((k) => `<text x="${sol - 6}" y="${y(k)}" text-anchor="end" dominant-baseline="central">${sayi(k, 0)}</text>`
     + `<line x1="${sol}" x2="${E - sag}" y1="${y(k)}" y2="${y(k)}" class="kesit-izgara"/>`).join("");
   const xEt = [0, z.uzunluk / 2, z.uzunluk].map((d, i) => `<text x="${x(d)}" y="${B - 6}" text-anchor="${["start", "middle", "end"][i]}">${olcuUzunlugu(d)}</text>`).join("");
-  const rakam = (ad, deger) => `<div><dt>${ad}</dt><dd>${deger}</dd></div>`;
+  const rakam = (ad, deger, genis = false) => `<div${genis ? ' class="genis"' : ""}><dt>${ad}</dt><dd>${deger}</dd></div>`;
   $("kesitSonuc").innerHTML = `
     <div class="kesit-grafik">
       <svg viewBox="0 0 ${E} ${B}" role="img" aria-label="${esc(`Kesit: ${olcuUzunlugu(z.uzunluk)}, kot ${sayi(z.enAz, 1)}–${sayi(z.enCok, 1)} m`)}">
@@ -676,9 +694,9 @@ function kesitCiz() {
       </svg>
     </div>
     <dl class="egim-rakamlar iki">
-      ${rakam("Uzunluk", olcuUzunlugu(z.uzunluk))}${rakam("A → B kotu", `${sayi(z.bas, 1)} → ${sayi(z.son, 1)} m`)}
-      ${rakam("En düşük / yüksek", `${sayi(z.enAz, 1)} / ${sayi(z.enCok, 1)} m`)}${rakam("Çıkış / iniş", `${sayi(z.cikis, 1)} / ${sayi(z.inis, 1)} m`)}
+      ${rakam("Uzunluk", olcuUzunlugu(z.uzunluk))}${rakam("Çıkış / iniş", `${sayi(z.cikis, 1)} / ${sayi(z.inis, 1)} m`)}
       ${rakam("Ortalama eğim", `%${sayi(z.ortEgim, 1)}`)}${rakam("En dik bölüm", `%${sayi(z.dik, 1)}`)}
+      ${rakam("A → B kotu", `${sayi(z.bas, 1)} → ${sayi(z.son, 1)} m`, true)}${rakam("En düşük / en yüksek kot", `${sayi(z.enAz, 1)} / ${sayi(z.enCok, 1)} m`, true)}
     </dl>`;
   // Grafikte gezinince haritada da o nokta
   const svg = $("kesitSonuc").querySelector("svg"), imlec = svg.querySelector(".kesit-imlec");
@@ -722,7 +740,7 @@ $("panel-egim").addEventListener("click", (e) => {
   const hangi = b.closest("[data-egim-tablo]").dataset.egimTablo;
   const tablolar = hangi === "ozet" ? [siniflarTablosu(), ozetTablosu()] : [parselEgimTablosu()];
   const bolge = egim.bolge.ad;
-  const ad = `${hangi === "ozet" ? "Eğim sınıfları" : "Parsel eğimleri"} · ${bolge} (${EGIM_KAYNAK})`;
+  const ad = `${hangi === "ozet" ? "Eğim sınıfları" : "Parsel eğimleri"} · ${bolge} (${egimKaynagi()})`;
   if (b.dataset.is === "excel") {
     // analiz.js'teki gibi; dosya adı bölgeden
     const dosyaAdi = `egim-${bolge}-${new Date().toISOString().slice(0, 10)}`;

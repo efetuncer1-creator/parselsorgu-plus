@@ -8,6 +8,10 @@ ve veri klasöründe saklanır: aynı bölge bir daha indirilmez, sonra internet
 
 Piksel nokta olarak tanımlıdır (GTRasterTypeGeoKey = PixelIsPoint): dosyanın (0, 0) noktası tam dereceli
 kuzey-batı köşesinin kendisi. Denizdeki 1°x1° karelerin dosyası yoktur; oralar boş (NaN) kalır.
+
+Dosyada küçültülmüş kopyalar da var (2, 4 ve 8 kat: ~60, 120, 240 m). Bölge büyükse (bir seferde en fazla
+1500x1500 nokta) bunlardan uygun olanı kullanılır; ızgaranın aralığı ("adim") bunu söyler. Küçültülmüş
+kopyanın noktası, tam çözünürlükteki f x f noktanın ortası: tam çözünürlükte (f - 1) / 2 nokta içeride.
 """
 
 import json
@@ -25,9 +29,11 @@ import numpy as np
 
 KAYNAK = "https://copernicus-dem-30m.s3.amazonaws.com"
 HUCRE = 3600  # derece başına nokta (60°'nin altındaki enlemlerde)
-EN_COK_HUCRE = 1500 * 1500  # ~45 km x 45 km; daha büyüğü hem yavaş hem tarayıcıya ağır
+EN_COK_HUCRE = 1500 * 1500  # tam çözünürlükte ~45 km x 45 km; büyük bölgede küçültülmüş kopya kullanılır
+KATLAR = (1, 2, 4, 8)  # küçültme katları (dosyadaki seviyeler)
 PAY = 2  # eğim kenarda da hesaplansın diye bölgenin çevresine eklenen nokta
 BASLIK_BOYU = 65536
+BASLIK_SURUMU = 2  # saklanan başlık bu sürümden eskiyse (seviyeler yok) yeniden okunur
 
 
 class YukseklikHatasi(Exception):
@@ -61,37 +67,40 @@ _TURLER = {1: ("B", 1), 2: ("s", 1), 3: ("H", 2), 4: ("I", 4), 11: ("f", 4), 12:
 
 
 def baslik_coz(v, getir):
-    """İlk IFD'deki (tam çözünürlük) etiketler. v: dosyanın başı; getir(bas, son): dışarıda kalan değerler için."""
+    """Bütün seviyeler (IFD zinciri: tam çözünürlük ve küçültülmüş kopyalar). v: dosyanın başı;
+    getir(bas, son): v'nin dışında kalan baytlar için."""
     if v[:4] != b"II*\0":
         raise ValueError("Beklenmeyen dosya biçimi")
+
+    def oku(bas, boy):
+        return v[bas:bas + boy] if bas + boy <= len(v) else getir(bas, bas + boy - 1)
+
     ofs = struct.unpack_from("<I", v, 4)[0]
-    n = struct.unpack_from("<H", v, ofs)[0]
-    et = {}
-    for i in range(n):
-        etiket, tur, sayi, deger = struct.unpack_from("<HHI4s", v, ofs + 2 + i * 12)
-        if tur not in _TURLER or tur == 2:
-            continue
-        bic, boy = _TURLER[tur]
-        toplam = boy * sayi
-        if toplam <= 4:
-            veri = deger[:toplam]
-        else:
-            yer = struct.unpack("<I", deger)[0]
-            veri = v[yer:yer + toplam] if yer + toplam <= len(v) else getir(yer, yer + toplam - 1)
-        et[etiket] = struct.unpack("<" + bic * sayi, veri)
-    geo = et.get(34735, ())
+    seviyeler, ilk = [], None
+    while ofs and len(seviyeler) < 8:
+        n = struct.unpack("<H", oku(ofs, 2))[0]
+        girdiler = oku(ofs + 2, n * 12 + 4)
+        et = {}
+        for i in range(n):
+            etiket, tur, sayi, deger = struct.unpack_from("<HHI4s", girdiler, i * 12)
+            if tur not in _TURLER or tur == 2:
+                continue
+            bic, boy = _TURLER[tur]
+            toplam = boy * sayi
+            veri = deger[:toplam] if toplam <= 4 else oku(struct.unpack("<I", deger)[0], toplam)
+            et[etiket] = struct.unpack("<" + bic * sayi, veri)
+        ilk = ilk or et
+        s = {"en": et[256][0], "boy": et[257][0], "doseme_en": et[322][0], "doseme_boy": et[323][0],
+             "ofsetler": list(et[324]), "boylar": list(et[325]),
+             "sikistirma": et.get(259, (1,))[0], "ongorucu": et.get(317, (1,))[0]}
+        if et.get(258, (0,))[0] != 32 or et.get(339, (1,))[0] != 3 or s["sikistirma"] not in (1, 8) or s["ongorucu"] not in (1, 3):
+            raise ValueError("Desteklenmeyen yükseklik dosyası biçimi")
+        seviyeler.append(s)
+        ofs = struct.unpack_from("<I", girdiler, n * 12)[0]
+    geo = ilk.get(34735, ())
     anahtarlar = {geo[i]: geo[i + 3] for i in range(4, len(geo) - 3, 4)}
-    b = {
-        "en": et[256][0], "boy": et[257][0], "doseme_en": et[322][0], "doseme_boy": et[323][0],
-        "ofsetler": list(et[324]), "boylar": list(et[325]),
-        "sikistirma": et.get(259, (1,))[0], "ongorucu": et.get(317, (1,))[0],
-        "bit": et.get(258, (0,))[0], "bicim": et.get(339, (1,))[0],
-        "olcek": list(et[33550][:2]), "kose": [et[33922][3], et[33922][4]],
-        "nokta": anahtarlar.get(1025) == 2,
-    }
-    if b["bit"] != 32 or b["bicim"] != 3 or b["sikistirma"] not in (1, 8) or b["ongorucu"] not in (1, 3):
-        raise ValueError("Desteklenmeyen yükseklik dosyası biçimi")
-    return b
+    return {"surum": BASLIK_SURUMU, "seviyeler": seviyeler, "olcek": list(ilk[33550][:2]),
+            "kose": [ilk[33922][3], ilk[33922][4]], "nokta": anahtarlar.get(1025) == 2}
 
 
 def doseme_coz(ham, en, boy, sikistirma, ongorucu):
@@ -131,9 +140,8 @@ class Yukseklik:
         if ad in self._basliklar:
             return self._basliklar[ad]
         yol = self.klasor / ad / "baslik.json"
-        if yol.is_file():
-            b = json.loads(yol.read_text(encoding="utf-8"))
-        else:
+        b = json.loads(yol.read_text(encoding="utf-8")) if yol.is_file() else None
+        if b is None or not (b.get("yok") or b.get("surum") == BASLIK_SURUMU):
             url = self._url(ad)
             v = self._aralik(url, 0, BASLIK_BOYU - 1)
             if v is None:
@@ -144,27 +152,29 @@ class Yukseklik:
             self._yaz(yol, json.dumps(b).encode("utf-8"))
         if not b.get("yok"):
             beklenen = 1 / self.hucre
-            if (b["en"], b["boy"]) != (self.hucre, self.hucre) or any(abs(o - beklenen) > 1e-9 for o in b["olcek"]) or not b["nokta"]:
+            ilk = b["seviyeler"][0]
+            if (ilk["en"], ilk["boy"]) != (self.hucre, self.hucre) or any(abs(o - beklenen) > 1e-9 for o in b["olcek"]) or not b["nokta"]:
                 raise ValueError("Bu enlemdeki yükseklik verisi desteklenmiyor.")
         self._basliklar[ad] = b
         return b
 
-    def _doseme(self, ad, b, k, sayac):
-        anahtar = (ad, k)
+    def _doseme(self, ad, s, seviye, k, sayac):
+        """seviye: 0 tam çözünürlük, 1.. küçültülmüş kopyalar; k: o seviyedeki döşemenin sırası."""
+        anahtar = (ad, seviye, k)
         with self._kilit:
             if anahtar in self._bloklar:
                 self._bloklar.move_to_end(anahtar)
                 return self._bloklar[anahtar]
-        yol = self.klasor / ad / f"{k}.bin"
+        yol = self.klasor / ad / (f"{k}.bin" if seviye == 0 else f"s{seviye}-{k}.bin")
         if yol.is_file():
             ham = yol.read_bytes()
         else:
-            ham = self._aralik(self._url(ad), b["ofsetler"][k], b["ofsetler"][k] + b["boylar"][k] - 1)
-            if ham is None or len(ham) != b["boylar"][k]:
+            ham = self._aralik(self._url(ad), s["ofsetler"][k], s["ofsetler"][k] + s["boylar"][k] - 1)
+            if ham is None or len(ham) != s["boylar"][k]:
                 raise YukseklikHatasi("Yükseklik verisi eksik indirildi; tekrar dene.")
             sayac[0] += len(ham)
             self._yaz(yol, ham)
-        a = doseme_coz(ham, b["doseme_en"], b["doseme_boy"], b["sikistirma"], b["ongorucu"])
+        a = doseme_coz(ham, s["doseme_en"], s["doseme_boy"], s["sikistirma"], s["ongorucu"])
         with self._kilit:
             self._bloklar[anahtar] = a
             while len(self._bloklar) > 12:
@@ -175,40 +185,50 @@ class Yukseklik:
         """Kutuyu (ve çevresinde PAY kadar noktayı) kaplayan yükseklik ızgarası.
 
         Dönüş: (dizi, bilgi). dizi[satır, sütun] metre (float32, kuzeyden güneye, batıdan doğuya; yoksa NaN).
-        bilgi: ilk noktanın boylamı/enlemi ("bati", "kuzey"), nokta aralığı ("adim", derece), boyut,
-        denizde kalan yer var mı ("eksik") ve bu istekte indirilen bayt ("indirilen").
+        bilgi: ilk noktanın boylamı/enlemi ("bati", "kuzey"), nokta aralığı ("adim", derece), boyut, küçültme
+        katı ("kat": 1 tam çözünürlük), denizde kalan yer var mı ("eksik") ve bu istekte indirilen bayt.
         """
         n = self.hucre
-        i0, i1 = math.floor((90 - kuzey) * n) - PAY, math.ceil((90 - guney) * n) + PAY
-        j0, j1 = math.floor((bati + 180) * n) - PAY, math.ceil((dogu + 180) * n) + PAY
-        boy, en = i1 - i0 + 1, j1 - j0 + 1
-        if boy * en > EN_COK_HUCRE:
-            raise ValueError("Bölge çok büyük: yükseklik en fazla ~45 km x 45 km'lik bölge için hesaplanır.")
+        for f in KATLAR:  # sığan en ince seviye
+            kay = (f - 1) / 2  # küçültülmüş noktanın tam çözünürlükteki yeri (nokta cinsinden)
+            i0 = math.floor(((90 - kuzey) * n - kay) / f) - PAY
+            i1 = math.ceil(((90 - guney) * n - kay) / f) + PAY
+            j0 = math.floor(((bati + 180) * n - kay) / f) - PAY
+            j1 = math.ceil(((dogu + 180) * n - kay) / f) + PAY
+            boy, en = i1 - i0 + 1, j1 - j0 + 1
+            if boy * en <= EN_COK_HUCRE:
+                break
+        else:
+            raise ValueError("Bölge çok büyük: yükseklik en fazla ~300 km x 300 km'lik bölge için hesaplanır.")
+        seviye, m = KATLAR.index(f), n // f  # m: bu seviyede karenin kenarındaki nokta
         dizi = np.full((boy, en), np.nan, dtype=np.float32)
         sayac = [0]
         eksik = False
-        for ti in range(i0 // n, i1 // n + 1):
-            for tj in range(j0 // n, j1 // n + 1):
+        for ti in range(i0 // m, i1 // m + 1):
+            for tj in range(j0 // m, j1 // m + 1):
                 ad = dosya_adi(89 - ti, tj - 180)  # karenin kuzeyi 90 - ti
                 b = self._baslik(ad, sayac)
                 # Bu karedeki satır/sütun aralığı (karenin içinde)
-                r0, r1 = max(i0, ti * n) - ti * n, min(i1, ti * n + n - 1) - ti * n
-                c0, c1 = max(j0, tj * n) - tj * n, min(j1, tj * n + n - 1) - tj * n
+                r0, r1 = max(i0, ti * m) - ti * m, min(i1, ti * m + m - 1) - ti * m
+                c0, c1 = max(j0, tj * m) - tj * m, min(j1, tj * m + m - 1) - tj * m
                 if b.get("yok"):
                     eksik = True
                     continue
                 if abs(b["kose"][0] - (tj - 180)) > 1e-9 or abs(b["kose"][1] - (90 - ti)) > 1e-9:
                     raise ValueError("Yükseklik dosyasının konumu beklenenden farklı.")
-                dw, dh = b["doseme_en"], b["doseme_boy"]
-                yan = math.ceil(b["en"] / dw)
+                if seviye >= len(b["seviyeler"]) or b["seviyeler"][seviye]["en"] != m:
+                    raise ValueError("Bu büyüklükte bölge için yükseklik verisi yok; daha küçük bir bölge seç.")
+                s = b["seviyeler"][seviye]
+                dw, dh = s["doseme_en"], s["doseme_boy"]
+                yan = math.ceil(s["en"] / dw)
                 for bi in range(r0 // dh, r1 // dh + 1):
                     for bj in range(c0 // dw, c1 // dw + 1):
-                        a = self._doseme(ad, b, bi * yan + bj, sayac)
+                        a = self._doseme(ad, s, seviye, bi * yan + bj, sayac)
                         rr0, rr1 = max(r0, bi * dh), min(r1, bi * dh + dh - 1)
                         cc0, cc1 = max(c0, bj * dw), min(c1, bj * dw + dw - 1)
-                        dizi[ti * n + rr0 - i0:ti * n + rr1 - i0 + 1, tj * n + cc0 - j0:tj * n + cc1 - j0 + 1] = \
+                        dizi[ti * m + rr0 - i0:ti * m + rr1 - i0 + 1, tj * m + cc0 - j0:tj * m + cc1 - j0 + 1] = \
                             a[rr0 - bi * dh:rr1 - bi * dh + 1, cc0 - bj * dw:cc1 - bj * dw + 1]
         # Copernicus denizi 0 m düz yazar; dosyası olmayan kareler NaN
-        bilgi = {"bati": j0 / n - 180, "kuzey": 90 - i0 / n, "adim": 1 / n, "en": en, "boy": boy,
-                 "eksik": eksik or bool(np.isnan(dizi).any()), "indirilen": sayac[0]}
+        bilgi = {"bati": (j0 * f + kay) / n - 180, "kuzey": 90 - (i0 * f + kay) / n, "adim": f / n, "kat": f,
+                 "en": en, "boy": boy, "eksik": eksik or bool(np.isnan(dizi).any()), "indirilen": sayac[0]}
         return dizi, bilgi

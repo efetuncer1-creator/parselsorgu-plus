@@ -6,6 +6,7 @@ import math
 import struct
 import tempfile
 import unittest
+import unittest.mock
 import zlib
 from pathlib import Path
 
@@ -30,39 +31,55 @@ def sikistir(a):
     return zlib.compress(fark.tobytes())
 
 
-def tiff(bati, kuzey):
-    """Kuzey-batı köşesi (bati, kuzey) olan 1°x1° dosya."""
-    a = np.fromfunction(deger, (N, N), dtype=np.float64).astype(np.float32)
-    dosemeler = [sikistir(a[i:i + DOSEME, j:j + DOSEME]) for i in range(0, N, DOSEME) for j in range(0, N, DOSEME)]
+def tiff(bati, kuzey, katlar=(1, 2)):
+    """Kuzey-batı köşesi (bati, kuzey) olan 1°x1° dosya; tam çözünürlük ve küçültülmüş kopyalar (IFD zinciri).
+    Küçültülmüş noktanın değeri, kapladığı f x f noktanın ortasındaki değer (deger doğrusal: ortalamayla aynı)."""
+    seviyeler = []
+    for f in katlar:
+        m = N // f
+        a = np.fromfunction(lambda r, c: deger(r * f + (f - 1) / 2, c * f + (f - 1) / 2), (m, m), dtype=np.float64).astype(np.float32)
+        d = min(DOSEME, m)
+        seviyeler.append((m, d, [sikistir(a[i:i + d, j:j + d]) for i in range(0, m, d) for j in range(0, m, d)]))
     geo = [1, 1, 0, 3, 1024, 0, 1, 2, 1025, 0, 1, 2, 2048, 0, 1, 4326]
-    dis = {  # etiket -> (tür, değerler); 4 bayta sığmayanlar IFD'den sonra yazılır
-        256: (3, [N]), 257: (3, [N]), 258: (3, [32]), 259: (3, [8]), 317: (3, [3]), 322: (3, [DOSEME]), 323: (3, [DOSEME]),
-        324: (4, [0] * len(dosemeler)), 325: (4, [len(d) for d in dosemeler]), 339: (3, [3]),
-        33550: (12, [1 / N, 1 / N, 0.0]), 33922: (12, [0.0, 0.0, 0.0, bati, kuzey, 0.0]), 34735: (3, geo),
-    }
     bic = {3: "H", 4: "I", 12: "d"}
-    ifd = 8
-    veri_yeri = ifd + 2 + len(dis) * 12 + 4
-    ekler, girdiler = b"", []
-    for etiket, (tur, d) in sorted(dis.items()):
-        ham = struct.pack("<" + bic[tur] * len(d), *d)
-        if len(ham) <= 4:
-            girdiler.append((etiket, tur, len(d), ham.ljust(4, b"\0"), None))
-        else:
-            girdiler.append((etiket, tur, len(d), None, veri_yeri + len(ekler)))
-            ekler += ham
-    doseme_yeri = veri_yeri + len(ekler)
-    ofsetler, yer = [], doseme_yeri
-    for d in dosemeler:
-        ofsetler.append(yer)
-        yer += len(d)
-    # 324'ün değerleri (ofsetler) artık belli
-    i324 = [g[0] for g in girdiler].index(324)
-    ekler = ekler[:girdiler[i324][4] - veri_yeri] + struct.pack(f"<{len(ofsetler)}I", *ofsetler) + ekler[girdiler[i324][4] - veri_yeri + 4 * len(ofsetler):]
-    v = b"II*\0" + struct.pack("<I", ifd) + struct.pack("<H", len(girdiler))
-    for etiket, tur, sayi, ham, yer_ in girdiler:
-        v += struct.pack("<HHI", etiket, tur, sayi) + (ham if ham is not None else struct.pack("<I", yer_))
-    return v + struct.pack("<I", 0) + ekler + b"".join(dosemeler)
+
+    def girdiler(seviye, ofsetler, ilk):
+        m, d, dosemeler = seviye
+        g = {256: (3, [m]), 257: (3, [m]), 258: (3, [32]), 259: (3, [8]), 317: (3, [3]), 322: (3, [d]), 323: (3, [d]),
+             324: (4, ofsetler), 325: (4, [len(x) for x in dosemeler]), 339: (3, [3])}
+        if ilk:
+            g.update({33550: (12, [1 / N, 1 / N, 0.0]), 33922: (12, [0.0, 0.0, 0.0, bati, kuzey, 0.0]), 34735: (3, geo)})
+        return g
+
+    def ifd(g, yer, sonraki):
+        """yer'de başlayan IFD ve hemen ardından 4 bayta sığmayan değerleri."""
+        veri_yeri = yer + 2 + len(g) * 12 + 4
+        govde, ekler = b"", b""
+        for etiket, (tur, d) in sorted(g.items()):
+            ham = struct.pack("<" + bic[tur] * len(d), *d)
+            govde += struct.pack("<HHI", etiket, tur, len(d))
+            if len(ham) <= 4:
+                govde += ham.ljust(4, b"\0")
+            else:
+                govde += struct.pack("<I", veri_yeri + len(ekler))
+                ekler += ham
+        return struct.pack("<H", len(g)) + govde + struct.pack("<I", sonraki) + ekler
+
+    # Önce IFD'lerin yeri (uzunlukları ofsetlerin değerine bağlı değil), sonra döşemelerin yeri
+    yerler, yer = [], 8
+    for i, s in enumerate(seviyeler):
+        yerler.append(yer)
+        yer += len(ifd(girdiler(s, [0] * len(s[2]), i == 0), 0, 0))
+    ofsetler = []
+    for s in seviyeler:
+        ofsetler.append([])
+        for x in s[2]:
+            ofsetler[-1].append(yer)
+            yer += len(x)
+    v = b"II*\0" + struct.pack("<I", 8)
+    for i, s in enumerate(seviyeler):
+        v += ifd(girdiler(s, ofsetler[i], i == 0), yerler[i], yerler[i + 1] if i + 1 < len(yerler) else 0)
+    return v + b"".join(x for s in seviyeler for x in s[2])
 
 
 class SahteKaynak:
@@ -139,7 +156,38 @@ class YukseklikTest(unittest.TestCase):
     def test_cok_buyuk_bolge(self):
         y = yukseklik.Yukseklik(self.klasor.name, aralik=kaynak())
         with self.assertRaises(ValueError):
-            y.izgara(30.0, 37.0, 31.0, 38.0)
+            y.izgara(30.0, 36.0, 35.0, 41.0)  # gerçek çözünürlükte 8 kat küçültülse de 1500 noktayı aşar
+
+    def test_buyuk_bolgede_kucultulmus_kopya(self):
+        k = kaynak((37, 32))
+        with unittest.mock.patch.object(yukseklik, "EN_COK_HUCRE", 120):  # tam çözünürlükte 13x13 nokta sığmaz
+            dizi, bilgi = self.yeni(k).izgara(32.0, 37.0, 33.0, 38.0)
+        self.assertEqual(bilgi["kat"], 2)
+        self.assertAlmostEqual(bilgi["adim"], 2 / N)
+        self.assertLessEqual(bilgi["en"] * bilgi["boy"], 120)
+        dolu = 0
+        for i in range(bilgi["boy"]):
+            for j in range(bilgi["en"]):
+                enlem, boylam = bilgi["kuzey"] - i * bilgi["adim"], bilgi["bati"] + j * bilgi["adim"]
+                if 37 < enlem < 38 and 32 < boylam < 33:  # karenin içi; çevresi dosyası olmayan kareler
+                    dolu += 1
+                    self.assertAlmostEqual(float(dizi[i, j]), deger((38 - enlem) * N, (boylam - 32) * N), places=3)
+                else:
+                    self.assertTrue(np.isnan(dizi[i, j]))
+        self.assertEqual(dolu, (N // 2) ** 2)
+        self.assertTrue((Path(self.klasor.name) / yukseklik.dosya_adi(37, 32) / "s1-0.bin").is_file())
+
+    def test_eski_baslik_yeniden_okunur(self):
+        self.yeni(kaynak((37, 32))).izgara(32.3, 37.4, 32.6, 37.7)
+        yol = Path(self.klasor.name) / yukseklik.dosya_adi(37, 32) / "baslik.json"
+        b = json.loads(yol.read_text(encoding="utf-8"))
+        del b["surum"]
+        yol.write_text(json.dumps(b), encoding="utf-8")
+        k = kaynak((37, 32))
+        dizi, bilgi = self.yeni(k).izgara(32.3, 37.4, 32.6, 37.7)
+        self.assertGreater(k.istekler, 0)  # başlık yeniden indirildi; döşemeler diskten
+        self.assertEqual(json.loads(yol.read_text(encoding="utf-8"))["surum"], yukseklik.BASLIK_SURUMU)
+        self.assertFalse(np.isnan(dizi).any())
 
     def test_uc(self):
         from parselapp.server import Hata, Uygulama
