@@ -50,6 +50,7 @@
     <symbol id="i-ok" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-tik" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="i-gorsel" viewBox="0 0 24 24"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+    <symbol id="i-analiz" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></symbol>
     <symbol id="i-kaydet" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
     <symbol id="i-yazici" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
     <symbol id="i-cerceve" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1" stroke-dasharray="2.5 2"/></symbol>
@@ -76,6 +77,10 @@
     <button type="button" role="tab" id="sekme-alan" data-sekme="alan" aria-controls="panel-alan" aria-selected="false">
       <svg class="ikon"><use href="#i-alan"/></svg>
       <span>Alan</span>
+    </button>
+    <button type="button" role="tab" id="sekme-analiz" data-sekme="analiz" aria-controls="panel-analiz" aria-selected="false">
+      <svg class="ikon"><use href="#i-analiz"/></svg>
+      <span>Analiz</span>
     </button>
     <button type="button" role="tab" id="sekme-gorsel" data-sekme="gorsel" aria-controls="panel-gorsel" aria-selected="false">
       <svg class="ikon"><use href="#i-gorsel"/></svg>
@@ -308,7 +313,67 @@
         <div class="yuva" data-yuva="alan"></div>
       </section>
 
-      <!-- ===================== Sayfa 3: Alanların görünümü ===================== -->
+      <!-- ===================== Sayfa 3: Parsel analizi ===================== -->
+      <section class="panel" id="panel-analiz" role="tabpanel" aria-labelledby="sekme-analiz" hidden>
+        <div class="kutu">
+          <div class="kutu-baslik"><h2>Kapsam</h2></div>
+          <div class="form">
+            <div class="bolumlu" role="radiogroup" aria-label="Hangi parseller">
+              <label><input type="radio" name="analizKapsam" value="kesisen"><span>Alana değen</span></label>
+              <label><input type="radio" name="analizKapsam" value="icinde"><span>Alan içi</span></label>
+              <label><input type="radio" name="analizKapsam" value="secili"><span>Seçili</span></label>
+              <label><input type="radio" name="analizKapsam" value="tumu"><span>Tümü</span></label>
+            </div>
+            <div class="grup" id="analizAlanSatiri">
+              <div class="satir-alan secici"><span id="analizAlan-etiket">Alan</span>
+                <button type="button" class="secici-dugme" id="analizAlan-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="analizAlan-etiket analizAlan-dugme"><span class="secici-deger"></span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+                <select id="analizAlan" class="gizli-secim" tabindex="-1" aria-hidden="true"></select>
+              </div>
+            </div>
+            <p id="analizOzet" class="analiz-ozet" aria-live="polite"></p>
+          </div>
+          <div id="analizBos" class="bos-durum" hidden>
+            <svg class="ikon ikon-buyuk" aria-hidden="true"><use href="#i-analiz"/></svg>
+            <p>Listede parsel yok</p>
+            <span>Parsel sekmesinde sorgula, içe aktar ya da alanı tara; analiz buradan çıkar.</span>
+          </div>
+        </div>
+
+        <div class="kutu" id="analizNitelikKutu" hidden>
+          <div class="kutu-baslik"><h2>Parsel türleri</h2></div>
+          <div id="analizNitelik"></div>
+          <div class="arac-cubugu analiz-eylemleri" data-tablo="nitelik">
+            <button type="button" class="metin-dugme" data-is="harita"><svg class="ikon"><use href="#i-harita"/></svg>Haritaya ekle</button>
+            <button type="button" class="metin-dugme" data-is="sayfa"><svg class="ikon"><use href="#i-yazici"/></svg>Sayfaya ekle</button>
+            <button type="button" class="metin-dugme" data-is="excel"><svg class="ikon"><use href="#i-tablo"/></svg>Excel</button>
+          </div>
+        </div>
+
+        <div class="kutu" id="analizParselKutu" hidden>
+          <div class="kutu-baslik"><h2>Ada/parsel tablosu <span id="analizParselAdet" class="rozet">0</span></h2></div>
+          <div class="sutun-secimi">
+            <div class="sutun-ust">
+              <p class="ayar-baslik">Sütunlar</p>
+              <div class="hazir-sutunlar">
+                <button type="button" class="metin-dugme" data-hazir="temel">Temel</button>
+                <button type="button" class="metin-dugme" data-hazir="konum">Konum</button>
+                <button type="button" class="metin-dugme" data-hazir="tumu">Tümü</button>
+              </div>
+            </div>
+            <div id="analizSutunlar" class="cipler" role="group" aria-label="Tablodaki sütunlar"></div>
+          </div>
+          <div id="analizParsel"></div>
+          <div class="arac-cubugu analiz-eylemleri" data-tablo="parsel">
+            <button type="button" class="metin-dugme" data-is="harita"><svg class="ikon"><use href="#i-harita"/></svg>Haritaya ekle</button>
+            <button type="button" class="metin-dugme" data-is="sayfa"><svg class="ikon"><use href="#i-yazici"/></svg>Sayfaya ekle</button>
+            <button type="button" class="metin-dugme" data-is="excel"><svg class="ikon"><use href="#i-tablo"/></svg>Excel</button>
+          </div>
+        </div>
+
+        <button type="button" id="analizExcel" class="dugme ana genis" hidden><svg class="ikon"><use href="#i-indir"/></svg>İki tabloyu Excel olarak indir</button>
+      </section>
+
+      <!-- ===================== Sayfa 4: Alanların görünümü ===================== -->
       <section class="panel" id="panel-gorsel" role="tabpanel" aria-labelledby="sekme-gorsel" hidden>
         <div class="kutu" id="projeKutu">
           <div class="kutu-baslik"><h2>Proje</h2><span id="projeDurum" class="ikincil-metin" aria-live="polite"></span></div>
@@ -490,7 +555,7 @@
         </div>
       </section>
 
-      <!-- ===================== Sayfa 4: Çıktı ===================== -->
+      <!-- ===================== Sayfa 5: Çıktı ===================== -->
       <section class="panel" id="panel-cikti" role="tabpanel" aria-labelledby="sekme-cikti" hidden>
         <div class="kutu">
           <div class="kutu-baslik"><h2>Sayfa</h2></div>
@@ -663,5 +728,6 @@
   <script src="app.js"></script>
   <script src="cikti.js"></script>
   <script src="proje.js"></script>
+  <script src="analiz.js"></script>
 </body>
 </html>

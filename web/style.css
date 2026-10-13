@@ -1146,9 +1146,9 @@ body:not(.gorsel-acik) .not-katmani, body:not(.gorsel-acik) .not-katmani * { poi
 .onizleme-kutu { position: absolute; cursor: move; border-radius: var(--r-xs); outline: 1.5px dashed transparent; outline-offset: 2px; touch-action: none; }
 .onizleme-kutu:hover, .onizleme-kutu.suruklenen { outline-color: var(--vurgu); background: var(--vurgu-zayif); }
 
-/* Dört sekme telefonda kenarlara değmesin */
+/* Beş sekme telefonda sığsın: ikon üstte, ad altta */
 @media (max-width: 760px) {
-  .sekmeler [role=tab] { padding: var(--b-2) var(--b-3); }
+  .sekmeler [role=tab] { flex-direction: column; gap: var(--b-yarim); padding: var(--b-1-5) var(--b-2-5); font-size: 10.5px; }
 }
 /* Önizlemede boyut tutamacı: kutunun sağ alt köşesi; üzerine gelince görünür */
 .onizleme-tutamac {
@@ -1166,3 +1166,21 @@ body:not(.gorsel-acik) .not-katmani, body:not(.gorsel-acik) .not-katmani * { poi
 .canli-sayfa .onizleme-tuval { position: absolute; inset: 0; }
 .canli-sayfa .onizleme-kutu { pointer-events: auto; }
 body.cikti-sayfasi .lejant { display: none; }
+
+/* ---- Analiz sekmesi ------------------------------------------------------------ */
+.analiz-ozet { font: var(--t-vurgulu); }
+.analiz-tablo-kap { overflow-x: auto; margin: 0 calc(var(--b-1) * -1); padding: 0 var(--b-1); scrollbar-width: thin; }
+.analiz-tablo { width: 100%; border-collapse: collapse; font: var(--t-kucuk); font-variant-numeric: tabular-nums; }
+.analiz-tablo :is(th, td) { padding: var(--b-1-5) var(--b-1-5); text-align: left; white-space: nowrap; }
+.analiz-tablo :is(th, td).sag { text-align: right; }
+.analiz-tablo thead th { font-weight: 600; color: var(--metin-2); box-shadow: inset 0 -1px 0 var(--ayrac); }
+.analiz-tablo tbody tr + tr td { box-shadow: inset 0 1px 0 var(--ayrac); }
+.analiz-tablo tfoot th { font-weight: 650; box-shadow: inset 0 1px 0 var(--metin-3); }
+.analiz-tablo .pay-zemin { background: linear-gradient(to right, var(--vurgu-zayif) var(--pay), transparent var(--pay)); border-radius: var(--r-xs); }
+.analiz-eylemleri { margin: var(--b-2-5) -4px 0; flex-wrap: wrap; }
+.sutun-secimi { display: flex; flex-direction: column; gap: var(--b-2); margin-bottom: var(--b-3); }
+.sutun-ust { display: flex; align-items: center; justify-content: space-between; gap: var(--b-2); }
+.sutun-ust .ayar-baslik { margin: 0; }
+.hazir-sutunlar { display: flex; gap: var(--b-yarim); }
+.cip.secilebilir { padding: 0 var(--b-2-5); color: var(--metin-2); }
+.cip.secilebilir[aria-pressed=true] { background: var(--vurgu-zayif); color: var(--vurgu-metin); box-shadow: inset 0 0 0 1px var(--vurgu-metin); }

@@ -430,7 +430,7 @@ async function parselGuncelle(key, buton) {
 
 // ---- sekmeler ------------------------------------------------------------------
 
-const SAYFALAR = { parsel: "Parsel sorgu", alan: "Alandan parsel tespiti", gorsel: "Alan görünümü", cikti: "Çıktı al" };
+const SAYFALAR = { parsel: "Parsel sorgu", alan: "Alandan parsel tespiti", analiz: "Parsel analizi", gorsel: "Alan görünümü", cikti: "Çıktı al" };
 
 function sekmeAc(ad) {
   document.querySelectorAll("[role=tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.sekme === ad));
@@ -469,6 +469,7 @@ function listeCiz() {
   $("seciliAdet").textContent = durum.secili.size ? `${durum.secili.size} seçili` : "";
   disaSecenekleriGuncelle();
   seciliBarGuncelle();
+  document.dispatchEvent(new Event("parseller")); // analiz.js: liste ya da seçim değişti
   if (!liste.length) {
     ul.innerHTML = durum.parseller.size
       ? `<li class="bos"><div class="bos-durum">${ikon("ara", "ikon ikon-buyuk")}<p>Eşleşen parsel yok</p><span>Aramayı kısalt ya da başka bir kelime dene.</span></div></li>`
@@ -639,7 +640,7 @@ $("ilce").addEventListener("change", async () => {
 // Uzun listelerde (il/ilçe/mahalle) yazarak arama vardır; kısa listelerde arama kutusu gizlenir.
 
 const SECICILER = ["il", "ilce", "mahalle"];
-const TUM_SECICILER = [...SECICILER, "sistem", "dilim", "hesapKatmani", "ciktiOlcek"];
+const TUM_SECICILER = [...SECICILER, "sistem", "dilim", "hesapKatmani", "ciktiOlcek", "analizAlan"];
 const secici = { acik: null, aktif: 0, gorunen: [], sonraki: null, odak: null };
 
 function seciciEsitle(ad) {

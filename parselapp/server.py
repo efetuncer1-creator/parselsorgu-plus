@@ -8,6 +8,7 @@ import argparse
 import json
 import mimetypes
 import os
+import re
 import sys
 import threading
 import webbrowser
@@ -86,6 +87,14 @@ class Uygulama:
                     return ice_aktar(self.store, ad, govde, basliklar.get("X-Dosya-Tarih") or None)
                 except Exception as e:
                     raise Hata(HTTPStatus.BAD_REQUEST, f"{ad} okunamadı: {e}") from e
+            case ("POST", ["tablo-excel"]):
+                g = _json(govde)
+                try:
+                    veri = exporters.tablo_excel(g.get("sayfalar"))
+                except ValueError as e:
+                    raise Hata(HTTPStatus.BAD_REQUEST, str(e)) from e
+                ad = re.sub(r'[\\/:*?"<>|]+', "-", str(g.get("dosyaAdi") or "analiz"))[:80] or "analiz"
+                return _Dosya(veri, f"{ad}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             case ("POST", ["disa-aktar"]):
                 return self._disa_aktar(_json(govde))
             case ("GET", ["referanslar"]):
@@ -125,6 +134,13 @@ class Uygulama:
                 if "parsel" in sonuc:
                     sonuc["parsel"] = ozellik(sonuc["parsel"])
                 return sonuc
+            case ("POST", ["referanslar", ref_id, "alan-ici"]):
+                # Analiz sekmesi: alana değen (ya da kapsam "icinde" ise tamamen içinde kalan) parsellerin
+                # alan içindeki m² ve oranı; eşikler alan özetindekilerle aynı.
+                g = _json(govde)
+                esik = referans.ICINDE_ORAN if g.get("kapsam") == "icinde" else referans.KESISEN_ORAN
+                sonuc = self._analiz(analiz.alan_ici_m2, self._referans_al(ref_id), self.store.listele(g.get("keys") or []))
+                return {k: [round(m2, 2), round(oran, 4)] for k, (m2, oran) in sonuc.items() if oran >= esik}
             case ("POST", ["referanslar", ref_id, "tarama-sifirla"]):
                 self.store.referans_tarama_sifirla(int(ref_id))
                 return self._referans_al(ref_id)

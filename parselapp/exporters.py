@@ -288,3 +288,64 @@ def _sayi(s):
         return int(s)
     except (TypeError, ValueError):
         return s
+
+
+# ---- analiz tabloları (Analiz sekmesi) ---------------------------------------------
+
+TABLO_TURLERI = {"metin": None, "kod": None, "sayi": "#,##0.00", "tamsayi": "#,##0", "yuzde": "0.0%"}
+_SAYFA_ADI_YASAK = re.compile(r"[\[\]:*?/\\]")
+
+
+def tablo_excel(sayfalar):
+    """Analiz sekmesinin tabloları: her biri bir çalışma sayfası.
+
+    sayfalar: [{"ad", "sutunlar": [{"ad", "tur"}], "satirlar": [[değer...]], "toplam": [değer...] (isteğe bağlı)}].
+    tur: metin | kod (ada/parsel gibi; sayıysa sayı olarak yazılır) | sayi | tamsayi | yuzde (0-1 arası oran).
+    """
+    if not isinstance(sayfalar, list) or not 1 <= len(sayfalar) <= 10:
+        raise ValueError("Excel'e yazılacak tablo yok.")
+    wb = Workbook()
+    wb.remove(wb.active)
+    adlar = set()
+    for s in sayfalar:
+        sutunlar = s.get("sutunlar") if isinstance(s, dict) else None
+        satirlar = s.get("satirlar") if isinstance(s, dict) else None
+        if not (isinstance(sutunlar, list) and sutunlar and isinstance(satirlar, list) and len(satirlar) <= 100000
+                and all(isinstance(c, dict) and c.get("tur") in TABLO_TURLERI for c in sutunlar)
+                and all(isinstance(r, list) and len(r) == len(sutunlar) for r in satirlar + ([s["toplam"]] if s.get("toplam") else []))):
+            raise ValueError("Tablo okunamadı.")
+        ad = _SAYFA_ADI_YASAK.sub("-", str(s.get("ad") or "Tablo"))[:31] or "Tablo"
+        while ad in adlar:
+            ad = f"{ad[:28]} {len(adlar) + 1}"
+        adlar.add(ad)
+        ws = wb.create_sheet(ad)
+        _baslik_yaz(ws, 1, [str(c.get("ad") or "") for c in sutunlar])
+
+        def hucre(deger, tur):
+            if deger is None or isinstance(deger, bool):
+                return None
+            if tur == "kod":
+                return _sayi(deger)
+            if tur in ("sayi", "tamsayi", "yuzde"):
+                return deger if isinstance(deger, (int, float)) else None
+            return str(deger)
+
+        for r in satirlar:
+            ws.append([hucre(v, c["tur"]) for v, c in zip(r, sutunlar)])
+        son = len(satirlar) + 1
+        if s.get("toplam"):
+            ws.append([hucre(v, c["tur"]) for v, c in zip(s["toplam"], sutunlar)])
+            for hc in ws[son + 1]:
+                hc.font = Font(bold=True)
+        for i, c in enumerate(sutunlar, 1):
+            bicim = TABLO_TURLERI[c["tur"]]
+            if bicim:
+                for satir in ws.iter_rows(min_row=2, min_col=i, max_col=i):
+                    satir[0].number_format = bicim
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = f"A1:{get_column_letter(len(sutunlar))}{son}"
+        enler = [max([len(str(c.get("ad") or ""))] + [len(str(r[i])) for r in satirlar if r[i] is not None]) for i, c in enumerate(sutunlar)]
+        _genislik(ws, [min(50, max(8, e + 3)) for e in enler])
+    tampon = io.BytesIO()
+    wb.save(tampon)
+    return tampon.getvalue()

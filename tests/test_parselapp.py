@@ -231,6 +231,52 @@ class ProjeTest(GeciciStore):
         self.assertEqual(uyg.store.listele()[0]["nitelik"], "Eski")
 
 
+class AnalizTest(GeciciStore):
+    def test_alan_ici_ucu(self):
+        from parselapp.server import Uygulama
+        ice_aktar(self.store, "alan_yoneticisi.kml", oku("alan_yoneticisi.kml"))
+        uyg = Uygulama(self.store)
+        ref_id = str(self.store.referans_ekle("OSB", "#bf5af2", referans.dosya_oku("osb_sinir.kml", oku("osb_sinir.kml"))))
+        anahtar = {p["parsel"]: p["key"] for p in self.store.listele()}
+        r = uyg.yonlendir("POST", ["referanslar", ref_id, "alan-ici"], json.dumps({"keys": list(anahtar.values())}).encode(), {})
+        self.assertEqual(set(r), {anahtar["5"], anahtar["1"]})  # 12/7 alana değmiyor
+        m2, oran = r[anahtar["5"]]
+        self.assertGreater(m2, 0)
+        self.assertGreaterEqual(oran, 0.98)
+        icinde = uyg.yonlendir("POST", ["referanslar", ref_id, "alan-ici"],
+                               json.dumps({"keys": list(anahtar.values()), "kapsam": "icinde"}).encode(), {})
+        self.assertEqual(set(icinde), {anahtar["5"]})  # 13/1 alana kısmen giriyor
+
+    def test_tablo_excel(self):
+        from parselapp.server import Uygulama
+        uyg = Uygulama(self.store)
+        sayfalar = [
+            {"ad": "Parsel türleri", "sutunlar": [{"ad": "Nitelik", "tur": "metin"}, {"ad": "Adet", "tur": "tamsayi"},
+                                                  {"ad": "Alan (m²)", "tur": "sayi"}, {"ad": "Oran", "tur": "yuzde"}],
+             "satirlar": [["Tarla", 3, 12683.71, 0.75], ["Bahçe", 1, 4200.5, 0.25]], "toplam": ["Toplam", 4, 16884.21, 1]},
+            {"ad": "Parseller: 1/2", "sutunlar": [{"ad": "Ada", "tur": "kod"}, {"ad": "Parsel", "tur": "kod"}],
+             "satirlar": [["512", "15"], ["513", "2a"]]},
+        ]
+        dosya = uyg.yonlendir("POST", ["tablo-excel"], json.dumps({"sayfalar": sayfalar, "dosyaAdi": "Çumra/analiz"}).encode(), {})
+        self.assertEqual(dosya.ad, "Çumra-analiz.xlsx")
+        kitap = load_workbook(io.BytesIO(dosya.veri))
+        self.assertEqual(kitap.sheetnames, ["Parsel türleri", "Parseller- 1-2"])
+        s = kitap["Parsel türleri"]
+        self.assertEqual([c.value for c in s[2]], ["Tarla", 3, 12683.71, 0.75])
+        self.assertEqual(s["C2"].number_format, "#,##0.00")
+        self.assertEqual(s["D2"].number_format, "0.0%")
+        self.assertTrue(s["A4"].font.bold)
+        self.assertEqual([c.value for c in kitap["Parseller- 1-2"][3]], [513, "2a"])  # sayı olan kod sayıya döner
+
+    def test_tablo_excel_bozuk(self):
+        from parselapp.server import Hata, Uygulama
+        uyg = Uygulama(self.store)
+        for sayfalar in (None, [], [{"ad": "x", "sutunlar": [{"ad": "a", "tur": "renk"}], "satirlar": []}],
+                         [{"ad": "x", "sutunlar": [{"ad": "a", "tur": "metin"}], "satirlar": [["1", "2"]]}]):
+            with self.subTest(sayfalar=sayfalar), self.assertRaises(Hata):
+                uyg.yonlendir("POST", ["tablo-excel"], json.dumps({"sayfalar": sayfalar}).encode(), {})
+
+
 class IzgaraTest(unittest.TestCase):
     def test_izgara(self):
         # Çumra çevresinde ~1,2 km x 1,5 km
