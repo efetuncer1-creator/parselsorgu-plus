@@ -1344,7 +1344,6 @@ body.cikti-sayfasi .lejant { display: none; }
 .kesit-dolgu { fill: var(--vurgu-zayif); stroke: none; }
 .kesit-cizgi { fill: none; stroke: var(--vurgu-metin); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .kesit-uc { font-weight: 700; fill: var(--metin); }
-.kesit-birim { fill: var(--metin-3); }
 .kesit-yuzey { fill: transparent; cursor: crosshair; }
 .kesit-imlec line { stroke: var(--metin-2); stroke-width: 1; stroke-dasharray: 3 3; }
 .kesit-imlec circle { fill: var(--vurgu-metin); stroke: var(--kutu-ust); stroke-width: 1.5; }

@@ -674,19 +674,19 @@ function kesitOzeti(o, pencere = 30) {
 function kesitCiz() {
   const o = kesit.ornekler, z = kesitOzeti(o, kesit.pencere);
   if (z.gecerli.length < 2) { $("kesitSonuc").innerHTML = `<p class="ikincil-metin">Bu hatta yükseklik verisi yok.</p>`; return; }
-  const E = 320, B = 150, sol = 44, sag = 8, ust = 10, alt = 22;
+  const E = 320, B = 150, sol = 50, sag = 8, ust = 10, alt = 22;
   const yAlt = Math.floor(z.enAz - Math.max(1, (z.enCok - z.enAz) * 0.1)), yUst = Math.ceil(z.enCok + Math.max(1, (z.enCok - z.enAz) * 0.1));
   const x = (d) => sol + (d / z.uzunluk) * (E - sol - sag), y = (k) => ust + ((yUst - k) / (yUst - yAlt)) * (B - ust - alt);
   const cizgi = z.gecerli.map((q, i) => `${i ? "L" : "M"}${x(q.d).toFixed(1)} ${y(q.kot).toFixed(1)}`).join("");
   const dolgu = `${cizgi}L${x(z.gecerli.at(-1).d).toFixed(1)} ${B - alt}L${x(z.gecerli[0].d).toFixed(1)} ${B - alt}Z`;
-  const yEt = [yUst, (yUst + yAlt) / 2, yAlt].map((k) => `<text x="${sol - 6}" y="${y(k)}" text-anchor="end" dominant-baseline="central">${sayi(k, 0)}</text>`
+  const yEt = [yUst, (yUst + yAlt) / 2, yAlt].map((k, i) => `<text x="${sol - 6}" y="${y(k)}" text-anchor="end" dominant-baseline="central">${sayi(k, 0)}${i ? "" : " m"}</text>`
     + `<line x1="${sol}" x2="${E - sag}" y1="${y(k)}" y2="${y(k)}" class="kesit-izgara"/>`).join("");
   const xEt = [0, z.uzunluk / 2, z.uzunluk].map((d, i) => `<text x="${x(d)}" y="${B - 6}" text-anchor="${["start", "middle", "end"][i]}">${olcuUzunlugu(d)}</text>`).join("");
   const rakam = (ad, deger, genis = false) => `<div${genis ? ' class="genis"' : ""}><dt>${ad}</dt><dd>${deger}</dd></div>`;
   $("kesitSonuc").innerHTML = `
     <div class="kesit-grafik">
       <svg viewBox="0 0 ${E} ${B}" role="img" aria-label="${esc(`Kesit: ${olcuUzunlugu(z.uzunluk)}, kot ${sayi(z.enAz, 1)}–${sayi(z.enCok, 1)} m`)}">
-        ${yEt}<text x="${sol - 6}" y="${ust - 4}" text-anchor="end" class="kesit-birim">m</text>
+        ${yEt}
         <path d="${dolgu}" class="kesit-dolgu"/><path d="${cizgi}" class="kesit-cizgi"/>${xEt}
         <text x="${sol + 4}" y="${ust + 10}" class="kesit-uc">A</text><text x="${E - sag - 4}" y="${ust + 10}" text-anchor="end" class="kesit-uc">B</text>
         <g class="kesit-imlec" hidden><line y1="${ust}" y2="${B - alt}"/><circle r="3.5"/><text y="${ust + 2}"></text></g>
