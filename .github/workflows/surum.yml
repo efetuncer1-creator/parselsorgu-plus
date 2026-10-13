@@ -31,8 +31,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pyinstaller
 
+      # Düşen test olursa çıktının sonu uyarı olarak da yazılır: derleme kaydına giriş yapmadan da
+      # (GitHub'ın açık API'sinden) okunabilsin.
       - name: Testler
-        run: python -m unittest -v
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m unittest -v 2>&1 | tee test-ciktisi.txt && exit 0
+          ozet=$(tail -c 6000 test-ciktisi.txt | tr -d '\r' | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+          echo "::error title=Testler başarısız::$ozet"
+          exit 1
 
       # Uygulama kendi sürümünü bilsin: açılışta GitHub'daki son sürümle karşılaştırır. Elle çalıştırmada
       # (etiket yok) dosya olduğu gibi kalır; o derleme güncelleme denetlemez.
