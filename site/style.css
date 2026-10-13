@@ -145,15 +145,6 @@ html.lenis, html.lenis body { height: auto; }
   .rx-hero__yer { display: none; }
 }
 
-/* ---------- statement ---------- */
-.rx-statement { min-height: 100svh; display: grid; place-items: center; padding: 0 var(--rx-gutter); background: var(--rx-bg-layer-0); }
-.rx-statement__text {
-  margin: 0; text-align: center; max-width: 12ch;
-  font: var(--rx-font-weight-regular) min(calc(var(--rx-fs-20) * 1.4), calc(var(--rx-vh-unit) * 5.2)) / var(--rx-lh-100) var(--rx-font-display);
-  letter-spacing: var(--rx-ls-neg-150); text-transform: uppercase; color: var(--rx-text-header);
-}
-.rx-statement__text span { display: inline-block; }
-
 /* ---------- feature scenes ---------- */
 .rx-scene {
   display: grid; grid-template-columns: 1fr; gap: var(--rx-gap-500); align-items: center;

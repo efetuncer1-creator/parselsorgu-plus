@@ -45,13 +45,6 @@
     onEnter: () => nav.classList.add("is-solid"), onLeaveBack: () => nav.classList.remove("is-solid"),
   });
 
-  // ---- STATEMENT: words brighten one after another -------------------------------
-  const words = gsap.utils.toArray("[data-statement] span");
-  pinScene(document.querySelector("[data-statement]"), (tl) => {
-    tl.from(words, { autoAlpha: 0.12, scale: 0.86, yPercent: 20, stagger: 0.5, duration: 1 });
-    tl.to({}, { duration: 0.6 });
-  }, { length: "+=170%", mobileLength: "+=220%" });
-
   // ---- AREA SCENE: screen tilts flat while the counters fill ---------------------
   const counters = gsap.utils.toArray("[data-sayac]");
   const format = (el, v) => el.dataset.bicim === "yuzde"
