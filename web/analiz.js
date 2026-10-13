@@ -290,12 +290,15 @@ function analizTablosu(hangi) {
 }
 
 async function analizExcel(tablolar, buton) {
+  const s = analizDurumu.sonuc;
+  const dosyaAdi = `analiz-${s.alanli ? s.alan.ad : KAPSAM_ADI[analizDurumu.kapsam]}-${new Date().toISOString().slice(0, 10)}`;
+  const ad = `${guvenliAd(dosyaAdi)}.xlsx`;
+  const hedef = await kayitYeriSor(ad); // önce yer sorulur
+  if (hedef === false) return;
   yukleniyor(buton, true);
   try {
-    const s = analizDurumu.sonuc;
-    const dosyaAdi = `analiz-${s.alanli ? s.alan.ad : KAPSAM_ADI[analizDurumu.kapsam]}-${new Date().toISOString().slice(0, 10)}`;
     const r = await postJson("tablo-excel", { dosyaAdi, sayfalar: tablolar });
-    blobIndir(await r.blob(), `${dosyaAdi.replace(/[\\/:*?"<>|]+/g, "-")}.xlsx`);
+    await dosyaYaz(hedef, await r.blob(), ad);
   } catch (e) { mesaj(e.message, true); } finally { yukleniyor(buton, false); }
 }
 

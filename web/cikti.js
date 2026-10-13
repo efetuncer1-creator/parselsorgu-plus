@@ -773,22 +773,16 @@ function dosyaAdi(uzanti) {
   return `${ad}-${new Date().toISOString().slice(0, 10)}.${uzanti}`;
 }
 
-function blobIndir(blob, ad) {
-  const url = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement("a"), { href: url, download: ad });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
-  mesaj(`${ad} indirildi.`, "basari");
-}
-
+// Önce kaydedilecek yer sorulur (app.js kayitYeriSor), sayfa sonra çizilir.
 async function ciktiIndir(bicim, buton) {
+  const ad = dosyaAdi(bicim);
+  const hedef = await kayitYeriSor(ad);
+  if (hedef === false) return;
   yukleniyor(buton, true);
   try {
     const { tuval } = await sayfaCiz();
     if (bicim === "png") {
-      blobIndir(await new Promise((coz) => tuval.toBlob(coz, "image/png")), dosyaAdi("png"));
+      await dosyaYaz(hedef, await new Promise((coz) => tuval.toBlob(coz, "image/png")), ad);
     } else {
       const jsPDF = await jspdfYukle();
       const serbest = cikti.sablon === "serbest";
@@ -796,7 +790,7 @@ async function ciktiIndir(bicim, buton) {
         : [kagitDuzeni().en, kagitDuzeni().boy];
       const pdf = new jsPDF({ orientation: en > boy ? "landscape" : "portrait", unit: "mm", format: [en, boy], compress: true });
       pdf.addImage(tuval.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, en, boy);
-      blobIndir(pdf.output("blob"), dosyaAdi("pdf"));
+      await dosyaYaz(hedef, pdf.output("blob"), ad);
     }
   } catch (e) { mesaj(e.message, true); } finally { yukleniyor(buton, false); }
 }

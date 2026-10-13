@@ -15,9 +15,10 @@
         { "tur": "yeni", "metin": "Çıktı: seçilen alan ya da A4/A3 sayfa (yön, ölçek, 150/300 dpi); başlık ve tarih, lejant, kuzey oku ve ölçek, ITRF96/ED50 koordinat ızgarası; logo, tablo ve yazı. PNG ve PDF." },
         { "tur": "yeni", "metin": "Çıktı sayfası haritanın üstünde canlı görünür; başlık, lejant ve eklenenler orada ya da önizlemede sürüklenip köşeden büyütülür, küçültülür." },
         { "tur": "yeni", "metin": "Proje: bütün çalışma (parseller, alanlar, yazı, ok, görseller, lejant, çıktı düzeni) tek dosyaya kaydedilir ve açılır; başka bilgisayarda da TKGM'ye sorgu gitmez." },
-        { "tur": "yeni", "metin": "Analiz sekmesi: alandaki, seçili ya da listedeki parsellerin türleri (nitelik, adet, alan, pay) ve sütunları seçilebilen ada/parsel tablosu; Excel'e, haritaya ya da çıktı sayfasına eklenir." },
+        { "tur": "yeni", "metin": "Analiz sekmesi: alandaki, seçili ya da listedeki parsellerin türleri (nitelik, adet, alan, pay) ve sütunları seçilebilen ada/parsel tablosu; Excel'e, haritaya ya da çıktı sayfasına eklenir. Parsel türleri dilim grafiği olarak da gösterilir." },
         { "tur": "yeni", "metin": "Parseller niteliklerine göre renklendirilir; renkler değiştirilebilir, lejanta ve çıktıya yansır." },
         { "tur": "iyilestirme", "metin": "Ada/parsel numaraları ve alan adları haritada gösterilip gizlenebilir." },
+        { "tur": "iyilestirme", "metin": "Dışa aktarırken, çıktı alırken ve proje kaydederken dosyanın kaydedileceği klasör ve ad sorulur (Chrome, Edge)." },
         { "tur": "duzeltme", "metin": "Ağ klasöründeki dosyalar yüklenirken çıkan \"Failed to fetch\" hatası giderildi; bazı Excel dosyaları ve Türkçe CSV'ler artık doğru okunuyor." }
       ]
     },

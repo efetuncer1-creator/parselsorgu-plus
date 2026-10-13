@@ -106,16 +106,67 @@ async function dosyaIcerigi(f) {
 const postJson = (yol, govde) =>
   api(yol, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde) });
 
-async function indir(govde) {
-  const r = await postJson("disa-aktar", govde);
-  const ad = decodeURIComponent((r.headers.get("Content-Disposition") || "").split("''")[1] || "parseller");
-  const url = URL.createObjectURL(await r.blob());
+// ---- dosya kaydetme: yeri kullanıcı seçer ----------------------------------------------------------
+// Chrome ve Edge'de kaydetme penceresi açılır (klasör ve ad seçilir). Pencere tıklamanın hemen ardından
+// açılmalı (tarayıcı kuralı); bu yüzden önce yer sorulur, dosya sonra hazırlanıp oraya yazılır.
+// Pencereyi desteklemeyen tarayıcıda dosya İndirilenler klasörüne iner.
+const DOSYA_TURLERI = {
+  ".kml": ["KML (Google Earth)", "application/vnd.google-earth.kml+xml"],
+  ".zip": ["ZIP arşivi", "application/zip"],
+  ".xlsx": ["Excel çalışma kitabı", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  ".png": ["PNG görseli", "image/png"],
+  ".pdf": ["PDF belgesi", "application/pdf"],
+  ".parselsorgu": ["Parsel Sorgu + projesi", "application/json"],
+};
+const guvenliAd = (s) => String(s).replace(/[\\/:*?"<>|]+/g, "-").replace(/^[\s.-]+|[\s.-]+$/g, "") || "parsel";
+
+// Dönüş: dosya tutamacı; pencere yoksa (ya da açılamadıysa) null: indirilecek; vazgeçildiyse false.
+async function kayitYeriSor(ad) {
+  if (!window.showSaveFilePicker) return null;
+  const uzanti = (ad.match(/\.[^.]+$/) || [""])[0].toLowerCase();
+  const [aciklama, tur] = DOSYA_TURLERI[uzanti] || ["Dosya", "application/octet-stream"];
+  try {
+    return await showSaveFilePicker({ suggestedName: ad, types: uzanti ? [{ description: aciklama, accept: { [tur]: [uzanti] } }] : undefined });
+  } catch (e) {
+    return e.name === "AbortError" ? false : null;
+  }
+}
+
+async function dosyaYaz(hedef, blob, ad) {
+  if (hedef) {
+    const yazici = await hedef.createWritable();
+    await yazici.write(blob);
+    await yazici.close();
+    return mesaj(`${hedef.name} kaydedildi.`, "basari");
+  }
+  const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement("a"), { href: url, download: ad });
   document.body.append(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   mesaj(`${ad} indirildi.`, "basari");
+}
+
+// Önerilen dosya adı (sunucudaki exporters.dosya_adi ile aynı kural)
+function parselDosyaAdi(keys, uzanti) {
+  const ps = keys.map((k) => durum.parseller.get(k)?.properties).filter(Boolean);
+  const yerler = new Set(ps.map((p) => `${p.il}-${p.ilce}-${p.mahalle}`));
+  const ad = ps.length === 1 ? `${ps[0].il}-${ps[0].ilce}-${ps[0].mahalle}-${ps[0].ada}-${ps[0].parsel}`
+    : yerler.size === 1 ? `${[...yerler][0]}-${ps.length} parsel` : `Parseller-${ps.length} parsel-${new Date().toISOString().slice(0, 10)}`;
+  return guvenliAd(ad) + uzanti;
+}
+
+async function indir(govde, buton) {
+  const uzanti = govde.bicim === "excel" ? ".xlsx" : govde.ayriDosyalar && govde.keys.length > 1 ? ".zip" : ".kml";
+  const ad = parselDosyaAdi(govde.keys, uzanti);
+  const hedef = await kayitYeriSor(ad);
+  if (hedef === false) return;
+  yukleniyor(buton, true);
+  try {
+    const r = await postJson("disa-aktar", govde);
+    await dosyaYaz(hedef, await r.blob(), ad);
+  } catch (err) { mesaj(err.message, true); } finally { yukleniyor(buton, false); }
 }
 
 // ---- durum ---------------------------------------------------------------------
@@ -901,11 +952,7 @@ $("disaForm").addEventListener("submit", async (e) => {
   const alanli = kapsam() !== "secili" || (alanSekmesinde() && aktifAlan);
   const govde = { keys, bicim: bicim(), ayriDosyalar: $("ayriDosyalar").checked, sistem: $("sistem").value, dilim: $("dilim").value };
   if (alanli && $("alanSiniriEkle").checked) govde.referansId = aktifAlan;
-  const buton = $("disaButon");
-  yukleniyor(buton, true);
-  try { await indir(govde); }
-  catch (err) { mesaj(err.message, true); }
-  finally { yukleniyor(buton, false); }
+  await indir(govde, $("disaButon"));
 });
 
 // ---- içe aktar -----------------------------------------------------------------

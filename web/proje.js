@@ -85,7 +85,7 @@ async function projeKaydet(farkli = false) {
       proje.dosya = dosya;
       mesaj(`${dosya.name} kaydedildi.`, "basari");
     } else {
-      blobIndir(new Blob([metin], { type: "application/json" }), projeDosyaAdi());
+      await dosyaYaz(null, new Blob([metin], { type: "application/json" }), projeDosyaAdi());
     }
     proje.kaydedildi = new Date();
     projeBilgisi();
