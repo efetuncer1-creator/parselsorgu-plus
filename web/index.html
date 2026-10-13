@@ -523,6 +523,21 @@
           <p class="ikincil-metin" data-not="tablo">Tabloyu haritada sürükleyerek taşı. Renk başlık satırına uygulanır.</p>
         </div>
 
+        <div class="kutu" id="nitelikKutu">
+          <div class="kutu-baslik"><h2>Parseller</h2></div>
+          <label class="anahtar">
+            <input type="checkbox" id="nitelikAcik" role="switch">
+            <span class="anahtar-izi" aria-hidden="true"></span>
+            <span>Niteliklerine göre renklendir<small>Rengi değiştirmek için niteliğin yanındaki kareye tıkla</small></span>
+          </label>
+          <ul id="nitelikListesi" class="nitelik-listesi" aria-label="Nitelikler ve renkleri"></ul>
+          <p id="nitelikBos" class="ikincil-metin">Listede parsel yok.</p>
+          <div id="nitelikEylemleri" class="arac-cubugu not-araclari">
+            <button type="button" id="nitelikLejant" class="metin-dugme"><svg class="ikon"><use href="#i-arti"/></svg>Nitelikleri lejanta ekle</button>
+            <button type="button" id="nitelikVarsayilan" class="metin-dugme"><svg class="ikon"><use href="#i-geri"/></svg>Varsayılan renkler</button>
+          </div>
+        </div>
+
         <div class="kutu" id="lejantKutu">
           <div class="kutu-baslik">
             <h2>Lejant</h2>
@@ -729,5 +744,6 @@
   <script src="cikti.js"></script>
   <script src="proje.js"></script>
   <script src="analiz.js"></script>
+  <script src="nitelik.js"></script>
 </body>
 </html>

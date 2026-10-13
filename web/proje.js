@@ -58,6 +58,7 @@ async function projeOlustur() {
     notlar: await Promise.all([...notlar.values()].map(notKaydi)),
     katmanSirasi: [...katmanSirasi],
     lejant: { acik: lejant.acik, daralt: lejant.daralt, baslik: lejant.baslik, ogeler: lejant.ogeler },
+    nitelikRenk: { acik: nitelikRenk.acik, renkler: nitelikRenk.renkler },
     cikti: {
       sablon: cikti.sablon, yon: cikti.yon, olcek: cikti.olcek, dpi: cikti.dpi, carpan: cikti.carpan, sistem: cikti.sistem,
       canli: cikti.canli, ogeler: cikti.ogeler, baslik: cikti.baslik, tarih: cikti.tarih, serbest: cikti.serbest,
@@ -240,9 +241,17 @@ async function projeAc(dosya, tutamac = null) {
     const l = p.lejant || {};
     lejant.ogeler = (Array.isArray(l.ogeler) ? l.ogeler : []).map((o) => (o && (o.tur === "alan" || o.tur === "not") ? { ...o, id: yeniKimlik.get(o.id) } : o))
       .filter((o) => o && (o.ad === undefined || typeof o.ad === "string") && (o.tur === "alan" ? referanslar.has(o.id) : o.tur === "not" ? notlar.has(o.id)
-        : Object.hasOwn(LEJANT_SABIT, o.tur) || (o.tur === "ozel" && typeof o.k === "string" && RENK.test(o.renk) && Object.hasOwn(OZEL_SEKIL, o.sekil))));
+        : Object.hasOwn(LEJANT_SABIT, o.tur) || (o.tur === "nitelik" && typeof o.nitelik === "string")
+          || (o.tur === "ozel" && typeof o.k === "string" && RENK.test(o.renk) && Object.hasOwn(OZEL_SEKIL, o.sekil))));
     Object.assign(lejant, { acik: l.acik === true, daralt: l.daralt === true, baslik: metinAl(l.baslik, 40, "Lejant") });
     lejantKaydet();
+
+    // Nitelik renkleri (eski projelerde yok: o zaman tercih olduğu gibi kalır)
+    if (p.nitelikRenk && typeof p.nitelikRenk === "object") {
+      nitelikRenk.acik = p.nitelikRenk.acik === true;
+      nitelikRenk.renkler = Object.fromEntries(Object.entries(p.nitelikRenk.renkler || {}).filter(([, v]) => typeof v === "string" && RENK.test(v)));
+      nitelikleriUygula();
+    }
 
     // Çıktı düzeni ve sayfaya konanlar
     const c = p.cikti || {};

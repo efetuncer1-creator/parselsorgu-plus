@@ -523,7 +523,7 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
     ctx.save();
     ctx.lineJoin = "round";
     for (const [key, f] of durum.parseller) {
-      const st = durum.secili.has(key) ? STIL_SECILI : STIL;
+      const st = parselStili(key, false);
       const yol = geometriYolu(f.geometry, g.nokta);
       ctx.globalAlpha = st.fillOpacity; ctx.fillStyle = st.fillColor; ctx.fill(yol, "evenodd");
       ctx.globalAlpha = st.opacity; ctx.lineWidth = st.weight * p; ctx.strokeStyle = st.color; ctx.stroke(yol);

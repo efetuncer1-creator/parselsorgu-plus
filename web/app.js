@@ -241,11 +241,47 @@ const HR = {
 const STIL = { color: HR.parsel, weight: 1.5, opacity: 0.95, fillColor: HR.parsel, fillOpacity: 0.06 };
 const STIL_SECILI = { color: HR.secili, weight: 2.5, opacity: 1, fillColor: HR.secili, fillOpacity: 0.3 };
 
+// ---- nitelik renkleri: açıkken parseller niteliklerine göre boyanır (düzenleyici nitelik.js'te) ----
+// Kullanıcının seçtiği renk saklanır; seçilmemiş nitelik adına göre hep aynı rengi alır, sık görülenlerin
+// tanıdık renkleri var (tarla buğday, bahçe yeşil, arsa turuncu...).
+const NITELIK_RENKLERI = [["--nitelik-renk-1", "Buğday"], ["--nitelik-renk-2", "Yeşil"], ["--nitelik-renk-3", "Turuncu"],
+  ["--nitelik-renk-4", "Mor"], ["--nitelik-renk-5", "Açık yeşil"], ["--nitelik-renk-6", "Camgöbeği"], ["--nitelik-renk-7", "Kırmızı"],
+  ["--nitelik-renk-8", "Kahve"], ["--nitelik-renk-9", "Zeytin"], ["--nitelik-renk-10", "Çivit"], ["--nitelik-renk-11", "Pembe"],
+  ["--nitelik-renk-12", "Gri"]];
+const TANIDIK_NITELIKLER = [[/tarla/, 1], [/(^|\s)(ev|konut|bina)|kargir|ahşap|yapı/, 7], [/bahçe/, 2], [/arsa/, 3], [/(^|\s)bağ/, 4],
+  [/mera|çayır|otlak/, 5], [/zeytin/, 9], [/ham toprak/, 8], [/fabrika|sanayi|depo|atölye/, 10], [/yol|dere|kanal|ark/, 6]];
+const nitelikRenk = { acik: false, renkler: {} };
+try {
+  const k = JSON.parse(localStorage.getItem("nitelikRenkleri") || "{}");
+  nitelikRenk.acik = k.acik === true;
+  for (const [ad, renk] of Object.entries(k.renkler || {})) if (/^#[0-9a-f]{6}$/i.test(renk)) nitelikRenk.renkler[ad] = renk;
+} catch { /* varsayılan: kapalı */ }
+const nitelikAdi = (p) => (p?.nitelik || "").trim() || "Belirtilmemiş";
+
+function nitelikRengi(ad) {
+  if (nitelikRenk.renkler[ad]) return nitelikRenk.renkler[ad];
+  const k = trKucuk(ad);
+  const tanidik = TANIDIK_NITELIKLER.find(([desen]) => desen.test(k));
+  const sira = tanidik ? tanidik[1] : 1 + ([...k].reduce((h, c) => (h * 31 + c.codePointAt(0)) >>> 0, 7) % NITELIK_RENKLERI.length);
+  return token(`--nitelik-renk-${sira}`);
+}
+
+// Parselin haritadaki ve çıktıdaki stili. Seçili mavi kenarlı; üzerinde çalışılan beyaz kenarlı (çıktıda değil).
+function parselStili(key, aktifGoster = true) {
+  const secili = durum.secili.has(key);
+  let st = secili ? STIL_SECILI : STIL;
+  if (nitelikRenk.acik) {
+    const renk = nitelikRengi(nitelikAdi(durum.parseller.get(key)?.properties));
+    st = secili ? { color: HR.secili, weight: 2.5, opacity: 1, fillColor: renk, fillOpacity: 0.6 }
+      : { color: renk, weight: 1.5, opacity: 1, fillColor: renk, fillOpacity: 0.45 };
+  }
+  return aktifGoster && key === durum.aktif ? { ...st, color: HR.aktif, weight: 3 } : st;
+}
+
 function stilUygula(key) {
   const k = durum.katmanlar.get(key);
   if (!k) return;
-  const temel = durum.secili.has(key) ? STIL_SECILI : STIL;
-  k.setStyle(key === durum.aktif ? { ...temel, color: HR.aktif, weight: 3 } : temel);
+  k.setStyle(parselStili(key));
   if (parselNo.isaretler.has(key)) parselNoSigdir(key);
 }
 
@@ -1583,11 +1619,11 @@ const ALAN_RENKLERI = [["--alan-renk-1", "Mor"], ["--alan-renk-2", "Camgöbeği"
 // daha: varsa "Diğer görünüm ayarları" düğmesi çıkar.
 const renkPaleti = { anahtar: null, dugme: null, sec: null, daha: null };
 
-function renkPaletiAc(dugme, { anahtar, renk: mevcut, sec, daha = null }) {
+function renkPaletiAc(dugme, { anahtar, renk: mevcut, sec, daha = null, renkler = ALAN_RENKLERI }) {
   if (renkPaleti.anahtar === anahtar) return renkPaletiKapat();
   renkPaletiKapat(false);
   const panel = $("renkPaleti");
-  panel.innerHTML = ALAN_RENKLERI.map(([ad, isim]) => {
+  panel.innerHTML = renkler.map(([ad, isim]) => {
     const renk = token(ad);
     return `<button type="button" data-renk="${renk}" style="background:${renk}" aria-label="${isim}" data-ipucu="${isim}" aria-pressed="${renk.toLowerCase() === mevcut.toLowerCase()}"></button>`;
   }).join("") + (daha ? `<button type="button" class="palet-daha" data-gorsel>${ikon("gorsel")}Diğer görünüm ayarları</button>` : "");
@@ -2044,6 +2080,7 @@ try {
 } catch { /* bozuk kayıt: varsayılan */ }
 lejant.baslik = String(lejant.baslik ?? "");
 lejant.ogeler = (Array.isArray(lejant.ogeler) ? lejant.ogeler : []).filter((o) => o && (Object.hasOwn(LEJANT_SABIT, o.tur)
+  || (o.tur === "nitelik" && typeof o.nitelik === "string")
   || (o.tur === "ozel" && typeof o.k === "string" && typeof o.ad === "string" && /^#[0-9a-f]{6}$/i.test(o.renk) && Object.hasOwn(OZEL_SEKIL, o.sekil))));
 
 function lejantKaydet() {
@@ -2051,18 +2088,21 @@ function lejantKaydet() {
 }
 
 // Öğe türleri: alan, not (ok), ozel ve LEJANT_SABIT'teki hazır öğeler.
-const ogeAnahtari = (o) => (o.tur === "alan" || o.tur === "not" ? `${o.tur}-${o.id}` : o.tur === "ozel" ? o.k : o.tur);
+const ogeAnahtari = (o) => (o.tur === "alan" || o.tur === "not" ? `${o.tur}-${o.id}` : o.tur === "ozel" ? o.k
+  : o.tur === "nitelik" ? `nitelik-${o.nitelik}` : o.tur);
 const lejantAlani = (o) => referanslar.get(o.id)?.veri;
 const lejantGecerli = (o) => (o.tur === "alan" ? referanslar.has(o.id) : o.tur === "not" ? notlar.has(o.id) : true);
-const lejantGorunur = (o) => (o.tur === "alan" ? lejantAlani(o).gorunur : o.tur === "not" ? notlar.get(o.id).gorunur : true);
+const lejantGorunur = (o) => (o.tur === "alan" ? lejantAlani(o).gorunur : o.tur === "not" ? notlar.get(o.id).gorunur
+  : o.tur === "nitelik" ? nitelikRenk.acik : true); // nitelik renkleri kapalıyken lejantta da yok
 const lejantVarsayilanAdi = (o) => (o.tur === "alan" ? lejantAlani(o).ad : o.tur === "not" ? notAdi(notlar.get(o.id))
-  : o.tur === "ozel" ? "Özel öğe" : LEJANT_SABIT[o.tur].ad);
+  : o.tur === "ozel" ? "Özel öğe" : o.tur === "nitelik" ? o.nitelik : LEJANT_SABIT[o.tur].ad);
 const lejantAdi = (o) => o.ad ?? lejantVarsayilanAdi(o);
 
 function lejantOrnegi(o) {
   if (o.tur === "alan") return katmanOrnegi(lejantAlani(o));
   if (o.tur === "not") return notOrnegi(notlar.get(o.id));
   if (o.tur === "ozel") return sekilOrnegi(o.sekil, o.renk, OZEL_SEKIL[o.sekil]);
+  if (o.tur === "nitelik") return sekilOrnegi("alan", nitelikRengi(o.nitelik), { dolgu: 0.45, kalinlik: 1.5 });
   return LEJANT_SABIT[o.tur].ornek();
 }
 
@@ -2110,6 +2150,9 @@ function lejantDuzenCiz() {
     ...katmanSirasi.filter((id) => (referanslar.has(id) || notlar.get(id)?.tur === "ok") && !lejant.ogeler.some((o) => o.id === id))
       .map((id) => ({ tur: referanslar.has(id) ? "alan" : "not", id })),
     ...Object.keys(LEJANT_SABIT).filter((tur) => !lejant.ogeler.some((o) => o.tur === tur)).map((tur) => ({ tur })),
+    // Nitelik renkleri açıkken listedeki nitelikler
+    ...(nitelikRenk.acik ? [...new Set([...durum.parseller.values()].map((f) => nitelikAdi(f.properties)))]
+      .filter((n) => !lejant.ogeler.some((o) => o.tur === "nitelik" && o.nitelik === n)).map((nitelik) => ({ tur: "nitelik", nitelik })) : []),
   ];
   $("lejantCipler").innerHTML = lejantEklenebilir.map((o, i) =>
     `<button type="button" class="cip" data-i="${i}" title="Lejanta ekle">${lejantOrnegi(o)}<span>${esc(lejantAdi(o))}</span>${ikon("arti")}</button>`).join("")
