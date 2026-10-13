@@ -939,12 +939,7 @@ function sorguModu(acik) {
 $("haritaModu").addEventListener("click", () => sorguModu(durum.mod !== "sorgu"));
 
 harita.on("click", async (e) => {
-  // Boş yere tıklama, son tıklanan parsele ikinci kez dokunmakla aynı: seçimi ve bilgi düğmesi kalkar
-  // (listeden ya da toplu seçilen öbür parseller seçili kalır).
-  if (!durum.mod) {
-    if (durum.aktif) seciliDegistir(durum.aktif, false);
-    return aktifBirak();
-  }
+  if (!durum.mod) return aktifBirak(); // boş yere tıklama: yalnız bilgi düğmesi kalkar, seçim kalır
   if (durum.mod === "cizim") return cizimPinEkle(e.latlng);
   if (durum.mod?.startsWith("not-")) return notTikla(e.latlng);
   if (durum.mod !== "sorgu") return;
