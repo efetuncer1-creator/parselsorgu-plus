@@ -76,15 +76,8 @@ async function projeKaydet(farkli = false) {
     if (dosya === false) return; // vazgeçildi
     yukleniyor(buton, true);
     const metin = JSON.stringify(await projeOlustur());
-    if (dosya) {
-      const yazici = await dosya.createWritable();
-      await yazici.write(metin);
-      await yazici.close();
-      proje.dosya = dosya;
-      mesaj(`${dosya.name} kaydedildi.`, "basari");
-    } else {
-      await dosyaYaz(null, new Blob([metin], { type: "application/json" }), projeDosyaAdi());
-    }
+    // Seçilen dosyaya yazılabildiyse sonraki kayıtlar aynı dosyanın üstüne (app.js dosyaYaz)
+    proje.dosya = (await dosyaYaz(dosya, new Blob([metin], { type: "application/json" }), projeDosyaAdi())) ? dosya : null;
     proje.kaydedildi = new Date();
     projeBilgisi();
   } catch (e) {

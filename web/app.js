@@ -110,9 +110,10 @@ const postJson = (yol, govde) =>
 // Chrome ve Edge'de kaydetme penceresi açılır (klasör ve ad seçilir). Pencere tıklamanın hemen ardından
 // açılmalı (tarayıcı kuralı); bu yüzden önce yer sorulur, dosya sonra hazırlanıp oraya yazılır.
 // Pencereyi desteklemeyen tarayıcıda dosya İndirilenler klasörüne iner.
-// Bazı gömülü tarayıcılar (ör. Claude masaüstü uygulamasının önizleme paneli) pencereyi hiç göstermeden
-// "vazgeçildi" der. Kullanıcı bu kadar çabuk vazgeçemeyeceği için o zaman pencere yok sayılır, bir daha da
-// denenmez; dosya indirilir.
+// Gömülü tarayıcılar sorun çıkarabiliyor: Claude masaüstü uygulamasının önizleme panelinde pencere ya hiç
+// açılmadan "vazgeçildi" diyor ya da açılıp seçilen dosyaya yazdırmıyor (0 baytlık dosya kalıyor). Orada
+// pencere hiç denenmez. Başka yerde de pencere çok çabuk kapanırsa ya da seçilen dosyaya yazılamazsa
+// pencere bir daha denenmez, dosya indirilir.
 const DOSYA_TURLERI = {
   ".kml": ["KML (Google Earth)", "application/vnd.google-earth.kml+xml"],
   ".zip": ["ZIP arşivi", "application/zip"],
@@ -123,7 +124,7 @@ const DOSYA_TURLERI = {
 };
 const guvenliAd = (s) => String(s).replace(/[\\/:*?"<>|]+/g, "-").replace(/^[\s.-]+|[\s.-]+$/g, "") || "parsel";
 
-let dosyaPenceresiYok = false;
+let dosyaPenceresiYok = /\bClaude\//.test(navigator.userAgent);
 
 // fn: "showSaveFilePicker" ya da "showOpenFilePicker". Dönüş: pencerenin sonucu; pencere yoksa ya da
 // açılamadıysa null; kullanıcı vazgeçtiyse false.
@@ -147,20 +148,29 @@ function kayitYeriSor(ad) {
   return dosyaPenceresi("showSaveFilePicker", { suggestedName: ad, types: uzanti ? [{ description: aciklama, accept: { [tur]: [uzanti] } }] : undefined });
 }
 
+// Dönüş: seçilen dosyaya yazıldıysa true, indirildiyse false.
 async function dosyaYaz(hedef, blob, ad) {
   if (hedef) {
-    const yazici = await hedef.createWritable();
-    await yazici.write(blob);
-    await yazici.close();
-    return mesaj(`${hedef.name} kaydedildi.`, "basari");
+    try {
+      const yazici = await hedef.createWritable();
+      await yazici.write(blob);
+      await yazici.close();
+      mesaj(`${hedef.name} kaydedildi.`, "basari");
+      return true;
+    } catch (e) {
+      dosyaPenceresiYok = true; // tarayıcı seçilen dosyaya yazdırmadı
+      console.warn("Seçilen dosyaya yazılamadı; dosya indiriliyor.", e);
+    }
   }
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement("a"), { href: url, download: ad });
   document.body.append(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // İndirme onay bekleyebilir (ör. gömülü tarayıcıda); adres o sırada geçersiz olmasın.
+  setTimeout(() => URL.revokeObjectURL(url), 120000);
   mesaj(`${ad} indirildi.`, "basari");
+  return false;
 }
 
 // Önerilen dosya adı (sunucudaki exporters.dosya_adi ile aynı kural)
