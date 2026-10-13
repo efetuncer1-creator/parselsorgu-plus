@@ -141,7 +141,7 @@ function notKaydiniOku(k) {
     const sayfalar = Array.isArray(k.sayfalar) ? k.sayfalar.filter((s) => s && Array.isArray(s.satirlar) && s.satirlar.length
       && s.satirlar.every((r) => Array.isArray(r) && r.every((h) => typeof h === "string"))).map((s) => ({ ad: metinAl(s.ad, 60, "Sayfa"), satirlar: s.satirlar, kesildi: s.kesildi === true })) : [];
     return konum && sayfalar.length && { ...ortak, tur: "tablo", konum, sayfalar, sayfa: Math.round(sayiAl(k.sayfa, 0, sayfalar.length - 1, 0)),
-      tumSayfalar: k.tumSayfalar === true, baslikSatiri: k.baslikSatiri !== false, boyut: sayiAl(k.boyut, 1, 500, 12), renk: renkAl(k.renk, token("--not-siyah")) };
+      dizilis: secenekAl(k.dizilis, ["tek", "alt", "yan"], k.tumSayfalar === true ? "alt" : "tek"), baslikSatiri: k.baslikSatiri !== false, boyut: sayiAl(k.boyut, 1, 500, 12), renk: renkAl(k.renk, token("--not-siyah")) };
   }
   return null;
 }
@@ -158,7 +158,7 @@ function sayfaOgesiniOku(o) {
   }
   if (o.tur === "tablo") {
     const tablo = notKaydiniOku({ ...o, tur: "tablo", konum: [0, 0] });
-    return tablo && { tur: "tablo", ad: metinAl(o.ad, 80, "Tablo"), sayfalar: tablo.sayfalar, sayfa: tablo.sayfa, tumSayfalar: tablo.tumSayfalar, baslikSatiri: tablo.baslikSatiri,
+    return tablo && { tur: "tablo", ad: metinAl(o.ad, 80, "Tablo"), sayfalar: tablo.sayfalar, sayfa: tablo.sayfa, dizilis: tablo.dizilis, baslikSatiri: tablo.baslikSatiri,
       renk: tablo.renk, boyutMm: sayiAl(o.boyutMm, ...SAYFA_OGE_SINIRI, 2.6) };
   }
   if (o.tur === "yazi") {

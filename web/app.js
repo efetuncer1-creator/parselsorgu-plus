@@ -2691,8 +2691,8 @@ function notDuzenDoldur() {
   } else {
     kaydirici("notTabloBoyut", n.boyut);
     $("notBaslikSatiri").checked = n.baslikSatiri;
-    $("notTumSayfalarSatiri").hidden = n.sayfalar.length < 2;
-    $("notTumSayfalar").checked = !!n.tumSayfalar;
+    $("notDizilis").hidden = n.sayfalar.length < 2;
+    document.querySelectorAll("input[name=notDizilis]").forEach((x) => { x.checked = x.value === tabloDizilisi(n); });
     $("notKesildi").hidden = !tabloSayfalari(n).some((s) => s.kesildi);
   }
   // PDF'in sayfaları ya da Excel'in çalışma sayfaları arasında gezinme
@@ -2700,7 +2700,7 @@ function notDuzenDoldur() {
   $("notSayfa").hidden = !sayfali;
   if (sayfali) {
     const [no, toplam, ad] = n.tur === "gorsel" ? [n.sayfa, n.sayfaSayisi, "Sayfa"] : [n.sayfa + 1, n.sayfalar.length, n.sayfalar[n.sayfa].ad];
-    const hepsi = n.tur === "tablo" && n.tumSayfalar; // hepsi alt alta gösteriliyor
+    const hepsi = n.tur === "tablo" && tabloDizilisi(n) !== "tek"; // hepsi birlikte gösteriliyor
     $("notSayfaAd").textContent = hepsi ? `Bütün sayfalar · ${toplam}` : `${ad} · ${no}/${toplam}`;
     $("notSayfaGeri").disabled = hepsi || no <= 1;
     $("notSayfaIleri").disabled = hepsi || no >= toplam;
@@ -2853,7 +2853,7 @@ async function gorselNotuEkle(dosya) {
 async function tabloNotuEkle(dosya) {
   const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(dosya.name) }, body: await dosyaIcerigi(dosya) });
   const merkez = harita.getCenter();
-  return notEkle("tablo", { ad: dosya.name.replace(/\.[^.]+$/, ""), sayfalar: r.sayfalar, sayfa: 0, tumSayfalar: r.sayfalar.length > 1, baslikSatiri: true, boyut: 12,
+  return notEkle("tablo", { ad: dosya.name.replace(/\.[^.]+$/, ""), sayfalar: r.sayfalar, sayfa: 0, dizilis: r.sayfalar.length > 1 ? "alt" : "tek", baslikSatiri: true, boyut: 12,
     konum: [merkez.lat, merkez.lng], renk: token("--not-siyah") });
 }
 
@@ -2870,21 +2870,46 @@ async function notDosyalariniAl(dosyalar) {
   return kalan;
 }
 
-// Tablonun gösterilen çalışma sayfaları: seçili olan ya da ("bütün sayfalar" açıksa) hepsi alt alta.
-// Haritadaki not ve çıktı sayfasına konan tablo (cikti.js tabloCiz) ortak kullanır.
-const tabloSayfalari = (n) => (n.tumSayfalar && n.sayfalar.length > 1 ? n.sayfalar : [n.sayfalar[n.sayfa]]);
+// Excel'in çalışma sayfaları: tek sayfa (gezgindeki) ya da hepsi alt alta / yan yana. Haritadaki not ve çıktı
+// sayfasına konan tablo (cikti.js tabloCiz) ortak kullanır.
+const tabloDizilisi = (n) => (n.sayfalar.length < 2 ? "tek" : n.dizilis || "tek");
+const tabloSayfalari = (n) => (tabloDizilisi(n) === "tek" ? [n.sayfalar[n.sayfa]] : n.sayfalar);
+
+// Tablonun görünüşü (haritada ve çıktıda aynı):
+// - hiç dolu hücresi olmayan sütunlar atılır;
+// - yalnız bir hücresi dolu satırlar (Excel'deki başlık, açıklama, "Koordinat sistemi: ..." gibi notlar) sütun
+//   genişliğini belirlemez, tablonun bütün enine yayılıp gerekirse alt satıra geçer;
+// - baştaki böyle satırlar tablonun üstünde durur; "İlk satır başlık" açıksa ilk çok hücreli satır başlıktır.
+function tabloDuzeni(s, baslikSatiri) {
+  const satirlar = s.satirlar.filter((r) => r.some((h) => h !== ""));
+  const genis = Math.max(0, ...satirlar.map((r) => r.length)) > 1;
+  const tek = (r) => genis && r.filter((h) => h !== "").length === 1;
+  const cokHucreli = satirlar.filter((r) => !tek(r));
+  const sutunlar = [...Array(Math.max(1, ...cokHucreli.map((r) => r.length))).keys()]
+    .filter((j) => cokHucreli.some((r) => r[j]) || !cokHucreli.length && j === 0);
+  const yayilan = (r) => r.find((h) => h !== "");
+  let i = 0;
+  const ust = [];
+  while (i < satirlar.length && tek(satirlar[i])) ust.push(yayilan(satirlar[i++]));
+  const baslikHam = baslikSatiri && i < satirlar.length ? satirlar[i++] : null;
+  const baslik = baslikHam && sutunlar.map((j) => baslikHam[j] || "");
+  const govde = satirlar.slice(i).map((r) => (tek(r) ? { yayilan: yayilan(r) } : { hucreler: sutunlar.map((j) => r[j] || "") }));
+  return { ust, baslik, govde, sutunSayisi: sutunlar.length };
+}
 
 function tabloHtml(n) {
   const sayfalar = tabloSayfalari(n), adli = sayfalar.length > 1;
   const satir = (h, et) => `<tr>${h.map((x) => `<${et}>${esc(x)}</${et}>`).join("")}</tr>`;
   const tablo = (s) => {
-    const [ilk, ...kalan] = s.satirlar;
-    const govde = (n.baslikSatiri ? kalan : s.satirlar).map((h) => satir(h, "td")).join("");
-    return `${adli ? `<div class="harita-tablo-ad">${esc(s.ad)}</div>` : ""}`
-      + `<table>${n.baslikSatiri ? `<thead>${satir(ilk, "th")}</thead>` : ""}<tbody>${govde}</tbody></table>`;
+    const d = tabloDuzeni(s, n.baslikSatiri);
+    // Yayılan satırın içeriği sütun genişliğini büyütmesin diye genişliği sıfır, en az hücre kadar (style.css)
+    const yay = (metin, sinif) => `<tr class="${sinif}"><td colspan="${d.sutunSayisi}"><div class="yayilan">${esc(metin)}</div></td></tr>`;
+    const ust = (adli ? [yay(s.ad, "tablo-ad")] : []).concat(d.ust.map((m) => yay(m, "tablo-not")));
+    const govde = d.govde.map((r) => (r.hucreler ? satir(r.hucreler, "td") : yay(r.yayilan, "tablo-ara"))).join("");
+    return `<table>${ust.length || d.baslik ? `<thead>${ust.join("")}${d.baslik ? satir(d.baslik, "th") : ""}</thead>` : ""}<tbody>${govde}</tbody></table>`;
   };
   const secili = n.id === seciliNot && gorselSekmesinde();
-  return `<div class="harita-tablo${secili ? " secili" : ""}" style="--tablo-boyut:${n.boyut}px;--tablo-renk:${esc(n.renk)};--tablo-yazi:${acikRenk(n.renk) ? "var(--not-siyah)" : "var(--not-beyaz)"}">`
+  return `<div class="harita-tablo ${tabloDizilisi(n)}${secili ? " secili" : ""}" style="--tablo-boyut:${n.boyut}px;--tablo-renk:${esc(n.renk)};--tablo-yazi:${acikRenk(n.renk) ? "var(--not-siyah)" : "var(--not-beyaz)"}">`
     + `${sayfalar.map(tablo).join("")}</div>`;
 }
 
@@ -2924,7 +2949,7 @@ async function notSayfaDegistir(fark) {
 
 $("notKaristir").addEventListener("change", (e) => notGuncelle(seciliNot, { karistir: e.target.checked }));
 $("notBaslikSatiri").addEventListener("change", (e) => notGuncelle(seciliNot, { baslikSatiri: e.target.checked }));
-$("notTumSayfalar").addEventListener("change", (e) => notGuncelle(seciliNot, { tumSayfalar: e.target.checked }));
+document.querySelectorAll("input[name=notDizilis]").forEach((x) => x.addEventListener("change", () => notGuncelle(seciliNot, { dizilis: x.value })));
 
 // Haritadaki grafik kartı: Analiz sekmesindeki dilim grafiğinin aynısı (analiz.js dilimGrafigiSvg)
 function grafikHtml(n) {

@@ -517,11 +517,11 @@
               <span class="anahtar-izi" aria-hidden="true"></span>
               <span>İlk satır başlık</span>
             </label>
-            <label class="anahtar" id="notTumSayfalarSatiri">
-              <input type="checkbox" id="notTumSayfalar" role="switch">
-              <span class="anahtar-izi" aria-hidden="true"></span>
-              <span>Bütün sayfaları alt alta göster</span>
-            </label>
+            <div id="notDizilis" class="bolumlu" role="radiogroup" aria-label="Excel'in çalışma sayfaları">
+              <label><input type="radio" name="notDizilis" value="tek"><span>Tek sayfa</span></label>
+              <label><input type="radio" name="notDizilis" value="alt"><span>Alt alta</span></label>
+              <label><input type="radio" name="notDizilis" value="yan"><span>Yan yana</span></label>
+            </div>
             <p id="notKesildi" class="ikincil-metin" hidden>Tablonun ilk 1.000 satırı ve 50 sütunu gösteriliyor.</p>
           </fieldset>
           <fieldset class="ayar" data-not="grafik">

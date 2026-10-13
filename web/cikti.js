@@ -358,21 +358,45 @@ function okCiz(ctx, a, b, { renk, kalinlik, uc, cizgi }, p) {
   ctx.restore();
 }
 
-// Tablo: başlık satırı renkli, gövde beyaz zeminde; merkezi (x, y). Kutu ölçüleri döner. "Bütün sayfalar"
-// açıksa çalışma sayfaları adlarıyla alt alta (app.js tabloSayfalari); her birinin sütunları kendine göre.
+// Tablo: başlık satırı renkli, gövde beyaz zeminde; merkezi (x, y). Kutu ölçüleri döner. Düzen haritadakiyle
+// aynı (app.js tabloDuzeni): boş sütun yok, tek hücreli satırlar tablonun enine yayılıp sarılır. Birden çok
+// çalışma sayfası adlarıyla alt alta ya da yan yana.
 function tabloCiz(ctx, n, x, y, boyutPx, olc = false) {
-  const sayfalar = tabloSayfalari(n), adli = sayfalar.length > 1, bas = n.baslikSatiri ? 1 : 0;
+  const sayfalar = tabloSayfalari(n), adli = sayfalar.length > 1, yan = adli && tabloDizilisi(n) === "yan";
   ctx.save();
   const yazi = (k) => `${k ? 650 : 400} ${boyutPx}px Inter, sans-serif`;
-  const dolgu = [boyutPx * 0.6, boyutPx * 0.3], satirBoy = boyutPx * 1.3 + dolgu[1] * 2, adBoy = adli ? satirBoy * 1.15 : 0;
+  const dolgu = [boyutPx * 0.6, boyutPx * 0.3], satirBoy = boyutPx * 1.3 + dolgu[1] * 2, cizgi = Math.max(1, boyutPx / 12);
+  const genislik = (m, kalin) => { ctx.font = yazi(kalin); return ctx.measureText(m).width; };
+  const sar = (m, en, kalin) => { // kelime kelime satırlara böl
+    ctx.font = yazi(kalin);
+    const sonuc = [];
+    let s = "";
+    for (const k of m.split(/\s+/)) {
+      const d = s ? `${s} ${k}` : k;
+      if (s && ctx.measureText(d).width > en) { sonuc.push(s); s = k; } else s = d;
+    }
+    return s ? [...sonuc, s] : sonuc.length ? sonuc : [""];
+  };
   const bloklar = sayfalar.map((s) => {
-    const satirlar = s.satirlar;
-    const enler = satirlar[0].map((_, j) => Math.max(...satirlar.map((r, i) => { ctx.font = yazi(i < bas); return ctx.measureText(r[j] || "").width; })) + dolgu[0] * 2);
-    ctx.font = yazi(true);
-    return { s, satirlar, enler, en: Math.max(enler.reduce((t, v) => t + v, 0), adli ? ctx.measureText(s.ad).width + dolgu[0] * 2 : 0), boy: adBoy + satirBoy * satirlar.length };
+    const d = tabloDuzeni(s, n.baslikSatiri);
+    const hucreli = [...(d.baslik ? [d.baslik] : []), ...d.govde.filter((r) => r.hucreler).map((r) => r.hucreler)];
+    const enler = [...Array(d.sutunSayisi).keys()].map((j) => Math.max(0, ...hucreli.map((r, i) => genislik(r[j] || "", d.baslik && i === 0))) + dolgu[0] * 2);
+    // Yayılan satırlar çok dar bir tabloda tek kelimeye düşmesin: en az 24 harflik yer
+    const yayilanlar = [...d.ust, ...d.govde.filter((r) => !r.hucreler).map((r) => r.yayilan)];
+    const enAz = Math.max(adli ? genislik(s.ad, true) : 0, Math.min(boyutPx * 14, Math.max(0, ...yayilanlar.map((m) => genislik(m, false))))) + dolgu[0] * 2;
+    const toplam = enler.reduce((t, v) => t + v, 0);
+    if (toplam < enAz) enler.forEach((v, j) => { enler[j] = v + ((enAz - toplam) * v) / (toplam || 1); });
+    const en = Math.max(toplam, enAz), metinEn = en - dolgu[0] * 2;
+    const ust = [...(adli ? [{ satirlar: [s.ad], kalin: true }] : []), ...d.ust.map((m) => ({ satirlar: sar(m, metinEn, false) }))];
+    const govde = d.govde.map((r) => (r.hucreler ? r : { satirlar: sar(r.yayilan, metinEn, false) }));
+    const boy = satirBoy * (ust.reduce((t, u) => t + u.satirlar.length, 0) + (d.baslik ? 1 : 0)
+      + govde.reduce((t, r) => t + (r.hucreler ? 1 : r.satirlar.length), 0));
+    return { d, enler, en, ust, govde, boy };
   });
-  const en = Math.max(...bloklar.map((b) => b.en)), boy = bloklar.reduce((t, b) => t + b.boy, 0);
-  const x0 = x - en / 2, y0 = y - boy / 2, cizgi = Math.max(1, boyutPx / 12);
+  const ara = cizgi;
+  const en = yan ? bloklar.reduce((t, b) => t + b.en, 0) + ara * (bloklar.length - 1) : Math.max(...bloklar.map((b) => b.en));
+  const boy = yan ? Math.max(...bloklar.map((b) => b.boy)) : bloklar.reduce((t, b) => t + b.boy, 0) + ara * (bloklar.length - 1);
+  const x0 = x - en / 2, y0 = y - boy / 2;
   if (!olc) {
     ctx.fillStyle = token("--not-beyaz");
     yuvarlakDikdortgen(ctx, x0, y0, en, boy, boyutPx * 0.5);
@@ -380,25 +404,41 @@ function tabloCiz(ctx, n, x, y, boyutPx, olc = false) {
     ctx.save();
     ctx.clip();
     ctx.textBaseline = "middle";
-    let by = y0;
+    const yatayCizgi = (bx, yy, w) => { ctx.fillStyle = token("--tablo-cizgi"); ctx.fillRect(bx, yy - cizgi, w, cizgi); };
+    let bx = x0, by = y0;
     bloklar.forEach((b, k) => {
-      if (adli) {
-        if (k) { ctx.fillStyle = token("--tablo-cizgi"); ctx.fillRect(x0, by, en, cizgi); }
-        ctx.font = yazi(true);
-        ctx.fillStyle = token("--not-siyah");
-        ctx.fillText(b.s.ad, x0 + dolgu[0], by + adBoy / 2);
-        by += adBoy;
+      if (k) { // sayfalar arasında çizgi
+        ctx.fillStyle = token("--tablo-cizgi");
+        if (yan) ctx.fillRect(bx - ara, y0, ara, boy); else ctx.fillRect(x0, by - ara, en, ara);
       }
-      if (bas) { ctx.fillStyle = n.renk; ctx.fillRect(x0, by, en, satirBoy); }
-      b.satirlar.forEach((r, i) => {
-        const ry = by + i * satirBoy;
-        if (i > bas - 1 && i < b.satirlar.length - 1) { ctx.fillStyle = token("--tablo-cizgi"); ctx.fillRect(x0, ry + satirBoy - cizgi, en, cizgi); }
-        ctx.font = yazi(i < bas);
-        ctx.fillStyle = i < bas ? token(acikRenk(n.renk) ? "--not-siyah" : "--not-beyaz") : token("--not-siyah");
-        let cx = x0;
-        r.forEach((h, j) => { ctx.fillText(h, cx + dolgu[0], ry + satirBoy / 2); cx += b.enler[j]; });
+      let yy = by;
+      for (const u of b.ust) {
+        ctx.font = yazi(!!u.kalin);
+        ctx.fillStyle = token("--not-siyah");
+        for (const m of u.satirlar) { ctx.fillText(m, bx + dolgu[0], yy + satirBoy / 2); yy += satirBoy; }
+      }
+      if (b.d.baslik) {
+        ctx.fillStyle = n.renk;
+        ctx.fillRect(bx, yy, b.en, satirBoy);
+        ctx.font = yazi(true);
+        ctx.fillStyle = token(acikRenk(n.renk) ? "--not-siyah" : "--not-beyaz");
+        let cx = bx;
+        b.d.baslik.forEach((h, j) => { ctx.fillText(h, cx + dolgu[0], yy + satirBoy / 2); cx += b.enler[j]; });
+        yy += satirBoy;
+      }
+      ctx.font = yazi(false);
+      b.govde.forEach((r, i) => {
+        ctx.fillStyle = token("--not-siyah");
+        if (r.hucreler) {
+          let cx = bx;
+          r.hucreler.forEach((h, j) => { ctx.fillText(h, cx + dolgu[0], yy + satirBoy / 2); cx += b.enler[j]; });
+          yy += satirBoy;
+        } else {
+          for (const m of r.satirlar) { ctx.fillText(m, bx + dolgu[0], yy + satirBoy / 2); yy += satirBoy; }
+        }
+        if (i < b.govde.length - 1) yatayCizgi(bx, yy, b.en);
       });
-      by += b.satirlar.length * satirBoy;
+      if (yan) bx += b.en + ara; else by += b.boy + ara;
     });
     ctx.restore();
   }
@@ -1022,11 +1062,13 @@ function sayfaOgeleriCiz() {
       ? `<textarea class="metin-girdi not-metin" data-is="metin" rows="2" maxlength="300" aria-label="Sayfadaki yazı">${esc(o.metin)}</textarea>`
       : `<input class="oge-ad" data-is="ad" maxlength="80" autocomplete="off" spellcheck="false" value="${esc(o.ad)}"
           placeholder="${o.tur === "grafik" ? "Başlıksız grafik" : SAYFA_OGE_AD[o.tur]}" aria-label="${o.tur === "grafik" ? "Grafiğin başlığı" : "Adı"}">`;
-    // Birden çok çalışma sayfası olan tabloda hangisi (ya da hepsi alt alta)
+    // Birden çok çalışma sayfası olan tabloda hangisi ya da hepsi (alt alta, yan yana)
+    const dizilis = o.tur === "tablo" && tabloDizilisi(o);
     const sayfaSecimi = o.tur === "tablo" && o.sayfalar.length > 1
-      ? `<label class="sayfa-oge-sayfa"><span>Sayfa</span><select data-is="sayfa" class="metin-girdi">`
-        + `<option value="hepsi"${o.tumSayfalar ? " selected" : ""}>Bütün sayfalar</option>`
-        + o.sayfalar.map((s, i) => `<option value="${i}"${!o.tumSayfalar && o.sayfa === i ? " selected" : ""}>${esc(s.ad)}</option>`).join("")
+      ? `<label class="sayfa-oge-sayfa"><span>Sayfalar</span><select data-is="sayfa" class="metin-girdi">`
+        + `<option value="alt"${dizilis === "alt" ? " selected" : ""}>Hepsi, alt alta</option>`
+        + `<option value="yan"${dizilis === "yan" ? " selected" : ""}>Hepsi, yan yana</option>`
+        + o.sayfalar.map((s, i) => `<option value="${i}"${dizilis === "tek" && o.sayfa === i ? " selected" : ""}>${esc(s.ad)}</option>`).join("")
         + `</select></label>` : "";
     return `<li data-id="${o.id}">
       <div class="sayfa-oge-ust">${ikon({ gorsel: "resim", tablo: "tablo", grafik: "analiz" }[o.tur] || "yazi")}${ust}
@@ -1048,7 +1090,7 @@ async function sayfayaEkle(dosyalar) {
         cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "gorsel", ad, url: v.url, en: v.en, boy: v.boy, genislikMm: 40 });
       } else if (TABLO_MI(f)) {
         const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(f.name) }, body: await dosyaIcerigi(f) });
-        cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "tablo", ad, sayfalar: r.sayfalar, sayfa: 0, tumSayfalar: r.sayfalar.length > 1, baslikSatiri: true, boyutMm: 2.6, renk: token("--not-siyah") });
+        cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "tablo", ad, sayfalar: r.sayfalar, sayfa: 0, dizilis: r.sayfalar.length > 1 ? "alt" : "tek", baslikSatiri: true, boyutMm: 2.6, renk: token("--not-siyah") });
       } else mesaj(`${f.name}: görsel, PDF ya da Excel/CSV seç.`, true);
     } catch (e) { mesaj(`${f.name}: ${e.message}`, true); }
   }
@@ -1074,8 +1116,9 @@ $("sayfaOgeleri").addEventListener("input", (e) => {
     return canliZamanla();
   }
   if (e.target.dataset.is === "sayfa") {
-    o.tumSayfalar = e.target.value === "hepsi";
-    if (!o.tumSayfalar) o.sayfa = Number(e.target.value);
+    const v = e.target.value;
+    if (v === "alt" || v === "yan") o.dizilis = v;
+    else Object.assign(o, { dizilis: "tek", sayfa: Number(v) });
     return canliZamanla();
   }
   if (e.target.dataset.is !== "boyut") return;
