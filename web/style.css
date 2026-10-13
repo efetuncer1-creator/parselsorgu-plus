@@ -114,11 +114,17 @@
   --not-beyaz: #ffffff; --not-siyah: #1c1c1e;
   --not-hale-acik: rgba(255, 255, 255, .85); --not-zemin-koyu: rgba(28, 28, 30, .78); --not-zemin-acik: rgba(255, 255, 255, .9);
   --tablo-cizgi: rgba(0, 0, 0, .08);
+  --kagit-metin-2: #5b5d63; /* beyaz kart ve çıktı sayfasında ikincil yazı (temadan bağımsız) */
   --cikti-maske: rgba(10, 12, 16, .5);
-  /* Parsel nitelik renkleri (Görsel sekmesi; uydu ve haritada okunur) */
-  --nitelik-renk-1: #f2c14e; --nitelik-renk-2: #4cd964; --nitelik-renk-3: #ff9f43; --nitelik-renk-4: #a66cff;
-  --nitelik-renk-5: #b8e986; --nitelik-renk-6: #4fd1e8; --nitelik-renk-7: #ff5b5b; --nitelik-renk-8: #b08968;
-  --nitelik-renk-9: #9a9a3a; --nitelik-renk-10: #6c7bff; --nitelik-renk-11: #ff6fae; --nitelik-renk-12: #c7c7cc;
+  /* Nitelik renkleri: 8 tonluk doğrulanmış kategorik palet (sıra: mavi, turuncu, su yeşili, sarı, pembe,
+     yeşil, mor, kırmızı) + 0: nötr gri. Haritada koyu zemin adımı (uydu); kağıtta (haritadaki grafik kartı,
+     çıktı sayfası) açık zemin adımı. Çekmecedeki grafik --grafik-renk-* kullanır, koyu temada değişir. */
+  --nitelik-renk-0: #8e8e93; --nitelik-renk-1: #3987e5; --nitelik-renk-2: #d95926; --nitelik-renk-3: #199e70;
+  --nitelik-renk-4: #c98500; --nitelik-renk-5: #d55181; --nitelik-renk-6: #008300; --nitelik-renk-7: #9085e9; --nitelik-renk-8: #e66767;
+  --grafik-kagit-renk-0: #a1a1a6; --grafik-kagit-renk-1: #2a78d6; --grafik-kagit-renk-2: #eb6834; --grafik-kagit-renk-3: #1baf7a;
+  --grafik-kagit-renk-4: #eda100; --grafik-kagit-renk-5: #e87ba4; --grafik-kagit-renk-6: #008300; --grafik-kagit-renk-7: #4a3aa7; --grafik-kagit-renk-8: #e34948;
+  --grafik-renk-0: #a1a1a6; --grafik-renk-1: #2a78d6; --grafik-renk-2: #eb6834; --grafik-renk-3: #1baf7a;
+  --grafik-renk-4: #eda100; --grafik-renk-5: #e87ba4; --grafik-renk-6: #008300; --grafik-renk-7: #4a3aa7; --grafik-renk-8: #e34948;
 
   /* Alan renk paleti (iki temada aynı; parsel sarısı ve seçili mavisiyle karışmaz) */
   --alan-renk-1: #bf5af2; --alan-renk-2: #64d2ff; --alan-renk-3: #ff9f0a; --alan-renk-4: #30d158;
@@ -153,6 +159,9 @@
     --uyari: #ffb340;
     --tehlike: #ff8f87;
     --tehlike-zayif: rgba(255, 107, 107, .14);
+
+    --grafik-renk-0: #6e6e73; --grafik-renk-1: #3987e5; --grafik-renk-2: #d95926; --grafik-renk-3: #199e70;
+    --grafik-renk-4: #c98500; --grafik-renk-5: #d55181; --grafik-renk-6: #008300; --grafik-renk-7: #9085e9; --grafik-renk-8: #e66767;
   }
 }
 
@@ -1197,4 +1206,17 @@ body.cikti-sayfasi .lejant { display: none; }
 .nitelik-listesi .say { color: var(--metin-3); font-variant-numeric: tabular-nums; }
 .nitelik-listesi li.pasif .renk-secici { opacity: .45; }
 #nitelikEylemleri { margin-top: var(--b-2); }
-.renk-paleti:has(button:nth-child(9):not(.palet-daha)) { grid-template-columns: repeat(6, var(--boy-s)); } /* 12 renkli palet iki satır */
+.renk-paleti:has(button:nth-child(9):not(.palet-daha)) { grid-template-columns: repeat(5, var(--boy-s)); } /* 9 renkli nitelik paleti */
+
+/* ---- Analiz: dilim grafiği ------------------------------------------------------- */
+.kucuk-bolumlu span { height: var(--boy-xs); padding: 0 var(--b-2); font-size: 11.5px; }
+.analiz-grafik svg { display: block; width: 100%; height: auto; }
+.analiz-grafik .dilim { transition: opacity var(--sure-hizli) var(--yay); }
+.analiz-grafik svg:has(.dilim:hover) .dilim:not(:hover) { opacity: .45; }
+.analiz-tek-tur { font: var(--t-ikincil); color: var(--metin-2); padding: var(--b-2) 0; }
+.harita-grafik {
+  position: absolute; left: 0; top: 0; translate: -50% -50%; cursor: move;
+  width: calc(330px * var(--grafik-olcek)); border-radius: var(--r-kucuk); box-shadow: var(--golge-yazi);
+}
+.harita-grafik svg { display: block; width: 100%; height: auto; }
+.harita-grafik.secili { outline: 1.5px dashed var(--harita-cizim); outline-offset: var(--b-1); }

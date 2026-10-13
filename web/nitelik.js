@@ -12,6 +12,9 @@ function nitelikKaydet() {
 
 function nitelikleriUygula() {
   durum.parseller.forEach((_, key) => stilUygula(key));
+  for (const n of notlar.values()) if (n.tur === "grafik") notCiz(n); // grafik renkleri nitelik rengini izler
+  if (analizSekmesinde()) analizCiz();
+  canliZamanla();
   nitelikKaydet();
   nitelikListesiCiz();
   lejantCiz();
@@ -53,7 +56,8 @@ $("nitelikListesi").addEventListener("click", (e) => {
   renkPaletiAc(b, {
     anahtar: `nitelik-${ad}`, renk: nitelikRengi(ad), renkler: NITELIK_RENKLERI,
     sec: (renk) => {
-      nitelikRenk.renkler[ad] = renk;
+      const yuva = NITELIK_RENKLERI.findIndex(([tk]) => token(tk).toLowerCase() === renk.toLowerCase());
+      nitelikRenk.renkler[ad] = yuva >= 0 ? Number(NITELIK_RENKLERI[yuva][0].split("-").pop()) : renk;
       nitelikRenk.acik = true; // renk seçmek renklendirmeyi de açar
       nitelikleriUygula();
       $("nitelikListesi").querySelector(`li[data-nitelik="${CSS.escape(ad)}"] [data-is=renk]`)?.focus();

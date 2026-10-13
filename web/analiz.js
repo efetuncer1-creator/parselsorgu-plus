@@ -36,14 +36,15 @@ const KAPSAM_ADI = { kesisen: "alana değen", icinde: "alan içindeki", secili: 
 const ONIZLEME_SATIR = 8;
 
 // tercih: kullanıcının seçtiği kapsam; kapsam: geçerli olan (alan yokken alanlı tercih "tumu" olur, alan gelince geri döner)
-const analizDurumu = { tercih: "kesisen", kapsam: "kesisen", alanId: null, sutunlar: [...HAZIR_SUTUNLAR.temel], sonuc: null, surum: 0, zamanlayici: 0 };
+const analizDurumu = { tercih: "kesisen", kapsam: "kesisen", alanId: null, sutunlar: [...HAZIR_SUTUNLAR.temel], gorunum: "tablo", sonuc: null, surum: 0, zamanlayici: 0 };
 try {
   const k = JSON.parse(localStorage.getItem("analiz") || "{}");
   if (Object.hasOwn(KAPSAM_ADI, k.kapsam)) analizDurumu.tercih = analizDurumu.kapsam = k.kapsam;
   if (Array.isArray(k.sutunlar)) analizDurumu.sutunlar = k.sutunlar.filter((id) => ANALIZ_SUTUNLARI.some((c) => c.id === id));
+  if (k.gorunum === "grafik") analizDurumu.gorunum = "grafik";
 } catch { /* varsayılanlar */ }
 const analizKaydet = () => {
-  try { localStorage.setItem("analiz", JSON.stringify({ kapsam: analizDurumu.tercih, sutunlar: analizDurumu.sutunlar })); } catch { /* önemli değil */ }
+  try { localStorage.setItem("analiz", JSON.stringify({ kapsam: analizDurumu.tercih, sutunlar: analizDurumu.sutunlar, gorunum: analizDurumu.gorunum })); } catch { /* önemli değil */ }
 };
 const analizSekmesinde = () => !$("panel-analiz").hidden;
 const alanliKapsam = () => analizDurumu.kapsam === "kesisen" || analizDurumu.kapsam === "icinde";
@@ -126,6 +127,75 @@ function hucreMetni(v, tur, kisa = false) {
 const tabloMetinleri = (t) => [t.sutunlar.map((c) => c.ad), ...[...t.satirlar, ...(t.toplam ? [t.toplam] : [])]
   .map((r) => r.map((v, i) => hucreMetni(v, t.sutunlar[i].tur)))];
 
+// ---- dilim grafiği: parsel türlerinin payı ---------------------------------------------------------------
+// Parçanın bütüne oranını bir bakışta göstermek için. En fazla 6 dilim: gerisi "Diğer"de toplanır (daha fazla
+// dilim okunmaz, renkler karışır). Dilimler arasında 2 px boşluk; yanında adlı ve yüzdeli lejant; değerlerin
+// kendisi tabloda. Renk niteliği izler (haritadaki nitelik rengiyle aynı ton), "Diğer" nötr gri.
+// Aynı SVG çekmecede (panel: temaya göre renk), haritadaki kartta ve çıktı sayfasında (kagit) kullanılır.
+
+const EN_COK_DILIM = 6;
+
+function grafikVerisi(s) {
+  const t = nitelikTablosu(s);
+  const olcu = s.alanli ? 3 : 2; // alanda alan içi m², listede tapu alanı (tablodaki "Pay" ile aynı)
+  let dilimler = t.satirlar.map((r) => ({ ad: r[0], deger: r[olcu], adet: r[1] })).filter((d) => d.deger > 0);
+  if (dilimler.length > EN_COK_DILIM) {
+    const kalan = dilimler.slice(EN_COK_DILIM - 1);
+    dilimler = [...dilimler.slice(0, EN_COK_DILIM - 1), {
+      ad: "Diğer", diger: true, icerik: kalan.map((d) => d.ad),
+      deger: kalan.reduce((x, d) => x + d.deger, 0), adet: kalan.reduce((x, d) => x + d.adet, 0),
+    }];
+  }
+  const toplam = dilimler.reduce((x, d) => x + d.deger, 0);
+  dilimler.forEach((d) => { d.pay = toplam ? d.deger / toplam : 0; });
+  return { dilimler, toplam, birim: s.alanli ? "m² alan içinde" : "m² tapu alanı", parsel: s.parseller.length };
+}
+
+const dilimIpucu = (d, v) => `${d.diger ? `Diğer (${d.icerik.join(", ")})` : d.ad}: %${sayi(d.pay * 100, 1)} · ${sayi(d.deger)} ${v.birim.split(" ")[0]} · ${sayi(d.adet)} parsel`;
+
+// baglam: "panel" (çekmece, temaya göre renk ve yazı) ya da "kagit" (beyaz kart). Dönüş: { svg, en, boy }.
+function dilimGrafigiSvg(v, baglam = "kagit", baslik = "") {
+  const panel = baglam === "panel";
+  const renk = (d) => (d.diger ? (panel ? "var(--grafik-renk-0)" : token("--grafik-kagit-renk-0")) : nitelikRengi(d.ad, panel ? "panel" : "kagit"));
+  const [birincil, ikincil] = panel ? ["var(--metin)", "var(--metin-2)"] : [token("--not-siyah"), token("--kagit-metin-2")];
+  const dolgu = panel ? 0 : 14, ust = dolgu + (baslik ? 26 : 0);
+  const R = 64, r = 41, cx = dolgu + R, cy = ust + R;
+  const satir = 22, lejantX = dolgu + 2 * R + 20, en = lejantX + 168 + dolgu;
+  const lejantBoy = v.dilimler.length * satir;
+  const boy = Math.max(ust + 2 * R, ust + lejantBoy) + dolgu;
+  const ly = ust + Math.max(0, R - lejantBoy / 2) + satir / 2;
+  // Halka dilimi; boşluk orta yarıçapta 2 px olacak açı kadar
+  const bosluk = v.dilimler.length > 1 ? 2 / ((R + r) / 2) : 0;
+  const nokta = (yc, a) => [cx + yc * Math.sin(a), cy - yc * Math.cos(a)].map((x) => x.toFixed(2)).join(" ");
+  let aci = 0;
+  const dilimler = v.dilimler.map((d) => {
+    const a1 = aci + bosluk / 2, a2 = aci + d.pay * 2 * Math.PI - bosluk / 2;
+    aci += d.pay * 2 * Math.PI;
+    const ipucu = panel ? ` data-ipucu="${esc(dilimIpucu(d, v))}"` : "";
+    if (d.pay >= 0.9999) return `<circle cx="${cx}" cy="${cy}" r="${(R + r) / 2}" fill="none" stroke="${renk(d)}" stroke-width="${R - r}"${ipucu}/>`;
+    if (a2 <= a1) return "";
+    const buyuk = a2 - a1 > Math.PI ? 1 : 0;
+    return `<path class="dilim" fill="${renk(d)}"${ipucu} d="M${nokta(R, a1)}A${R} ${R} 0 ${buyuk} 1 ${nokta(R, a2)}L${nokta(r, a2)}A${r} ${r} 0 ${buyuk} 0 ${nokta(r, a1)}Z"/>`;
+  }).join("");
+  const kisalt = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+  const lejantSatirlari = v.dilimler.map((d, i) => {
+    const y = ly + i * satir;
+    return `<rect x="${lejantX}" y="${y - 5}" width="10" height="10" rx="2" fill="${renk(d)}"/>`
+      + `<text x="${lejantX + 16}" y="${y}" dominant-baseline="central" fill="${birincil}">${esc(kisalt(d.ad, 17))}</text>`
+      + `<text x="${en - dolgu}" y="${y}" dominant-baseline="central" text-anchor="end" font-weight="600" fill="${birincil}">%${sayi(d.pay * 100, 1)}</text>`;
+  }).join("");
+  const ozet = v.dilimler.map((d) => `${d.ad} %${sayi(d.pay * 100, 1)}`).join(", ");
+  const svg = `<svg xmlns="${SVG_NS}" viewBox="0 0 ${en} ${boy}" width="${en}" height="${boy}" role="img" aria-label="${esc(`${baslik || "Parsel türleri"} dilim grafiği: ${ozet}`)}"`
+    + ` font-family="Inter, sans-serif" font-size="12" style="font-variant-numeric: tabular-nums">`
+    + (panel ? "" : `<rect width="${en}" height="${boy}" rx="10" fill="${token("--not-beyaz")}"/>`)
+    + (baslik ? `<text x="${dolgu}" y="${dolgu + 9}" dominant-baseline="central" font-size="13" font-weight="650" fill="${birincil}">${esc(kisalt(baslik, 44))}</text>` : "")
+    + dilimler
+    + `<text x="${cx}" y="${cy - 3}" text-anchor="middle" font-size="14" font-weight="650" fill="${birincil}">${sayi(v.toplam)}</text>`
+    + `<text x="${cx}" y="${cy + 13}" text-anchor="middle" font-size="9.5" fill="${ikincil}">${esc(v.birim)}</text>`
+    + lejantSatirlari + "</svg>";
+  return { svg, en, boy };
+}
+
 // ---- ekran -------------------------------------------------------------------------------------------
 
 // cubuk: payı ilk hücrenin zemininde çubuk olarak da gösterir (nitelik tablosu)
@@ -181,13 +251,24 @@ function analizCiz() {
     : `Bu kapsamda parsel yok${s.alanli ? "; alanı tarayabilir ya da parsel içe aktarabilirsin" : ""}.`;
   for (const id of ["analizNitelikKutu", "analizParselKutu", "analizExcel"]) $(id).hidden = !s.parseller.length;
   if (!s.parseller.length) return;
-  $("analizNitelik").innerHTML = onizlemeTablosu(nitelikTablosu(s), { cubuk: true });
+  document.querySelectorAll("input[name=analizGorunum]").forEach((x) => { x.checked = x.value === analizDurumu.gorunum; });
+  $("analizNitelik").innerHTML = analizDurumu.gorunum === "grafik" ? grafikOnizleme(s) : onizlemeTablosu(nitelikTablosu(s), { cubuk: true });
+  $("analizNitelikKutu").querySelector('[data-is="excel"]').hidden = analizDurumu.gorunum === "grafik";
   const pt = parselTablosu(s);
   $("analizParselAdet").textContent = s.parseller.length;
   $("analizParsel").innerHTML = pt.sutunlar.length ? onizlemeTablosu(pt, { enCok: ONIZLEME_SATIR })
     : `<p class="ikincil-metin">Tabloda görünecek sütunları seç.</p>`;
   document.querySelectorAll('[data-tablo="parsel"] button').forEach((b) => { b.disabled = !pt.sutunlar.length; });
   analizSutunlariniCiz();
+}
+
+// Tek tür varsa dilim grafiği bir şey söylemez: sayı yazılır.
+function grafikOnizleme(s) {
+  const v = grafikVerisi(s);
+  if (v.dilimler.length < 2) {
+    return `<p class="analiz-tek-tur">Parsellerin tamamı <b>${esc(v.dilimler[0]?.ad || "belirtilmemiş")}</b>; grafik için en az iki tür gerekir.</p>`;
+  }
+  return `<div class="analiz-grafik">${dilimGrafigiSvg(v, "panel").svg}</div>`;
 }
 
 function analizSutunlariniCiz() {
@@ -224,6 +305,7 @@ $("panel-analiz").addEventListener("click", (e) => {
   const hangi = b.closest("[data-tablo]").dataset.tablo;
   const t = analizTablosu(hangi);
   const ad = analizBasligi(t);
+  if (hangi === "nitelik" && analizDurumu.gorunum === "grafik" && b.dataset.is !== "excel") return grafikEkle(b.dataset.is, ad);
   const sayfalar = [{ ad: t.ad, satirlar: tabloMetinleri(t), kesildi: false }];
   if (b.dataset.is === "excel") return analizExcel([t], b);
   if (b.dataset.is === "harita") {
@@ -236,6 +318,28 @@ $("panel-analiz").addEventListener("click", (e) => {
     mesaj(`"${ad}" çıktı sayfasına eklendi; Çıktı sekmesinde yerleştirebilirsin.`, "basari");
   }
 });
+// Dilim grafiği haritaya (Görsel'de katman) ya da çıktı sayfasına
+function grafikEkle(nereye, ad) {
+  const veri = grafikVerisi(analizDurumu.sonuc);
+  if (veri.dilimler.length < 2) return mesaj("Grafik için en az iki parsel türü gerekir; tabloyu ekleyebilirsin.", true);
+  const grafikAdi = ad.replace(/^Parsel türleri/, "Parsel türleri grafiği");
+  if (nereye === "harita") {
+    const m = harita.getCenter();
+    notEkle("grafik", { ad: grafikAdi, veri, boyut: 1, konum: [m.lat, m.lng] });
+    mesaj(`"${grafikAdi}" haritaya eklendi; Görsel sekmesinde taşıyıp boyutlandırabilirsin.`, "basari");
+  } else {
+    cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "grafik", ad: grafikAdi, veri, genislikMm: 90 });
+    sayfaOgeleriCiz();
+    mesaj(`"${grafikAdi}" çıktı sayfasına eklendi; Çıktı sekmesinde yerleştirebilirsin.`, "basari");
+  }
+}
+
+document.querySelectorAll("input[name=analizGorunum]").forEach((x) => x.addEventListener("change", () => {
+  analizDurumu.gorunum = x.value;
+  analizKaydet();
+  analizCiz();
+}));
+
 $("analizExcel").addEventListener("click", (e) => analizExcel([analizTablosu("nitelik"), analizTablosu("parsel")].filter((t) => t.sutunlar.length), e.currentTarget));
 
 document.querySelectorAll("input[name=analizKapsam]").forEach((x) => x.addEventListener("change", () => {

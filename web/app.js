@@ -242,28 +242,39 @@ const STIL = { color: HR.parsel, weight: 1.5, opacity: 0.95, fillColor: HR.parse
 const STIL_SECILI = { color: HR.secili, weight: 2.5, opacity: 1, fillColor: HR.secili, fillOpacity: 0.3 };
 
 // ---- nitelik renkleri: açıkken parseller niteliklerine göre boyanır (düzenleyici nitelik.js'te) ----
-// Kullanıcının seçtiği renk saklanır; seçilmemiş nitelik adına göre hep aynı rengi alır, sık görülenlerin
-// tanıdık renkleri var (tarla buğday, bahçe yeşil, arsa turuncu...).
-const NITELIK_RENKLERI = [["--nitelik-renk-1", "Buğday"], ["--nitelik-renk-2", "Yeşil"], ["--nitelik-renk-3", "Turuncu"],
-  ["--nitelik-renk-4", "Mor"], ["--nitelik-renk-5", "Açık yeşil"], ["--nitelik-renk-6", "Camgöbeği"], ["--nitelik-renk-7", "Kırmızı"],
-  ["--nitelik-renk-8", "Kahve"], ["--nitelik-renk-9", "Zeytin"], ["--nitelik-renk-10", "Çivit"], ["--nitelik-renk-11", "Pembe"],
-  ["--nitelik-renk-12", "Gri"]];
-const TANIDIK_NITELIKLER = [[/tarla/, 1], [/(^|\s)(ev|konut|bina)|kargir|ahşap|yapı/, 7], [/bahçe/, 2], [/arsa/, 3], [/(^|\s)bağ/, 4],
-  [/mera|çayır|otlak/, 5], [/zeytin/, 9], [/ham toprak/, 8], [/fabrika|sanayi|depo|atölye/, 10], [/yol|dere|kanal|ark/, 6]];
+// Doğrulanmış 8 tonluk kategorik palet (renk körlüğüne dayanıklı; dataviz denetiminden geçti) ve nötr gri.
+// Her nitelik bir yuvaya (0-8) bağlıdır; renk niteliği izler, sırasını değil. Aynı yuva bağlama göre farklı
+// adımla çizilir: haritada koyu zemin adımı (uydu), grafikte bulunduğu zemine uygun adım. 0: gri (diğer,
+// belirtilmemiş). Seçilmemiş nitelik adına göre hep aynı yuvayı alır; sık görülenlerin tanıdık tonu var.
+const NITELIK_RENKLERI = [["--nitelik-renk-1", "Mavi"], ["--nitelik-renk-2", "Turuncu"], ["--nitelik-renk-3", "Su yeşili"],
+  ["--nitelik-renk-4", "Sarı"], ["--nitelik-renk-5", "Pembe"], ["--nitelik-renk-6", "Yeşil"], ["--nitelik-renk-7", "Mor"],
+  ["--nitelik-renk-8", "Kırmızı"], ["--nitelik-renk-0", "Gri"]];
+const TANIDIK_NITELIKLER = [[/tarla/, 4], [/(^|\s)(ev|konut|bina)|kargir|ahşap|yapı/, 8], [/bahçe|zeytin/, 6], [/arsa/, 2],
+  [/(^|\s)bağ/, 7], [/mera|çayır|otlak/, 3], [/ham toprak/, 5], [/yol|dere|kanal|ark|fabrika|sanayi|depo|atölye/, 1],
+  [/^belirtilmemiş$/, 0]];
+// Yuva numarası ya da (eski kayıtlarda) #rrggbb
+const nitelikRengiGecerli = (v) => (Number.isInteger(v) && v >= 0 && v <= 8) || (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v));
 const nitelikRenk = { acik: false, renkler: {} };
 try {
   const k = JSON.parse(localStorage.getItem("nitelikRenkleri") || "{}");
   nitelikRenk.acik = k.acik === true;
-  for (const [ad, renk] of Object.entries(k.renkler || {})) if (/^#[0-9a-f]{6}$/i.test(renk)) nitelikRenk.renkler[ad] = renk;
+  for (const [ad, v] of Object.entries(k.renkler || {})) if (nitelikRengiGecerli(v)) nitelikRenk.renkler[ad] = v;
 } catch { /* varsayılan: kapalı */ }
 const nitelikAdi = (p) => (p?.nitelik || "").trim() || "Belirtilmemiş";
 
-function nitelikRengi(ad) {
-  if (nitelikRenk.renkler[ad]) return nitelikRenk.renkler[ad];
+function nitelikYuvasi(ad) {
+  if (Object.hasOwn(nitelikRenk.renkler, ad)) return nitelikRenk.renkler[ad];
   const k = trKucuk(ad);
   const tanidik = TANIDIK_NITELIKLER.find(([desen]) => desen.test(k));
-  const sira = tanidik ? tanidik[1] : 1 + ([...k].reduce((h, c) => (h * 31 + c.codePointAt(0)) >>> 0, 7) % NITELIK_RENKLERI.length);
-  return token(`--nitelik-renk-${sira}`);
+  return tanidik ? tanidik[1] : 1 + ([...k].reduce((h, c) => (h * 31 + c.codePointAt(0)) >>> 0, 7) % 8);
+}
+
+// baglam: "harita" (uydu üstü), "kagit" (beyaz kart: haritadaki grafik, çıktı sayfası) ya da "panel"
+// (çekmece; temaya göre değişen CSS değişkeni döner, sadece satır içi SVG'de kullanılır).
+function nitelikRengi(ad, baglam = "harita") {
+  const v = nitelikYuvasi(ad);
+  if (typeof v === "string") return v;
+  return baglam === "panel" ? `var(--grafik-renk-${v})` : token(`--${baglam === "kagit" ? "grafik-kagit" : "nitelik"}-renk-${v}`);
 }
 
 // Parselin haritadaki ve çıktıdaki stili. Seçili mavi kenarlı; üzerinde çalışılan beyaz kenarlı (çıktıda değil).
@@ -1747,7 +1758,8 @@ function katmanSirasiCiz() {
 function notSatiri(n) {
   const secili = n.id === seciliNot;
   const ozet = !n.gorunur ? "Haritada gizli" : n.tur === "yazi" ? `Yazı · ${n.boyut} px` : n.tur === "ok" ? `Ok · ${kalinlikMetni(n.kalinlik)}`
-    : n.tur === "gorsel" ? `${n.pdf ? `PDF · sayfa ${n.sayfa}` : "Görsel"} · %${n.opaklik}` : `Tablo · ${n.sayfalar[n.sayfa].satirlar.length} satır`;
+    : n.tur === "gorsel" ? `${n.pdf ? `PDF · sayfa ${n.sayfa}` : "Görsel"} · %${n.opaklik}`
+    : n.tur === "grafik" ? `Dilim grafiği · ${n.veri.dilimler.length} dilim` : `Tablo · ${n.sayfalar[n.sayfa].satirlar.length} satır`;
   return `
     <li data-id="${n.id}" class="${secili ? "secili" : ""}${n.gorunur ? "" : " gizli"}">
       <button type="button" class="tutamac" aria-label="${esc(notAdi(n))} katmanını taşı" title="Sürükle ya da yukarı/aşağı okla taşı">${ikon("tutamac")}</button>
@@ -2300,7 +2312,7 @@ const kimlik = (s) => (/^\d+$/.test(s) ? Number(s) : s);
 const NOT_RENKLERI = [["--not-beyaz", "Beyaz"], ["--not-siyah", "Siyah"], ...ALAN_RENKLERI];
 const acikRenk = (hex) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)); return 0.299 * r + 0.587 * g + 0.114 * b > 150; };
 const notAdi = (n) => n.ad || (n.tur === "yazi" ? n.metin.split("\n")[0].slice(0, 40) || "Yazı"
-  : { ok: "Ok", gorsel: "Görsel", tablo: "Tablo" }[n.tur]);
+  : { ok: "Ok", gorsel: "Görsel", tablo: "Tablo", grafik: "Grafik" }[n.tur]);
 
 // Listede ve lejantta okun küçük örneği (uçlar elle hesaplandı: 7 boy, 7 taban).
 function okOrnegi(renk, uc = "tek", cizgi = "duz") {
@@ -2313,6 +2325,10 @@ function okOrnegi(renk, uc = "tek", cizgi = "duz") {
 function notOrnegi(n) {
   if (n.tur === "ok") return okOrnegi(n.renk, n.uc, n.cizgi);
   if (n.tur === "gorsel") return `<img class="katman-ornek gorsel-ornek" src="${esc(n.url)}" alt="">`;
+  if (n.tur === "grafik") {
+    return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true"><circle cx="16" cy="11" r="7.5" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="4"/>`
+      + `<path d="M16 3.5A7.5 7.5 0 0 1 23.1 13.4" fill="none" stroke="${esc(nitelikRengi(n.veri.dilimler[0].ad, "kagit"))}" stroke-width="4"/></svg>`;
+  }
   if (n.tur === "tablo") {
     return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-opacity=".5"/>` +
       `<path d="M2.5 13.5h27M11.5 8v11.5M20.5 8v11.5" stroke="currentColor" stroke-opacity=".3"/><path d="M5 2.5h22a2.5 2.5 0 0 1 2.5 2.5v3h-27V5A2.5 2.5 0 0 1 5 2.5z" fill="${esc(n.renk)}"/></svg>`;
@@ -2354,10 +2370,11 @@ function notCiz(n) {
     const pane = katmanBolmesi(n.id);
     harita.getPane(pane).classList.add("not-katmani");
     harita.getPane(pane).style.mixBlendMode = n.tur === "gorsel" && n.karistir ? "multiply" : "";
-    if (n.tur === "yazi" || n.tur === "tablo") {
+    if (n.tur === "yazi" || n.tur === "tablo" || n.tur === "grafik") {
+      const html = { yazi: yaziHtml, tablo: tabloHtml, grafik: grafikHtml }[n.tur](n);
       n.katman = L.marker(n.konum, {
         pane, draggable: true, keyboard: false,
-        icon: L.divIcon({ className: "harita-yazi-ikon", html: n.tur === "yazi" ? yaziHtml(n) : tabloHtml(n), iconSize: null }),
+        icon: L.divIcon({ className: "harita-yazi-ikon", html, iconSize: null }),
       });
       n.katman.on("dragend", () => { const p = n.katman.getLatLng(); n.konum = [p.lat, p.lng]; });
       n.katman.on("click", () => notSec(n.id));
@@ -2381,7 +2398,7 @@ function notCiz(n) {
 // Seçili okun uçlarında ve ortasında sürüklenebilir noktalar: uçlar yönü, ortadaki yeri değiştirir.
 // Görselde ortadaki nokta taşır, köşedeki büyütür ve döndürür.
 function tutamaclariCiz(n) {
-  if (!n.katman || n.tur === "yazi" || n.tur === "tablo") return;
+  if (!n.katman || n.tur === "yazi" || n.tur === "tablo" || n.tur === "grafik") return;
   const tutamac = (konum, tasi, sinif) => {
     const t = L.marker(konum, {
       draggable: true, keyboard: false, zIndexOffset: 1000,
@@ -2541,6 +2558,8 @@ function notDuzenDoldur() {
     kaydirici("notOpaklik", n.opaklik, `%${n.opaklik}`);
     kaydirici("notAci", n.aci, `${String(n.aci).replace(".", ",")}°`);
     $("notKaristir").checked = n.karistir;
+  } else if (n.tur === "grafik") {
+    kaydirici("notGrafikBoyut", Math.round(n.boyut * 100), `%${Math.round(n.boyut * 100)}`);
   } else {
     kaydirici("notTabloBoyut", n.boyut, `${n.boyut} px`);
     $("notBaslikSatiri").checked = n.baslikSatiri;
@@ -2763,6 +2782,13 @@ $("notAci").addEventListener("input", (e) => notGuncelle(seciliNot, { aci: Numbe
 $("notKaristir").addEventListener("change", (e) => notGuncelle(seciliNot, { karistir: e.target.checked }));
 $("notBaslikSatiri").addEventListener("change", (e) => notGuncelle(seciliNot, { baslikSatiri: e.target.checked }));
 $("notTabloBoyut").addEventListener("input", (e) => notGuncelle(seciliNot, { boyut: Number(e.target.value) }));
+$("notGrafikBoyut").addEventListener("input", (e) => notGuncelle(seciliNot, { boyut: Number(e.target.value) / 100 }));
+
+// Haritadaki grafik kartı: Analiz sekmesindeki dilim grafiğinin aynısı (analiz.js dilimGrafigiSvg)
+function grafikHtml(n) {
+  const secili = n.id === seciliNot && gorselSekmesinde();
+  return `<div class="harita-grafik${secili ? " secili" : ""}" style="--grafik-olcek:${n.boyut}">${dilimGrafigiSvg(n.veri, "kagit", n.ad).svg}</div>`;
+}
 $("notSigdir").addEventListener("click", () => {
   const n = notlar.get(seciliNot);
   if (!n) return;

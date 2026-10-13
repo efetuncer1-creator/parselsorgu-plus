@@ -340,7 +340,13 @@
         </div>
 
         <div class="kutu" id="analizNitelikKutu" hidden>
-          <div class="kutu-baslik"><h2>Parsel türleri</h2></div>
+          <div class="kutu-baslik">
+            <h2>Parsel türleri</h2>
+            <div class="bolumlu kucuk-bolumlu" role="radiogroup" aria-label="Görünüm">
+              <label><input type="radio" name="analizGorunum" value="tablo"><span>Tablo</span></label>
+              <label><input type="radio" name="analizGorunum" value="grafik"><span>Grafik</span></label>
+            </div>
+          </div>
           <div id="analizNitelik"></div>
           <div class="arac-cubugu analiz-eylemleri" data-tablo="nitelik">
             <button type="button" class="metin-dugme" data-is="harita"><svg class="ikon"><use href="#i-harita"/></svg>Haritaya ekle</button>
@@ -458,7 +464,7 @@
             <h2 id="notBaslik">Yazı</h2>
             <button type="button" id="notSil" class="metin-dugme tehlikeli"><svg class="ikon"><use href="#i-kapat"/></svg>Sil</button>
           </div>
-          <label class="lejant-baslik-alan" data-not="ok gorsel tablo"><span>Ad</span><input id="notAd" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Katmanın adı; listede ve lejantta görünür"></label>
+          <label class="lejant-baslik-alan" data-not="ok gorsel tablo grafik"><span>Ad</span><input id="notAd" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Katmanın adı; listede ve lejantta görünür"></label>
           <div id="notSayfa" class="sayfa-gezgini" hidden>
             <button type="button" id="notSayfaGeri" class="ikon-dugme" aria-label="Önceki sayfa"><svg class="ikon"><use href="#i-sol"/></svg></button>
             <span id="notSayfaAd" aria-live="polite"></span>
@@ -513,6 +519,11 @@
             </label>
             <p id="notKesildi" class="ikincil-metin" hidden>Tablonun ilk 60 satırı ve 15 sütunu gösteriliyor.</p>
           </fieldset>
+          <fieldset class="ayar" data-not="grafik">
+            <legend>Grafik</legend>
+            <label class="kaydirici"><span>Boyut</span><input type="range" id="notGrafikBoyut" min="50" max="200" step="5"><output id="notGrafikBoyutDeger" for="notGrafikBoyut"></output></label>
+            <p class="ikincil-metin">Renkler nitelik renklerini izler; Parseller kutusunda değiştirince grafik de değişir.</p>
+          </fieldset>
           <fieldset class="ayar" data-not="yazi ok tablo">
             <legend>Renk</legend>
             <div id="notRenkler" class="renk-izgara not-renkleri" role="group" aria-label="Renk"></div>
@@ -521,6 +532,7 @@
           <p class="ikincil-metin" data-not="ok">Uçlardaki noktaları sürükleyerek yönünü, ortadakiyle yerini değiştir.</p>
           <p class="ikincil-metin" data-not="gorsel">Ortadaki noktayla taşı, köşedekiyle büyüt ve döndür.</p>
           <p class="ikincil-metin" data-not="tablo">Tabloyu haritada sürükleyerek taşı. Renk başlık satırına uygulanır.</p>
+          <p class="ikincil-metin" data-not="grafik">Grafiği haritada sürükleyerek taşı.</p>
         </div>
 
         <div class="kutu" id="nitelikKutu">

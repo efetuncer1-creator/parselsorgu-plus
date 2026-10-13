@@ -111,6 +111,15 @@ const renkAl = (v, varsayilan) => (typeof v === "string" && RENK.test(v) ? v : v
 const metinAl = (v, uzunluk, varsayilan = "") => (typeof v === "string" ? v.slice(0, uzunluk) : varsayilan);
 const noktaAl = (v) => (Array.isArray(v) && v.length === 2 && v.every((x) => Number.isFinite(x) && Math.abs(x) <= 180) ? [v[0], v[1]] : null);
 
+// Dilim grafiğinin verisi: en çok 6 dilim; adlar ve sayılar doğrulanır.
+function grafikVerisiniOku(v) {
+  if (!v || typeof v !== "object" || !Array.isArray(v.dilimler)) return null;
+  const dilimler = v.dilimler.slice(0, EN_COK_DILIM).filter((d) => d && typeof d.ad === "string" && Number.isFinite(d.deger) && Number.isFinite(d.pay))
+    .map((d) => ({ ad: d.ad.slice(0, 80), deger: Math.max(0, d.deger), pay: Math.min(1, Math.max(0, d.pay)), adet: Math.round(sayiAl(d.adet, 0, 1e7, 0)),
+      ...(d.diger === true ? { diger: true, icerik: (Array.isArray(d.icerik) ? d.icerik : []).filter((x) => typeof x === "string").slice(0, 50) } : {}) }));
+  return dilimler.length >= 2 ? { dilimler, toplam: sayiAl(v.toplam, 0, 1e12, 0), birim: metinAl(v.birim, 40, "m²"), parsel: Math.round(sayiAl(v.parsel, 0, 1e7, 0)) } : null;
+}
+
 function notKaydiniOku(k) {
   if (!k || typeof k !== "object") return null;
   const ortak = { ad: metinAl(k.ad, 60), gorunur: k.gorunur !== false };
@@ -132,6 +141,10 @@ function notKaydiniOku(k) {
       karistir: k.karistir === true, sayfa: Math.round(sayiAl(k.sayfa, 1, 1e4, 1)), sayfaSayisi: Math.round(sayiAl(k.sayfaSayisi, 1, 1e4, 1)),
       pdfVeri: typeof k.pdfVeri === "string" && k.pdfVeri.startsWith("data:application/pdf") ? k.pdfVeri : null };
   }
+  if (k.tur === "grafik") {
+    const konum = noktaAl(k.konum), veri = grafikVerisiniOku(k.veri);
+    return konum && veri && { ...ortak, tur: "grafik", konum, veri, boyut: sayiAl(k.boyut, 0.5, 2, 1) };
+  }
   if (k.tur === "tablo") {
     const konum = noktaAl(k.konum);
     const sayfalar = Array.isArray(k.sayfalar) ? k.sayfalar.filter((s) => s && Array.isArray(s.satirlar) && s.satirlar.length
@@ -147,6 +160,10 @@ function sayfaOgesiniOku(o) {
   if (o.tur === "gorsel" && typeof o.resim === "string" && o.resim.startsWith("data:image/")) {
     return { tur: "gorsel", ad: metinAl(o.ad, 80, "Görsel"), resim: o.resim, en: sayiAl(o.en, 1, 1e5, 1000), boy: sayiAl(o.boy, 1, 1e5, 1000),
       genislikMm: sayiAl(o.genislikMm, ...SAYFA_OGE_SINIRI.gorsel.slice(0, 2), 40) };
+  }
+  if (o.tur === "grafik") {
+    const veri = grafikVerisiniOku(o.veri);
+    return veri && { tur: "grafik", ad: metinAl(o.ad, 80, "Grafik"), veri, genislikMm: sayiAl(o.genislikMm, ...SAYFA_OGE_SINIRI.grafik.slice(0, 2), 90) };
   }
   if (o.tur === "tablo") {
     const tablo = notKaydiniOku({ ...o, tur: "tablo", konum: [0, 0] });
@@ -249,7 +266,7 @@ async function projeAc(dosya, tutamac = null) {
     // Nitelik renkleri (eski projelerde yok: o zaman tercih olduğu gibi kalır)
     if (p.nitelikRenk && typeof p.nitelikRenk === "object") {
       nitelikRenk.acik = p.nitelikRenk.acik === true;
-      nitelikRenk.renkler = Object.fromEntries(Object.entries(p.nitelikRenk.renkler || {}).filter(([, v]) => typeof v === "string" && RENK.test(v)));
+      nitelikRenk.renkler = Object.fromEntries(Object.entries(p.nitelikRenk.renkler || {}).filter(([, v]) => nitelikRengiGecerli(v)));
       nitelikleriUygula();
     }
 

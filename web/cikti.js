@@ -12,7 +12,7 @@ const KAGITLAR = { A4: [210, 297], A3: [297, 420] }; // mm, dikey
 const EN_BUYUK_KENAR = 8000; // serbest çıktının uzun kenarı, piksel
 const EN_COK_KARO = 2500; // bir katman için; aşılırsa çıktı çizilmez (tarayıcı kilitlenmesin)
 // Sayfaya konanların boyut sınırları (mm): paneldeki kaydırıcı ve önizlemedeki köşe tutamacı aynı sınırları kullanır.
-const SAYFA_OGE_SINIRI = { gorsel: [10, 400, 1], tablo: [1.5, 10, 0.1], yazi: [1.5, 30, 0.1] };
+const SAYFA_OGE_SINIRI = { gorsel: [10, 400, 1], grafik: [30, 300, 1], tablo: [1.5, 10, 0.1], yazi: [1.5, 30, 0.1] };
 const HAZIR_OGE_SINIRI = [0.5, 3]; // başlık, lejant, kuzey oku ve ölçeğin büyütme çarpanı
 const OLCEKLER = [500, 1000, 2000, 2500, 5000, 10000, 25000, 50000];
 const MERKATOR_R = 20037508.342789244;
@@ -550,6 +550,11 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
       if (n.tur === "yazi") yaziCiz(ctx, n.metin.split("\n"), ...g.nokta(...n.konum), { ...n, p });
       else if (n.tur === "ok") okCiz(ctx, g.nokta(...n.noktalar[0]), g.nokta(...n.noktalar[1]), n, p);
       else if (n.tur === "tablo") tabloCiz(ctx, n, ...g.nokta(...n.konum), n.boyut * p);
+    else if (n.tur === "grafik") {
+      const { svg, en, boy } = dilimGrafigiSvg(n.veri, "kagit", n.ad);
+      const [x, y] = g.nokta(...n.konum), k = n.boyut * p;
+      ctx.drawImage(await svgResmi(svg, Math.round(en * k), Math.round(boy * k)), x - (en * k) / 2, y - (boy * k) / 2, en * k, boy * k);
+    }
     }
   }
 
@@ -730,6 +735,11 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
       const en = o.genislikMm * mm, boy = (en * o.boy) / o.en;
       const k = yerlestir(o.id, en, boy, varsayilan);
       ctx.drawImage(img, k.x, k.y, en, boy);
+    } else if (o.tur === "grafik") {
+      const { svg, en: gEn, boy: gBoy } = dilimGrafigiSvg(o.veri, "kagit", o.ad);
+      const en = o.genislikMm * mm, boy = (en * gBoy) / gEn;
+      const k = yerlestir(o.id, en, boy, varsayilan);
+      ctx.drawImage(await svgResmi(svg, Math.round(en), Math.round(boy)), k.x, k.y, en, boy);
     } else if (o.tur === "tablo") {
       const olcu = tabloCiz(ctx, o, 0, 0, o.boyutMm * mm, true);
       const k = yerlestir(o.id, olcu.en, olcu.boy, varsayilan);
@@ -886,7 +896,7 @@ const sinirla = (v, [alt, ust, adim = 0.01]) => Math.min(ust, Math.max(alt, Math
 // Sayfaya konanlarda boyut (mm) değişir, paneldeki kaydırıcı da güncellenir; hazır öğelerde çarpan değişir.
 function ogeyiBuyut(id, carpan) {
   const o = cikti.sayfaOgeleri.find((x) => x.id === id);
-  if (o?.tur === "gorsel") o.genislikMm = sinirla(o.genislikMm * carpan, SAYFA_OGE_SINIRI.gorsel);
+  if (o?.tur === "gorsel" || o?.tur === "grafik") o.genislikMm = sinirla(o.genislikMm * carpan, SAYFA_OGE_SINIRI[o.tur]);
   else if (o) o.boyutMm = sinirla(o.boyutMm * carpan, SAYFA_OGE_SINIRI[o.tur]);
   else cikti.boyutlar[id] = sinirla((cikti.boyutlar[id] ?? 1) * carpan, HAZIR_OGE_SINIRI);
   sayfaOgeleriCiz();
@@ -971,15 +981,16 @@ let sayfaSayac = 0;
 function sayfaOgeleriCiz() {
   $("sayfaOgeleri").innerHTML = cikti.sayfaOgeleri.map((o) => {
     const [enAz, enCok, adim] = SAYFA_OGE_SINIRI[o.tur];
-    const boyut = o.tur === "gorsel" ? `<input type="range" data-is="boyut" min="${enAz}" max="${enCok}" step="${adim}" value="${o.genislikMm}" aria-label="${esc(o.ad)} genişliği, mm"><output>${sayi(o.genislikMm)} mm</output>`
+    const genislikli = o.tur === "gorsel" || o.tur === "grafik";
+    const boyut = genislikli ? `<input type="range" data-is="boyut" min="${enAz}" max="${enCok}" step="${adim}" value="${o.genislikMm}" aria-label="${esc(o.ad)} genişliği, mm"><output>${sayi(o.genislikMm)} mm</output>`
       : `<input type="range" data-is="boyut" min="${enAz}" max="${enCok}" step="${adim}" value="${o.boyutMm}" aria-label="${esc(o.ad)} yazı boyutu, mm"><output>${sayi(o.boyutMm, 1)} mm</output>`;
     const ust = o.tur === "yazi"
       ? `<textarea class="metin-girdi not-metin" data-is="metin" rows="2" maxlength="300" aria-label="Sayfadaki yazı">${esc(o.metin)}</textarea>`
       : `<span class="sayfa-oge-ad">${esc(o.ad)}</span>`;
     return `<li data-id="${o.id}">
-      <div class="sayfa-oge-ust">${ikon(o.tur === "gorsel" ? "resim" : o.tur === "tablo" ? "tablo" : "yazi")}${ust}
+      <div class="sayfa-oge-ust">${ikon({ gorsel: "resim", tablo: "tablo", grafik: "analiz" }[o.tur] || "yazi")}${ust}
         <button type="button" class="ikon-dugme" data-is="sil" aria-label="${esc(o.ad)} sayfadan çıkar" title="Sayfadan çıkar">${ikon("kapat")}</button></div>
-      <label class="kaydirici">${o.tur === "gorsel" ? "<span>Genişlik</span>" : "<span>Boyut</span>"}${boyut}</label>
+      <label class="kaydirici">${genislikli ? "<span>Genişlik</span>" : "<span>Boyut</span>"}${boyut}</label>
     </li>`;
   }).join("");
   $("sayfaOgeleri").querySelectorAll("input[type=range]").forEach(kaydiriciDoldur);
@@ -1019,7 +1030,7 @@ $("sayfaOgeleri").addEventListener("input", (e) => {
   if (e.target.dataset.is === "metin") { o.metin = e.target.value; o.ad = o.metin.split("\n")[0].slice(0, 30) || "Yazı"; return canliZamanla(); }
   if (e.target.dataset.is !== "boyut") return;
   const v = Number(e.target.value);
-  if (o.tur === "gorsel") { o.genislikMm = v; e.target.nextElementSibling.textContent = `${sayi(v)} mm`; }
+  if (o.tur === "gorsel" || o.tur === "grafik") { o.genislikMm = v; e.target.nextElementSibling.textContent = `${sayi(v)} mm`; }
   else { o.boyutMm = v; e.target.nextElementSibling.textContent = `${sayi(v, 1)} mm`; }
   kaydiriciDoldur(e.target);
   canliZamanla();
