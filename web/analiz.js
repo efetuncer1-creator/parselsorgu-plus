@@ -120,6 +120,7 @@ function parselTablosu(s) {
 function hucreMetni(v, tur, kisa = false) {
   if (v == null || v === "") return "";
   if (tur === "sayi") return sayi(v, kisa ? 0 : 2);
+  if (tur === "ondalik") return sayi(v, 1);
   if (tur === "tamsayi") return sayi(v);
   if (tur === "yuzde") return `%${sayi(v * 100, 1)}`;
   return String(v);

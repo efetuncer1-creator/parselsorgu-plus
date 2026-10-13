@@ -292,7 +292,7 @@ def _sayi(s):
 
 # ---- analiz tabloları (Analiz sekmesi) ---------------------------------------------
 
-TABLO_TURLERI = {"metin": None, "kod": None, "sayi": "#,##0.00", "tamsayi": "#,##0", "yuzde": "0.0%"}
+TABLO_TURLERI = {"metin": None, "kod": None, "sayi": "#,##0.00", "ondalik": "#,##0.0", "tamsayi": "#,##0", "yuzde": "0.0%"}
 _SAYFA_ADI_YASAK = re.compile(r"[\[\]:*?/\\]")
 
 
@@ -300,7 +300,8 @@ def tablo_excel(sayfalar):
     """Analiz sekmesinin tabloları: her biri bir çalışma sayfası.
 
     sayfalar: [{"ad", "sutunlar": [{"ad", "tur"}], "satirlar": [[değer...]], "toplam": [değer...] (isteğe bağlı)}].
-    tur: metin | kod (ada/parsel gibi; sayıysa sayı olarak yazılır) | sayi | tamsayi | yuzde (0-1 arası oran).
+    tur: metin | kod (ada/parsel gibi; sayıysa sayı olarak yazılır) | sayi | ondalik (tek ondalık: kot, eğim) | tamsayi
+    | yuzde (0-1 arası oran).
     """
     if not isinstance(sayfalar, list) or not 1 <= len(sayfalar) <= 10:
         raise ValueError("Excel'e yazılacak tablo yok.")
@@ -326,7 +327,7 @@ def tablo_excel(sayfalar):
                 return None
             if tur == "kod":
                 return _sayi(deger)
-            if tur in ("sayi", "tamsayi", "yuzde"):
+            if tur in ("sayi", "ondalik", "tamsayi", "yuzde"):
                 return deger if isinstance(deger, (int, float)) else None
             return str(deger)
 

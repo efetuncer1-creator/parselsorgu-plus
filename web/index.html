@@ -54,6 +54,8 @@
     <symbol id="i-ok" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-tik" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="i-gorsel" viewBox="0 0 24 24"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+    <symbol id="i-egim" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol>
+    <symbol id="i-kesit" viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M3 16l4-6 4 3 4-7 6 10"/></symbol>
     <symbol id="i-analiz" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></symbol>
     <symbol id="i-kaydet" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
     <symbol id="i-yazici" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
@@ -85,6 +87,10 @@
     <button type="button" role="tab" id="sekme-analiz" data-sekme="analiz" aria-controls="panel-analiz" aria-selected="false">
       <svg class="ikon"><use href="#i-analiz"/></svg>
       <span>Analiz</span>
+    </button>
+    <button type="button" role="tab" id="sekme-egim" data-sekme="egim" aria-controls="panel-egim" aria-selected="false">
+      <svg class="ikon"><use href="#i-egim"/></svg>
+      <span>Eğim</span>
     </button>
     <button type="button" role="tab" id="sekme-gorsel" data-sekme="gorsel" aria-controls="panel-gorsel" aria-selected="false">
       <svg class="ikon"><use href="#i-gorsel"/></svg>
@@ -383,7 +389,113 @@
         <button type="button" id="analizExcel" class="dugme ana genis" hidden><svg class="ikon"><use href="#i-indir"/></svg>İki tabloyu Excel olarak indir</button>
       </section>
 
-      <!-- ===================== Sayfa 4: Alanların görünümü ===================== -->
+      <!-- ===================== Sayfa 4: Eğim ve yükseklik (egim.js) ===================== -->
+      <section class="panel" id="panel-egim" role="tabpanel" aria-labelledby="sekme-egim" hidden>
+        <div class="kutu">
+          <div class="kutu-baslik"><h2>Bölge</h2></div>
+          <div class="form">
+            <div class="bolumlu" role="radiogroup" aria-label="Hangi bölge: alan, seçili parseller ya da listedeki bütün parseller">
+              <label><input type="radio" name="egimKapsam" value="alan"><span>Alan</span></label>
+              <label><input type="radio" name="egimKapsam" value="secili"><span>Seçili</span></label>
+              <label><input type="radio" name="egimKapsam" value="tumu"><span>Tümü</span></label>
+            </div>
+            <div class="grup" id="egimAlanSatiri">
+              <div class="satir-alan secici"><span id="egimAlan-etiket">Alan</span>
+                <button type="button" class="secici-dugme" id="egimAlan-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="egimAlan-etiket egimAlan-dugme"><span class="secici-deger"></span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+                <select id="egimAlan" class="gizli-secim" tabindex="-1" aria-hidden="true"></select>
+              </div>
+            </div>
+            <p id="egimDurum" class="analiz-ozet" aria-live="polite"></p>
+          </div>
+          <div id="egimBos" class="bos-durum" hidden>
+            <svg class="ikon ikon-buyuk" aria-hidden="true"><use href="#i-egim"/></svg>
+            <p>Bölge yok</p>
+            <span>Alan sekmesinde sınır yükle ya da çiz, ya da parsel sorgula; eğim ve yükseklik buradan çıkar.</span>
+          </div>
+        </div>
+
+        <div class="kutu" id="egimOzetKutu" hidden>
+          <div class="kutu-baslik"><h2>Özet</h2><span id="egimOzetAlt" class="ikincil-metin"></span></div>
+          <dl id="egimRakamlar" class="egim-rakamlar"></dl>
+          <p class="ayar-baslik">Eğim sınıfları</p>
+          <div id="egimSiniflar"></div>
+          <div class="arac-cubugu analiz-eylemleri" data-egim-tablo="ozet">
+            <button type="button" class="metin-dugme" data-is="harita"><svg class="ikon"><use href="#i-harita"/></svg>Haritaya ekle</button>
+            <button type="button" class="metin-dugme" data-is="sayfa"><svg class="ikon"><use href="#i-yazici"/></svg>Sayfaya ekle</button>
+            <button type="button" class="metin-dugme" data-is="excel"><svg class="ikon"><use href="#i-tablo"/></svg>Excel</button>
+          </div>
+        </div>
+
+        <div class="kutu" id="egimHaritaKutu" hidden>
+          <div class="kutu-baslik">
+            <h2>Harita</h2>
+            <label class="anahtar"><input type="checkbox" id="egimAcik" role="switch"><span class="anahtar-izi" aria-hidden="true"></span><span>Göster</span></label>
+          </div>
+          <div class="form">
+            <div class="bolumlu" role="radiogroup" aria-label="Haritada gösterilen">
+              <label><input type="radio" name="egimTur" value="egim"><span>Eğim</span></label>
+              <label><input type="radio" name="egimTur" value="yukseklik"><span>Yükseklik</span></label>
+            </div>
+            <label class="lejant-baslik-alan" data-egim-tur="egim"><span>Sınırlar</span><input id="egimSinirlari" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Eğim sınıflarının sınırları, yüzde" aria-describedby="egimSinirIpucu"></label>
+            <p id="egimSinirIpucu" class="ikincil-metin" data-egim-tur="egim">Yüzde olarak, küçükten büyüğe; ör. 2 5 10 15 20 30. En fazla 8 sınır.</p>
+            <div class="grup" data-egim-tur="yukseklik">
+              <div class="satir-alan secici"><span id="egimKotAraligi-etiket">Aralık</span>
+                <button type="button" class="secici-dugme" id="egimKotAraligi-dugme" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="egimKotAraligi-etiket egimKotAraligi-dugme"><span class="secici-deger"></span><svg class="ikon"><use href="#i-asagi"/></svg></button>
+                <select id="egimKotAraligi" class="gizli-secim" tabindex="-1" aria-hidden="true">
+                  <option value="0">Otomatik</option><option value="1">1 m</option><option value="2">2 m</option><option value="5">5 m</option>
+                  <option value="10">10 m</option><option value="20">20 m</option><option value="50">50 m</option><option value="100">100 m</option>
+                </select>
+              </div>
+            </div>
+            <label class="anahtar" data-egim-tur="yukseklik">
+              <input type="checkbox" id="egimKabartma" role="switch">
+              <span class="anahtar-izi" aria-hidden="true"></span>
+              <span>Gölgeli kabartma<small>Yüzey şekilleri kuzeybatıdan gelen ışıkla belirginleşir</small></span>
+            </label>
+            <div class="kaydirici sayili"><span>Opaklık</span><input type="range" id="egimOpaklik" min="10" max="100" step="5" aria-label="Haritadaki opaklık"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="egimOpaklikKutu" data-adim="5" autocomplete="off" aria-label="Haritadaki opaklık, %"><span aria-hidden="true">%</span></span></div>
+            <label class="anahtar">
+              <input type="checkbox" id="egimKirp" role="switch">
+              <span class="anahtar-izi" aria-hidden="true"></span>
+              <span>Sadece bölgenin içi<small>Kapalıyken çevresi de renklenir</small></span>
+            </label>
+            <ul id="egimLejantOnizleme" class="egim-lejant" aria-label="Sınıflar ve renkleri"></ul>
+            <label class="anahtar">
+              <input type="checkbox" id="egimLejant" role="switch" checked>
+              <span class="anahtar-izi" aria-hidden="true"></span>
+              <span>Sınıfları lejanta da ekle</span>
+            </label>
+            <button type="button" id="egimKatmanEkle" class="dugme ana genis"><svg class="ikon"><use href="#i-arti"/></svg>Katman olarak ekle</button>
+            <p class="ikincil-metin">Görsel sekmesine kilitli bir katman olarak eklenir; çıktıya ve projeye girer. Buradaki görüntü sadece bu sekmede görünür.</p>
+          </div>
+        </div>
+
+        <div class="kutu" id="egimParselKutu" hidden>
+          <div class="kutu-baslik"><h2>Parseller <span id="egimParselAdet" class="rozet">0</span></h2></div>
+          <div id="egimParsel"></div>
+          <div class="arac-cubugu analiz-eylemleri" data-egim-tablo="parsel">
+            <button type="button" class="metin-dugme" data-is="harita"><svg class="ikon"><use href="#i-harita"/></svg>Haritaya ekle</button>
+            <button type="button" class="metin-dugme" data-is="sayfa"><svg class="ikon"><use href="#i-yazici"/></svg>Sayfaya ekle</button>
+            <button type="button" class="metin-dugme" data-is="excel"><svg class="ikon"><use href="#i-tablo"/></svg>Excel</button>
+          </div>
+        </div>
+
+        <div class="kutu" id="egimKesitKutu">
+          <div class="kutu-baslik">
+            <h2>Kesit</h2>
+            <div class="arac-cubugu">
+              <button type="button" id="kesitTemizle" class="metin-dugme" hidden>Temizle</button>
+              <button type="button" id="kesitCiz" class="metin-dugme" aria-pressed="false"><svg class="ikon"><use href="#i-kesit"/></svg>Çiz</button>
+            </div>
+          </div>
+          <p id="kesitIpucu" class="not-ipucu" role="status" hidden>Haritada hattın noktalarına tıkla. Bitirmek için son noktaya tekrar tıkla ya da Enter'a bas; geri almak için Backspace, vazgeçmek için Esc.</p>
+          <div id="kesitSonuc" hidden></div>
+          <p id="kesitBos" class="ikincil-metin">Haritada bir hat çiz: boyunca yükseklik grafiği, çıkış, iniş ve eğim çıkar.</p>
+        </div>
+
+        <p class="ikincil-metin egim-kaynak">Yükseklik: Copernicus DEM GLO-30 (ESA ve Avrupa Birliği). Çözünürlük 30 m; yüzey modelidir, binalar ve ağaçlar yüksekliğe dahildir, birkaç metre sapma olabilir. Ön değerlendirme içindir; proje için halihazır harita kullan. Veri ilk kullanımda internetten indirilir, sonra bilgisayarda saklanır.</p>
+      </section>
+
+      <!-- ===================== Sayfa 5: Alanların görünümü ===================== -->
       <section class="panel" id="panel-gorsel" role="tabpanel" aria-labelledby="sekme-gorsel" hidden>
         <div class="kutu" id="projeKutu">
           <div class="kutu-baslik"><h2>Proje</h2><span id="projeDurum" class="ikincil-metin" aria-live="polite"></span></div>
@@ -616,7 +728,7 @@
         </div>
       </section>
 
-      <!-- ===================== Sayfa 5: Çıktı ===================== -->
+      <!-- ===================== Sayfa 6: Çıktı ===================== -->
       <section class="panel" id="panel-cikti" role="tabpanel" aria-labelledby="sekme-cikti" hidden>
         <div class="kutu">
           <div class="kutu-baslik"><h2>Sayfa</h2></div>
@@ -825,6 +937,7 @@
   <script src="proje.js"></script>
   <script src="analiz.js"></script>
   <script src="nitelik.js"></script>
+  <script src="egim.js"></script>
   <script src="arama.js"></script>
 </body>
 </html>

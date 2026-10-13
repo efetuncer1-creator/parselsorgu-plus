@@ -556,7 +556,7 @@ async function parselGuncelle(key, buton) {
 
 // ---- sekmeler ------------------------------------------------------------------
 
-const SAYFALAR = { parsel: "Parsel sorgu", alan: "Alandan parsel tespiti", analiz: "Parsel analizi", gorsel: "Alan görünümü", cikti: "Çıktı al" };
+const SAYFALAR = { parsel: "Parsel sorgu", alan: "Alandan parsel tespiti", analiz: "Parsel analizi", egim: "Eğim ve yükseklik", gorsel: "Alan görünümü", cikti: "Çıktı al" };
 
 function sekmeAc(ad) {
   document.querySelectorAll("[role=tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.sekme === ad));
@@ -776,7 +776,7 @@ $("ilce").addEventListener("change", async () => {
 // Uzun listelerde (il/ilçe/mahalle) yazarak arama vardır; kısa listelerde arama kutusu gizlenir.
 
 const SECICILER = ["il", "ilce", "mahalle"];
-const TUM_SECICILER = [...SECICILER, "sistem", "dilim", "hesapKatmani", "ciktiOlcek", "analizAlan"];
+const TUM_SECICILER = [...SECICILER, "sistem", "dilim", "hesapKatmani", "ciktiOlcek", "analizAlan", "egimAlan", "egimKotAraligi"];
 const secici = { acik: null, aktif: 0, gorunen: [], sonraki: null, odak: null };
 
 function seciciEsitle(ad) {
@@ -2314,6 +2314,8 @@ function siralanabilir(liste, degisti) {
 function sekilOrnegi(sekil, renk, { dolgu = 0.25, kalinlik = 2, dizi = "" } = {}) {
   const kenar = `stroke="${esc(renk)}" stroke-width="${kalinlik}"${dizi ? ` stroke-dasharray="${dizi}"` : ""}`;
   const ic = sekil === "cizgi" ? `<path d="M3 16C9 16 10 6 16 6s8 10 13 10" fill="none" ${kenar} stroke-linecap="round"/>`
+    // dolu (eğim sınıfları): açık tonlar beyazda da seçilsin diye ince gri kenar
+    : sekil === "dolu" ? `<rect x="2.5" y="2.5" width="27" height="17" rx="3" fill="${esc(renk)}" stroke="${token("--kagit-metin-2")}" stroke-opacity=".35"/>`
     : sekil === "nokta" ? `<circle cx="16" cy="11" r="5.5" fill="${esc(renk)}" fill-opacity="${dolgu}" ${kenar}/>`
     : `<rect x="2" y="2" width="28" height="18" rx="3" fill="${esc(renk)}" fill-opacity="${dolgu}" ${kenar}/>`;
   return `<svg class="katman-ornek" viewBox="0 0 32 22" aria-hidden="true">${ic}</svg>`;
@@ -2325,7 +2327,8 @@ const LEJANT_SABIT = {
   bosluk: { ad: "Sorgulanmamış boşluk", ornek: () => sekilOrnegi("alan", HR.bosluk, { dolgu: 0.14, kalinlik: 1.5, dizi: "3 3" }) },
   taranan: { ad: "Parsel çıkmayan nokta", ornek: () => sekilOrnegi("nokta", HR.taranan, { kalinlik: 1, dizi: "2 2" }) },
 };
-const OZEL_SEKIL = { alan: { dolgu: 0.3 }, cizgi: { kalinlik: 3 }, nokta: { dolgu: 0.9, kalinlik: 1.5 } };
+// dolu: eğim/yükseklik sınıfları gibi raster renkleri (Eğim sekmesi ekler; lejant formunda seçilmez)
+const OZEL_SEKIL = { alan: { dolgu: 0.3 }, cizgi: { kalinlik: 3 }, nokta: { dolgu: 0.9, kalinlik: 1.5 }, dolu: { dolgu: 1, kalinlik: 0 } };
 
 const lejant = { acik: false, daralt: false, baslik: "Lejant", ogeler: [] };
 try {
@@ -2335,7 +2338,7 @@ try {
 lejant.baslik = String(lejant.baslik ?? "");
 lejant.ogeler = (Array.isArray(lejant.ogeler) ? lejant.ogeler : []).filter((o) => o && (Object.hasOwn(LEJANT_SABIT, o.tur)
   || (o.tur === "nitelik" && typeof o.nitelik === "string")
-  || (o.tur === "ozel" && typeof o.k === "string" && typeof o.ad === "string" && /^#[0-9a-f]{6}$/i.test(o.renk) && Object.hasOwn(OZEL_SEKIL, o.sekil))));
+  || (o.tur === "ozel" && !o.not && typeof o.k === "string" && typeof o.ad === "string" && /^#[0-9a-f]{6}$/i.test(o.renk) && Object.hasOwn(OZEL_SEKIL, o.sekil))));
 
 function lejantKaydet() {
   try { localStorage.setItem("lejant", JSON.stringify(lejant)); } catch { /* tercih saklanamazsa önemli değil */ }
@@ -2345,8 +2348,9 @@ function lejantKaydet() {
 const ogeAnahtari = (o) => (o.tur === "alan" || o.tur === "not" ? `${o.tur}-${o.id}` : o.tur === "ozel" ? o.k
   : o.tur === "nitelik" ? `nitelik-${o.nitelik}` : o.tur);
 const lejantAlani = (o) => referanslar.get(o.id)?.veri;
-const lejantGecerli = (o) => (o.tur === "alan" ? referanslar.has(o.id) : o.tur === "not" ? notlar.has(o.id) : true);
-const lejantGorunur = (o) => (o.tur === "alan" ? lejantAlani(o).gorunur : o.tur === "not" ? notlar.get(o.id).gorunur
+// Özel öğe bir katmana bağlıysa (o.not: Eğim sekmesinin sınıfları) katmanla birlikte görünür ve silinir.
+const lejantGecerli = (o) => (o.tur === "alan" ? referanslar.has(o.id) : o.tur === "not" ? notlar.has(o.id) : o.not ? notlar.has(o.not) : true);
+const lejantGorunur = (o) => (o.tur === "alan" ? lejantAlani(o).gorunur : o.tur === "not" ? notlar.get(o.id).gorunur : o.not ? notlar.get(o.not).gorunur
   : o.tur === "nitelik" ? nitelikRenk.acik : true); // nitelik renkleri kapalıyken lejantta da yok
 const lejantVarsayilanAdi = (o) => (o.tur === "alan" ? lejantAlani(o).ad : o.tur === "not" ? notAdi(notlar.get(o.id))
   : o.tur === "ozel" ? "Özel öğe" : o.tur === "nitelik" ? o.nitelik : LEJANT_SABIT[o.tur].ad);
@@ -2429,7 +2433,7 @@ function lejantaAlanEkle(id) {
 // Silinen alan ya da not lejanttan da çıkar.
 function lejantAlanCikar(id) {
   const n = lejant.ogeler.length;
-  lejant.ogeler = lejant.ogeler.filter((o) => o.id !== id);
+  lejant.ogeler = lejant.ogeler.filter((o) => o.id !== id && o.not !== id);
   if (lejant.ogeler.length !== n) lejantKaydet();
 }
 
@@ -2696,7 +2700,7 @@ function tutamaclariCiz(n) {
   }, "orta");
 }
 
-function notEkle(tur, ayar) {
+function notEkle(tur, ayar, sec = true) {
   const id = `n${++notSayac}`;
   const ortak = { id, tur, ad: "", gorunur: true, opaklik: 100, kilit: false };
   const n = tur === "yazi" ? { ...ortak, metin: "Yazı", boyut: 16, renk: token("--not-beyaz"), stil: "hale", kalin: true, ...ayar }
@@ -2705,7 +2709,8 @@ function notEkle(tur, ayar) {
   notlar.set(id, n);
   katmanSirasi.unshift(id); // yeni katman en üste
   notCiz(n);
-  notSec(id);
+  if (sec) notSec(id);
+  else katmanSirasiCiz();
   return n;
 }
 

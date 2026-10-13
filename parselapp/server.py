@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
 
-from . import analiz, coords, exporters, guncelleme, proje, referans, surum, tablo
+from . import analiz, coords, exporters, guncelleme, proje, referans, surum, tablo, yukseklik
 from .importers import ice_aktar
 from .store import Store
 from .tkgm import Bulunamadi, LimitAsildi, Tkgm, TkgmHatasi
@@ -55,6 +55,7 @@ class Uygulama:
         self.store = store
         self.tkgm = Tkgm(store)
         self.guncelleme = guncelleme.Denetci(surum.SURUM)  # sunucu açılınca baslat(); yoksa ilk istekte
+        self.yukseklik = yukseklik.Yukseklik(store.path.parent / "yukseklik")  # indirilen döşemeler burada kalır
 
     # Her uç nokta (yöntem, yol parçaları) ile seçilir.
     def yonlendir(self, yontem, parcalar, govde, basliklar):
@@ -114,6 +115,8 @@ class Uygulama:
                 return self._izgara(_json(govde))
             case ("POST", ["koordinat"]):
                 return self._koordinat(_json(govde))
+            case ("POST", ["yukseklik"]):
+                return self._yukseklik(_json(govde))
             case ("POST", ["tablo-oku"]):
                 ad = unquote(basliklar.get("X-Dosya-Adi", "tablo.xlsx"))
                 try:
@@ -195,6 +198,22 @@ class Uygulama:
                                  "boylam": round(boylam, 7), "enlem": round(enlem, 7)})
         return {"sonuclar": sonuclar}
 
+    def _yukseklik(self, g):
+        """Eğim sekmesi: kutunun yükseklik ızgarası. Gövde ham float32 (küçük sonlu), bilgisi X-Izgara başlığında."""
+        try:
+            bati, guney, dogu, kuzey = (float(v) for v in g["bbox"])
+            if not (bati < dogu and guney < kuzey and 25 <= bati and dogu <= 46 and 35 <= guney and kuzey <= 43):
+                raise ValueError
+        except (KeyError, TypeError, ValueError) as e:
+            raise Hata(HTTPStatus.BAD_REQUEST, "Yükseklik için Türkiye içinde geçerli bir bölge gerekli.") from e
+        try:
+            dizi, bilgi = self.yukseklik.izgara(bati, guney, dogu, kuzey)
+        except ValueError as e:
+            raise Hata(HTTPStatus.BAD_REQUEST, str(e)) from e
+        except yukseklik.YukseklikHatasi as e:
+            raise Hata(HTTPStatus.BAD_GATEWAY, str(e)) from e
+        return _Dosya(dizi.astype("<f4").tobytes(), None, "application/octet-stream", {"X-Izgara": json.dumps(bilgi)})
+
     def _referans_al(self, ref_id):
         r = self.store.referans(int(ref_id), dokun=True)
         if not r:
@@ -255,8 +274,10 @@ class Uygulama:
 
 
 class _Dosya:
-    def __init__(self, veri, ad, tur):
-        self.veri, self.ad, self.tur = veri, ad, tur
+    """İkili cevap. ad varsa indirilecek dosya; yoksa sayfanın kendisi okur (ör. yükseklik ızgarası)."""
+
+    def __init__(self, veri, ad, tur, ek=None):
+        self.veri, self.ad, self.tur, self.ek = veri, ad, tur, ek or {}
 
 
 def _json(govde):
@@ -296,9 +317,10 @@ def isleyici(uygulama):
             except (KeyError, ValueError, TypeError) as e:
                 return self._json(HTTPStatus.BAD_REQUEST, {"hata": f"Eksik ya da hatalı bilgi: {e}"})
             if isinstance(sonuc, _Dosya):
-                ad = quote(sonuc.ad)
-                return self._yanit(HTTPStatus.OK, sonuc.veri, sonuc.tur,
-                                   {"Content-Disposition": f"attachment; filename*=UTF-8''{ad}"})
+                ek = dict(sonuc.ek)
+                if sonuc.ad:
+                    ek["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(sonuc.ad)}"
+                return self._yanit(HTTPStatus.OK, sonuc.veri, sonuc.tur, ek)
             self._json(HTTPStatus.OK, sonuc)
 
         def _statik(self, yol):

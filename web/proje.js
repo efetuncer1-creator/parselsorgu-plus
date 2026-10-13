@@ -277,10 +277,11 @@ async function projeAc(dosya, tutamac = null) {
 
     // Lejant
     const l = p.lejant || {};
-    lejant.ogeler = (Array.isArray(l.ogeler) ? l.ogeler : []).map((o) => (o && (o.tur === "alan" || o.tur === "not") ? { ...o, id: yeniKimlik.get(o.id) } : o))
+    lejant.ogeler = (Array.isArray(l.ogeler) ? l.ogeler : []).map((o) => (o && (o.tur === "alan" || o.tur === "not") ? { ...o, id: yeniKimlik.get(o.id) }
+      : o?.tur === "ozel" && o.not ? { ...o, not: yeniKimlik.get(o.not) ?? "" } : o)) // katmana bağlı özel öğe (Eğim sınıfları)
       .filter((o) => o && (o.ad === undefined || typeof o.ad === "string") && (o.tur === "alan" ? referanslar.has(o.id) : o.tur === "not" ? notlar.has(o.id)
         : Object.hasOwn(LEJANT_SABIT, o.tur) || (o.tur === "nitelik" && typeof o.nitelik === "string")
-          || (o.tur === "ozel" && typeof o.k === "string" && RENK.test(o.renk) && Object.hasOwn(OZEL_SEKIL, o.sekil))));
+          || (o.tur === "ozel" && typeof o.k === "string" && RENK.test(o.renk) && Object.hasOwn(OZEL_SEKIL, o.sekil) && (!("not" in o) || notlar.has(o.not)))));
     Object.assign(lejant, { acik: l.acik === true, daralt: l.daralt === true, baslik: metinAl(l.baslik, 40, "Lejant") });
     lejantKaydet();
 

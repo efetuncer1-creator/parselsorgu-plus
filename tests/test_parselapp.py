@@ -255,8 +255,8 @@ class AnalizTest(GeciciStore):
             {"ad": "Parsel türleri", "sutunlar": [{"ad": "Nitelik", "tur": "metin"}, {"ad": "Adet", "tur": "tamsayi"},
                                                   {"ad": "Alan (m²)", "tur": "sayi"}, {"ad": "Oran", "tur": "yuzde"}],
              "satirlar": [["Tarla", 3, 12683.71, 0.75], ["Bahçe", 1, 4200.5, 0.25]], "toplam": ["Toplam", 4, 16884.21, 1]},
-            {"ad": "Parseller: 1/2", "sutunlar": [{"ad": "Ada", "tur": "kod"}, {"ad": "Parsel", "tur": "kod"}],
-             "satirlar": [["512", "15"], ["513", "2a"]]},
+            {"ad": "Parseller: 1/2", "sutunlar": [{"ad": "Ada", "tur": "kod"}, {"ad": "Parsel", "tur": "kod"}, {"ad": "Ort. kot (m)", "tur": "ondalik"}],
+             "satirlar": [["512", "15", 1012.46], ["513", "2a", None]]},
         ]
         dosya = uyg.yonlendir("POST", ["tablo-excel"], json.dumps({"sayfalar": sayfalar, "dosyaAdi": "Çumra/analiz"}).encode(), {})
         self.assertEqual(dosya.ad, "Çumra-analiz.xlsx")
@@ -267,7 +267,9 @@ class AnalizTest(GeciciStore):
         self.assertEqual(s["C2"].number_format, "#,##0.00")
         self.assertEqual(s["D2"].number_format, "0.0%")
         self.assertTrue(s["A4"].font.bold)
-        self.assertEqual([c.value for c in kitap["Parseller- 1-2"][3]], [513, "2a"])  # sayı olan kod sayıya döner
+        self.assertEqual([c.value for c in kitap["Parseller- 1-2"][3]], [513, "2a", None])  # sayı olan kod sayıya döner
+        self.assertEqual(kitap["Parseller- 1-2"]["C2"].value, 1012.46)
+        self.assertEqual(kitap["Parseller- 1-2"]["C2"].number_format, "#,##0.0")
 
     def test_tablo_excel_bozuk(self):
         from parselapp.server import Hata, Uygulama
