@@ -871,7 +871,7 @@ input[type=checkbox].kutucuk:checked {
   color: var(--harita-yazi);
   text-shadow: 0 0 2px var(--harita-yazi-hale), 0 0 2px var(--harita-yazi-hale), 0 1px 3px var(--harita-yazi-hale);
 }
-.harita-yazi-ikon.sigmaz { visibility: hidden; }
+.harita-yazi-ikon.sigmaz, .harita-yazi-ikon.ciktida { visibility: hidden; } /* ciktida: canlı sayfa kendisi yazar */
 .harita-yazi-ikon.aktif .parsel-no { translate: -50% var(--b-3-5); } /* menü düğmesinin altına */
 .alan-adi {
   display: inline-flex; align-items: center; gap: var(--b-1-5);

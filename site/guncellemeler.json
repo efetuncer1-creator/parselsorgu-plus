@@ -18,6 +18,7 @@
         { "tur": "yeni", "metin": "Analiz sekmesi: alandaki, seçili ya da listedeki parsellerin türleri (nitelik, adet, alan, pay) ve sütunları seçilebilen ada/parsel tablosu; Excel'e, haritaya ya da çıktı sayfasına eklenir. Parsel türleri dilim grafiği olarak da gösterilir." },
         { "tur": "yeni", "metin": "Parseller niteliklerine göre renklendirilir; renkler değiştirilebilir, lejanta ve çıktıya yansır." },
         { "tur": "iyilestirme", "metin": "Ada/parsel numaraları ve alan adları haritada gösterilip gizlenebilir." },
+        { "tur": "iyilestirme", "metin": "Çıktıda bütün ada/parsel numaraları yazılır: sığmayan numara küçültülür, ince uzun parselde parselin yönüne döndürülür, çok küçük parselde yanına yazılıp çizgiyle bağlanır; yazılar üst üste binmez, ölçeğe ve kağıda göre kendiliğinden ayarlanır." },
         { "tur": "iyilestirme", "metin": "Dışa aktarırken, çıktı alırken ve proje kaydederken dosyanın kaydedileceği klasör ve ad sorulur (Chrome, Edge)." },
         { "tur": "duzeltme", "metin": "Ağ klasöründeki dosyalar yüklenirken çıkan \"Failed to fetch\" hatası giderildi; bazı Excel dosyaları ve Türkçe CSV'ler artık doğru okunuyor." }
       ]

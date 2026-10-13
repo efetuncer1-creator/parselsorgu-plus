@@ -529,15 +529,7 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
       ctx.globalAlpha = st.opacity; ctx.lineWidth = st.weight * p; ctx.strokeStyle = st.color; ctx.stroke(yol);
     }
     ctx.restore();
-    if (parselNo.acik) {
-      for (const f of durum.parseller.values()) {
-        const b = L.geoJSON(f).getBounds();
-        const [x0, y0] = g.nokta(b.getSouth(), b.getWest()), [x1, y1] = g.nokta(b.getNorth(), b.getEast());
-        if (x1 - x0 < 40 * p || y0 - y1 < 16 * p) continue;
-        const m = icNokta(f), [x, y] = g.nokta(m.lat, m.lng);
-        yaziCiz(ctx, [`${f.properties.ada}/${f.properties.parsel}`], x, y, { boyut: 11.5, kalin: true, renk: token("--harita-yazi"), stil: "hale", p });
-      }
-    }
+    if (parselNo.acik) parselNumaralariCiz(ctx, g, hc, p); // etiket.js: hepsi yazılır, sığdırılır
     for (const id of sira.filter((i) => typeof i === "number")) {
       const r = referanslar.get(id)?.veri;
       if (!r?.gorunur || !r.gorsel.etiket) continue;
@@ -556,6 +548,8 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
       ctx.drawImage(await svgResmi(svg, Math.round(en * k), Math.round(boy * k)), x - (en * k) / 2, y - (boy * k) / 2, en * k, boy * k);
     }
     }
+  } else if (parselNo.acik) {
+    parselNumaralariCiz(ctx, g, hc, p); // canlı sayfada da çıktıdaki gibi; haritadakiler gizlenir (canliNumaralar)
   }
 
   // Koordinat ızgarası: ince çizgiler, değerler çerçevenin iç kenarında
@@ -1056,7 +1050,7 @@ const canliAcik = () => ciktiSekmesinde() && cikti.canli && !!cerceveSiniri() &&
 function canliKonumla() {
   // Sayfanın kendi lejantı var; haritadaki lejant kutusu bu sırada gizlenir.
   document.body.classList.toggle("cikti-sayfasi", canliAcik());
-  if (!canliAcik()) { canli.kap.hidden = true; return; }
+  if (!canliAcik()) { canli.kap.hidden = true; canliNumaralar(false); return; }
   if (!canli.sayfa) return;
   const s = cerceveSiniri(), ust = harita.latLngToLayerPoint(s.getNorthWest()), alt = harita.latLngToLayerPoint(s.getSouthEast());
   let x = ust.x, y = ust.y, en = alt.x - ust.x, boy = alt.y - ust.y;
@@ -1078,8 +1072,19 @@ async function canliCiz() {
     Object.assign(canli, { kutular, sayfa });
     kutulariYerlestir(canli.kap, tuval, kutular, sayfa);
     canliKonumla();
-  } catch (e) { canli.kap.hidden = true; }
+    canliNumaralar(true);
+  } catch (e) { canli.kap.hidden = true; canliNumaralar(false); }
 }
+
+// Canlı sayfa ada/parsel numaralarını kendisi çizer; çerçevedeki parsellerin haritadaki numarası o sırada gizlenir.
+function canliNumaralar(acik) {
+  const s = acik && parselNo.acik ? cerceveSiniri() : null;
+  if (!s && !canli.numaraGizli) return;
+  canli.numaraGizli = !!s;
+  parselNo.isaretler.forEach((m) => m.getElement()?.classList.toggle("ciktida", !!s && s.contains(m.getLatLng())));
+}
+document.addEventListener("parseller", () => { if (ciktiSekmesinde()) canliZamanla(); });
+$("parselNoGoster").addEventListener("change", () => canliZamanla());
 
 function canliZamanla() {
   clearTimeout(canli.zamanlayici);
