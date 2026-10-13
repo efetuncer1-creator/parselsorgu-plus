@@ -13,6 +13,7 @@
         { "tur": "yeni", "metin": "Excel ve CSV tabloları haritaya ya da çıktı sayfasına eklenir." },
         { "tur": "yeni", "metin": "Lejant: haritada açılıp kapanır; öğeler eklenir, çıkarılır, adlandırılır ve sıralanır; özel öğe de eklenebilir." },
         { "tur": "yeni", "metin": "Çıktı: seçilen alan ya da A4/A3 sayfa (yön, ölçek, 150/300 dpi); başlık ve tarih, lejant, kuzey oku ve ölçek, ITRF96/ED50 koordinat ızgarası; logo, tablo ve yazı. PNG ve PDF." },
+        { "tur": "yeni", "metin": "Çıktı sayfası haritanın üstünde canlı görünür; başlık, lejant ve eklenenler orada ya da önizlemede sürüklenip köşeden büyütülür, küçültülür." },
         { "tur": "iyilestirme", "metin": "Ada/parsel numaraları ve alan adları haritada gösterilip gizlenebilir." }
       ]
     },
