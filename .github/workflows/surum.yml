@@ -38,7 +38,10 @@ jobs:
         run: |
           set -o pipefail
           python -m unittest -v 2>&1 | tee test-ciktisi.txt && exit 0
-          ozet=$(tail -c 6000 test-ciktisi.txt | tr -d '\r' | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+          # Hata ayrıntısı ("=====" ile başlayan bölüm); uyarı kutusu ~4000 harfle sınırlı
+          ayrinti=$(sed -n '/^======/,$p' test-ciktisi.txt)
+          [ -n "$ayrinti" ] || ayrinti=$(tail -c 3500 test-ciktisi.txt)
+          ozet=$(printf '%s' "$ayrinti" | head -c 3500 | tr -d '\r' | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
           echo "::error title=Testler başarısız::$ozet"
           exit 1
 

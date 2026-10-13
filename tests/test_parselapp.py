@@ -2,6 +2,7 @@
 
 import io
 import json
+import re
 import tempfile
 import unittest
 import zipfile
@@ -669,8 +670,9 @@ class TabloTest(unittest.TestCase):
             for ad in z.namelist():
                 veri = z.read(ad)
                 if ad == "xl/worksheets/sheet1.xml":
-                    veri = veri.replace(b'<dimension ref="A1:B3"/>', b'<dimension ref="A1"/>')
-                    self.assertIn(b'<dimension ref="A1"/>', veri)
+                    # Yazılış openpyxl'in XML yazıcısına göre değişir (lxml: "/>", standart: " />")
+                    veri, n = re.subn(rb'<dimension ref="A1:B3"\s*/>', b'<dimension ref="A1"/>', veri)
+                    self.assertEqual(n, 1)
                 y.writestr(ad, veri)
         satirlar = tablo.oku("baska-program.xlsx", bozuk.getvalue())["sayfalar"][0]["satirlar"]
         self.assertEqual(satirlar, [["Ada", "Parsel"], ["512", "15"], ["513", "2"]])
