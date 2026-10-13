@@ -54,7 +54,13 @@ async function api(yol, secenek = {}) {
 }
 
 async function apiIstek(yol, secenek) {
-  const r = await fetch("/api/" + yol, secenek);
+  let r;
+  try {
+    r = await fetch("/api/" + yol, secenek);
+  } catch {
+    // Tarayıcının "Failed to fetch"i: cevap hiç gelmedi (uygulama kapalı ya da bağlantı kesildi).
+    throw new Error("Uygulamanın sunucusuna ulaşılamadı. Uygulama kapanmış olabilir; yeniden açıp tekrar dene.");
+  }
   const tur = r.headers.get("Content-Type") || "";
   if (!tur.includes("application/json")) {
     if (!r.ok) throw new Error(`Sunucu hatası (${r.status})`);
@@ -84,6 +90,17 @@ $("diyalogIptal").addEventListener("click", () => $("diyalog").close("iptal"));
 const onayla = (metin, tamam = "Tamam") => diyalogAc(metin, { tamam });
 async function adSor(metin, varsayilan) {
   return (await diyalogAc(metin, { girdi: varsayilan, tamam: "Kaydet" })) ? $("diyalogGirdi").value : null;
+}
+
+// Dosya gönderilmeden önce belleğe okunur. Ağ klasöründeki dosyada tarayıcı, dosya seçildikten sonra
+// değişmiş sanıp gönderimi yarıda kesebiliyor ("Failed to fetch"); okunamazsa sebep açıkça söylenir.
+async function dosyaIcerigi(f) {
+  try {
+    return await f.arrayBuffer();
+  } catch {
+    throw new Error(`${f.name} okunamadı. Dosya başka bir programda açık olabilir ya da ağ klasörüne erişim kesilmiş olabilir; `
+      + "dosyayı bilgisayara kopyalayıp tekrar dene.");
+  }
 }
 
 const postJson = (yol, govde) =>
@@ -865,7 +882,7 @@ async function dosyalariAktar(dosyalar) {
           "X-Dosya-Adi": encodeURIComponent(f.name),
           "X-Dosya-Tarih": new Date(f.lastModified).toISOString().slice(0, 19),
         },
-        body: f,
+        body: await dosyaIcerigi(f),
       });
       for (const k in toplam) toplam[k] += r[k];
       r.keys.forEach((k) => keys.add(k));
@@ -1144,7 +1161,7 @@ async function referansEkle(dosyalar) {
   let son = null;
   for (const f of dosyalar) {
     try {
-      const r = await api("referanslar", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(f.name) }, body: f });
+      const r = await api("referanslar", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(f.name) }, body: await dosyaIcerigi(f) });
       referansCiz(r);
       son = r.id;
       mesaj(r.hesap_katmani
@@ -2634,7 +2651,7 @@ async function gorselNotuEkle(dosya) {
 }
 
 async function tabloNotuEkle(dosya) {
-  const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(dosya.name) }, body: dosya });
+  const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(dosya.name) }, body: await dosyaIcerigi(dosya) });
   const merkez = harita.getCenter();
   return notEkle("tablo", { ad: dosya.name.replace(/\.[^.]+$/, ""), sayfalar: r.sayfalar, sayfa: 0, baslikSatiri: true, boyut: 12,
     konum: [merkez.lat, merkez.lng], renk: token("--not-siyah") });

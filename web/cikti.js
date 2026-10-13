@@ -995,7 +995,7 @@ async function sayfayaEkle(dosyalar) {
         v.pdf?.destroy();
         cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "gorsel", ad, url: v.url, en: v.en, boy: v.boy, genislikMm: 40 });
       } else if (TABLO_MI(f)) {
-        const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(f.name) }, body: f });
+        const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(f.name) }, body: await dosyaIcerigi(f) });
         cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "tablo", ad, sayfalar: r.sayfalar, sayfa: 0, baslikSatiri: true, boyutMm: 2.6, renk: token("--not-siyah") });
       } else mesaj(`${f.name}: görsel, PDF ya da Excel/CSV seç.`, true);
     } catch (e) { mesaj(`${f.name}: ${e.message}`, true); }
