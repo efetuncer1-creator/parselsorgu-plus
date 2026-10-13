@@ -565,6 +565,29 @@ class TabloTest(unittest.TestCase):
         self.assertEqual(len(sayfa["satirlar"]), tablo.EN_FAZLA_SATIR)
         self.assertTrue(sayfa["kesildi"])
 
+    def test_kullanilan_alani_yanlis_yazilmis_excel(self):
+        # Bazı programlar <dimension ref="A1"/> yazar; satırların hepsi yine okunmalı.
+        from openpyxl import Workbook
+        kitap = Workbook()
+        for satir in (["Ada", "Parsel"], [512, 15], [513, 2]):
+            kitap.active.append(satir)
+        tampon = io.BytesIO()
+        kitap.save(tampon)
+        bozuk = io.BytesIO()
+        with zipfile.ZipFile(tampon) as z, zipfile.ZipFile(bozuk, "w") as y:
+            for ad in z.namelist():
+                veri = z.read(ad)
+                if ad == "xl/worksheets/sheet1.xml":
+                    veri = veri.replace(b'<dimension ref="A1:B3"/>', b'<dimension ref="A1"/>')
+                    self.assertIn(b'<dimension ref="A1"/>', veri)
+                y.writestr(ad, veri)
+        satirlar = tablo.oku("baska-program.xlsx", bozuk.getvalue())["sayfalar"][0]["satirlar"]
+        self.assertEqual(satirlar, [["Ada", "Parsel"], ["512", "15"], ["513", "2"]])
+
+    def test_windows_1254_csv(self):
+        sonuc = tablo.oku("excel.csv", "İl;İlçe\nKonya;Çumra".encode("cp1254"))
+        self.assertEqual(sonuc["sayfalar"][0]["satirlar"], [["İl", "İlçe"], ["Konya", "Çumra"]])
+
     def test_desteklenmeyen(self):
         for ad, icerik in (("eski.xls", b"x"), ("resim.png", b"x"), ("bozuk.xlsx", b"PK bozuk")):
             with self.subTest(ad=ad), self.assertRaises(ValueError):

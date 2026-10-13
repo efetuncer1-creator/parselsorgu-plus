@@ -46,7 +46,11 @@ def oku(ad, icerik):
     """{"sayfalar": [{"ad", "satirlar", "kesildi"}]}; boş sayfalar atlanır."""
     uzanti = Path(ad).suffix.lower()
     if uzanti == ".csv":
-        metin = icerik.decode("utf-8-sig", errors="replace")
+        # Türkçe Excel CSV'yi çoğunlukla Windows-1254 ile kaydeder; UTF-8 değilse o denenir.
+        try:
+            metin = icerik.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            metin = icerik.decode("cp1254", errors="replace")
         try:
             lehce = csv.Sniffer().sniff(metin[:4096], delimiters=";,\t")
         except csv.Error:
@@ -60,6 +64,9 @@ def oku(ad, icerik):
             raise ValueError(f"{ad} Excel dosyası olarak açılamadı.") from e
         sayfalar = []
         for sayfa in kitap.worksheets:
+            # Bazı programlar sayfanın kullanılan alanını yanlış yazar (ör. "A1"); hızlı okuma ona güvenip
+            # tabloyu tek hücre sanmasın.
+            sayfa.reset_dimensions()
             ham = []
             for s in sayfa.iter_rows(values_only=True):
                 ham.append(list(s))
