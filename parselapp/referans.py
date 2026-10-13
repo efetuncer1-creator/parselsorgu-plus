@@ -197,10 +197,11 @@ KESISEN_ORAN = 0.01
 # ---- görünüm (Görsel sekmesi) ----------------------------------------------------
 # Kayıtta olmayan ayar varsayılanla tamamlanır; böylece eski kayıtlar da sonradan eklenen ayarlar da çalışır.
 
-GORSEL = {"kalinlik": 3, "cizgi": "kesik", "desen": "capraz", "aralik": 9, "opaklik": 55, "etiket": True}
+# katman_opaklik: bütün katmanın (kenar, tarama, ad) opaklığı; opaklik yalnız taramanınki
+GORSEL = {"kalinlik": 3, "cizgi": "kesik", "desen": "capraz", "aralik": 9, "opaklik": 55, "etiket": True, "katman_opaklik": 100}
 CIZGILER = ("duz", "kesik", "nokta")
 DESENLER = ("yok", "dolu", "capraz", "ters", "yatay", "dikey", "kareli", "capraz-kareli", "nokta")
-_GORSEL_SAYILAR = {"kalinlik": (0, 10, 0.5), "aralik": (4, 24, 1), "opaklik": (5, 100, 1)}
+_GORSEL_SAYILAR = {"kalinlik": (0, 10, 0.5), "aralik": (4, 24, 1), "opaklik": (5, 100, 1), "katman_opaklik": (5, 100, 1)}
 _RENK = re.compile(r"#[0-9a-fA-F]{6}")
 
 

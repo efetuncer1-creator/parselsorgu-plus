@@ -57,6 +57,7 @@ async function projeOlustur() {
     aktifAlan,
     notlar: await Promise.all([...notlar.values()].map(notKaydi)),
     katmanSirasi: [...katmanSirasi],
+    gruplar: [...gruplar].map(([gid, g]) => ({ ad: g.ad, acik: g.acik, uyeler: [...katmanGrubu].filter(([, x]) => x === gid).map(([id]) => id) })),
     lejant: { acik: lejant.acik, daralt: lejant.daralt, baslik: lejant.baslik, ogeler: lejant.ogeler },
     nitelikRenk: { acik: nitelikRenk.acik, renkler: nitelikRenk.renkler },
     cikti: {
@@ -126,7 +127,13 @@ function tabloSayfasiniOku(s) {
 
 function notKaydiniOku(k) {
   if (!k || typeof k !== "object") return null;
-  const ortak = { ad: metinAl(k.ad, 60), gorunur: k.gorunur !== false };
+  const ortak = { ad: metinAl(k.ad, 60), gorunur: k.gorunur !== false, opaklik: sayiAl(k.opaklik, 5, 100, 100), kilit: k.kilit === true };
+  if (k.tur === "olcu") {
+    const noktalar = Array.isArray(k.noktalar) ? k.noktalar.slice(0, 1000).map(noktaAl) : [];
+    return noktalar.length >= 2 && noktalar.every(Boolean) && { ...ortak, tur: "olcu", noktalar, kapali: k.kapali === true && noktalar.length > 2,
+      renk: renkAl(k.renk, token("--alan-renk-3")), kalinlik: sayiAl(k.kalinlik, 0.5, 200, 2.5), cizgi: secenekAl(k.cizgi, ["duz", "kesik"], "duz"),
+      parcalar: k.parcalar !== false, cevre: k.cevre === true };
+  }
   if (k.tur === "yazi") {
     const konum = noktaAl(k.konum);
     return konum && { ...ortak, tur: "yazi", konum, metin: metinAl(k.metin, 300, "Yazı") || "Yazı", boyut: sayiAl(k.boyut, 1, 2000, 16),
@@ -187,6 +194,8 @@ function sayfaOgesiniOku(o) {
 // Açık çalışmayı kapatır: alanlar sunucudan da silinir, parseller önbellekte kalır.
 async function calismayiTemizle() {
   notModu(null);
+  gruplar.clear();
+  katmanGrubu.clear();
   for (const id of [...notlar.keys()]) notSil(id);
   for (const id of [...referanslar.keys()]) {
     await postJson(`referanslar/${id}/sil`, {}).catch(() => {});
@@ -256,6 +265,14 @@ async function projeAc(dosya, tutamac = null) {
     const sira = (Array.isArray(p.katmanSirasi) ? p.katmanSirasi : []).map((k) => yeniKimlik.get(k)).filter((k) => referanslar.has(k) || notlar.has(k));
     katmanSirasi.splice(0, katmanSirasi.length, ...new Set(sira));
     for (const k of [...referanslar.keys(), ...notlar.keys()]) if (!katmanSirasi.includes(k)) katmanSirasi.unshift(k);
+    // Katman grupları
+    for (const g of Array.isArray(p.gruplar) ? p.gruplar.slice(0, 200) : []) {
+      const uyeler = (Array.isArray(g?.uyeler) ? g.uyeler : []).map((k) => yeniKimlik.get(k)).filter((k) => referanslar.has(k) || notlar.has(k));
+      if (!uyeler.length) continue;
+      const gid = `g${++grupSayac}`;
+      gruplar.set(gid, { ad: metinAl(g.ad, 60, "Grup") || "Grup", acik: g.acik !== false });
+      uyeler.forEach((k) => katmanGrubu.set(k, gid));
+    }
     sirayiUygula();
 
     // Lejant

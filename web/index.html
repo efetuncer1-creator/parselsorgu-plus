@@ -29,6 +29,9 @@
     <symbol id="i-onay" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
     <symbol id="i-uyari" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
     <symbol id="i-bilgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-cetvel" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"/></symbol>
+    <symbol id="i-kilit" viewBox="0 0 24 24"><rect width="16" height="10" x="4" y="11" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-kilit-acik" viewBox="0 0 24 24"><rect width="16" height="10" x="4" y="11" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.75-1.4"/></symbol>
     <symbol id="i-bilgi-i" viewBox="0 0 24 24"><path d="M12 11v7M10 11h2M10 18h4M12 6.5h.01"/></symbol>
     <symbol id="i-indir" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></symbol>
     <symbol id="i-yukle" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></symbol>
@@ -404,6 +407,7 @@
           <div class="arac-cubugu not-araclari">
             <button type="button" id="yaziEkle" class="metin-dugme" aria-pressed="false"><svg class="ikon"><use href="#i-yazi"/></svg>Yazı ekle</button>
             <button type="button" id="okEkle" class="metin-dugme" aria-pressed="false"><svg class="ikon"><use href="#i-ok-isaret"/></svg>Ok ekle</button>
+            <button type="button" id="olcuEkle" class="metin-dugme" aria-pressed="false" title="Mesafe ya da alan ölç; haritada katman olarak kalır"><svg class="ikon"><use href="#i-cetvel"/></svg>Ölçü</button>
             <button type="button" id="gorselEkle" class="metin-dugme" title="Görsel ya da PDF (ör. taranmış plan); haritaya oturtulur"><svg class="ikon"><use href="#i-resim"/></svg>Görsel/PDF</button>
             <button type="button" id="tabloEkle" class="metin-dugme" title="Excel (.xlsx) ya da CSV tablosu"><svg class="ikon"><use href="#i-tablo"/></svg>Tablo</button>
             <input type="file" id="gorselSec" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.pdf" multiple hidden>
@@ -458,6 +462,7 @@
             <span class="anahtar-izi" aria-hidden="true"></span>
             <span>Alan adını haritada göster</span>
           </label>
+          <fieldset class="ayar katman-ayari" data-katman-ayari><legend>Katman</legend></fieldset>
         </div>
 
         <div class="kutu gorsel-duzen" id="notDuzen" hidden>
@@ -465,7 +470,7 @@
             <h2 id="notBaslik">Yazı</h2>
             <button type="button" id="notSil" class="metin-dugme tehlikeli"><svg class="ikon"><use href="#i-kapat"/></svg>Sil</button>
           </div>
-          <label class="lejant-baslik-alan" data-not="ok gorsel tablo grafik"><span>Ad</span><input id="notAd" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Katmanın adı; listede ve lejantta görünür"></label>
+          <label class="lejant-baslik-alan" data-not="ok gorsel tablo grafik olcu"><span>Ad</span><input id="notAd" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Katmanın adı; listede ve lejantta görünür"></label>
           <div id="notSayfa" class="sayfa-gezgini" hidden>
             <button type="button" id="notSayfaGeri" class="ikon-dugme" aria-label="Önceki sayfa"><svg class="ikon"><use href="#i-sol"/></svg></button>
             <span id="notSayfaAd" aria-live="polite"></span>
@@ -499,9 +504,30 @@
               <label><input type="radio" name="notCizgi" value="kesik"><span>Kesik</span></label>
             </div>
           </fieldset>
+          <fieldset class="ayar" data-not="olcu">
+            <legend>Ölçü</legend>
+            <div class="bolumlu" role="radiogroup" aria-label="Ölçü türü">
+              <label><input type="radio" name="olcuTur" value="mesafe"><span>Mesafe</span></label>
+              <label><input type="radio" name="olcuTur" value="alan"><span>Alan</span></label>
+            </div>
+            <div class="kaydirici sayili"><span>Kalınlık</span><input type="range" id="olcuKalinlik" min="1" max="8" step="0.5" aria-label="Ölçü çizgisinin kalınlığı"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="olcuKalinlikKutu" data-adim="0.5" autocomplete="off" aria-label="Ölçü çizgisinin kalınlığı, px"><span aria-hidden="true">px</span></span></div>
+            <div class="bolumlu" role="radiogroup" aria-label="Çizgi tipi">
+              <label><input type="radio" name="olcuCizgi" value="duz"><span>Düz</span></label>
+              <label><input type="radio" name="olcuCizgi" value="kesik"><span>Kesik</span></label>
+            </div>
+            <label class="anahtar">
+              <input type="checkbox" id="olcuParcalar" role="switch">
+              <span class="anahtar-izi" aria-hidden="true"></span>
+              <span>Kenar uzunlukları</span>
+            </label>
+            <label class="anahtar" id="olcuCevreSatiri">
+              <input type="checkbox" id="olcuCevre" role="switch">
+              <span class="anahtar-izi" aria-hidden="true"></span>
+              <span>Çevre uzunluğu</span>
+            </label>
+          </fieldset>
           <fieldset class="ayar" data-not="gorsel">
             <legend>Görsel</legend>
-            <div class="kaydirici sayili"><span>Opaklık</span><input type="range" id="notOpaklik" min="10" max="100" step="5" aria-label="Görselin opaklığı"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notOpaklikKutu" data-adim="1" autocomplete="off" aria-label="Görselin opaklığı, %"><span aria-hidden="true">%</span></span></div>
             <div class="kaydirici sayili"><span>Açı</span><input type="range" id="notAci" min="-180" max="180" step="0.5" aria-label="Görselin açısı"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notAciKutu" data-adim="1" autocomplete="off" aria-label="Görselin açısı, °"><span aria-hidden="true">°</span></span></div>
             <label class="anahtar">
               <input type="checkbox" id="notKaristir" role="switch">
@@ -530,7 +556,7 @@
             <div class="kaydirici sayili"><span>Boyut</span><input type="range" id="notGrafikBoyut" min="50" max="200" step="5" aria-label="Grafiğin boyutu"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notGrafikBoyutKutu" data-adim="5" autocomplete="off" aria-label="Grafiğin boyutu, %"><span aria-hidden="true">%</span></span></div>
             <p class="ikincil-metin">Renkler nitelik renklerini izler; Parseller kutusunda değiştirince grafik de değişir.</p>
           </fieldset>
-          <fieldset class="ayar" data-not="yazi ok tablo">
+          <fieldset class="ayar" data-not="yazi ok tablo olcu">
             <legend>Renk</legend>
             <div id="notRenkler" class="renk-izgara not-renkleri" role="group" aria-label="Renk"></div>
           </fieldset>
@@ -539,6 +565,8 @@
           <p class="ikincil-metin" data-not="gorsel">Ortadaki noktayla taşı, köşedekiyle büyüt ve döndür.</p>
           <p class="ikincil-metin" data-not="tablo">Tabloyu haritada sürükleyerek taşı. Renk başlık satırına uygulanır.</p>
           <p class="ikincil-metin" data-not="grafik">Grafiği haritada sürükleyerek taşı.</p>
+          <p class="ikincil-metin" data-not="olcu">Köşeleri sürükleyerek değiştir, ortadaki noktayla bütün ölçüyü taşı.</p>
+          <fieldset class="ayar katman-ayari" data-katman-ayari><legend>Katman</legend></fieldset>
         </div>
 
         <div class="kutu" id="nitelikKutu">

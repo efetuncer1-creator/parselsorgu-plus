@@ -270,31 +270,32 @@ function geometriYolu(geom, nokta) {
   return yol;
 }
 
-function alanCiz(ctx, r, g, p) {
+function alanCiz(ctx, r, g, p, alfa = 1) { // alfa: katmanın opaklığı (0-1)
   const v = r.gorsel, gizli = new Set(r.gizli || []), hesap = r.hesap_katmani;
   for (const f of r.geojson.features) {
     const ad = katmanAdi(f);
     if (gizli.has(ad) && ad !== hesap) continue;
     const tip = f.geometry.type;
     ctx.save();
+    ctx.globalAlpha = alfa; // tarama deseni bununla çizilir
     ctx.lineJoin = ctx.lineCap = "round";
     if (/Point$/.test(tip)) {
       const noktalar = tip === "Point" ? [f.geometry.coordinates] : f.geometry.coordinates;
       for (const [lon, lat] of noktalar) {
         const [x, y] = g.nokta(lat, lon);
         ctx.beginPath(); ctx.arc(x, y, 5 * p, 0, 2 * Math.PI);
-        ctx.globalAlpha = 0.8; ctx.fillStyle = r.renk; ctx.fill();
-        ctx.globalAlpha = 1; ctx.lineWidth = 2 * p; ctx.strokeStyle = r.renk; ctx.stroke();
+        ctx.globalAlpha = 0.8 * alfa; ctx.fillStyle = r.renk; ctx.fill();
+        ctx.globalAlpha = alfa; ctx.lineWidth = 2 * p; ctx.strokeStyle = r.renk; ctx.stroke();
       }
     } else {
       const yol = geometriYolu(f.geometry, g.nokta);
       const kapali = /Polygon$/.test(tip);
       if (hesap != null && ad !== hesap) {
-        ctx.globalAlpha = 0.7; ctx.lineWidth = p; ctx.strokeStyle = r.renk; ctx.stroke(yol);
+        ctx.globalAlpha = 0.7 * alfa; ctx.lineWidth = p; ctx.strokeStyle = r.renk; ctx.stroke(yol);
       } else {
-        if (kapali && v.desen === "dolu") { ctx.globalAlpha = v.opaklik / 100; ctx.fillStyle = r.renk; ctx.fill(yol, "evenodd"); }
+        if (kapali && v.desen === "dolu") { ctx.globalAlpha = (v.opaklik / 100) * alfa; ctx.fillStyle = r.renk; ctx.fill(yol, "evenodd"); }
         else if (kapali && v.desen !== "yok") { ctx.fillStyle = tuvalDeseni(ctx, r.renk, v, p); ctx.fill(yol, "evenodd"); }
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = alfa;
         if (v.kalinlik) {
           ctx.lineWidth = v.kalinlik * p;
           ctx.setLineDash(cizgiDizisiTuval(v.cizgi, v.kalinlik, p));
@@ -462,6 +463,51 @@ function tabloCiz(ctx, n, x, y, boyutPx, olc = false) {
   return { en, boy };
 }
 
+// Ölçü: çizgi ya da kapalı alan (hafif dolgulu) ve yazıları; yazılar haritadakiyle aynı (app.js olcuYazilari).
+function olcuCiz(ctx, n, g, p) {
+  const alanli = n.kapali && n.noktalar.length > 2;
+  ctx.save();
+  ctx.lineJoin = ctx.lineCap = "round";
+  ctx.beginPath();
+  n.noktalar.forEach(([a, b], i) => { const [x, y] = g.nokta(a, b); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  if (alanli) {
+    ctx.closePath();
+    const alfa = ctx.globalAlpha;
+    ctx.globalAlpha = alfa * 0.12;
+    ctx.fillStyle = n.renk;
+    ctx.fill();
+    ctx.globalAlpha = alfa;
+  }
+  ctx.strokeStyle = n.renk;
+  ctx.lineWidth = n.kalinlik * p;
+  ctx.setLineDash(n.cizgi === "kesik" ? [n.kalinlik * 3 * p, n.kalinlik * 2.2 * p] : []);
+  ctx.stroke();
+  ctx.restore();
+  const y = olcuYazilari(n);
+  for (const k of y.kenar) olcuYazisiCiz(ctx, [k.metin], ...g.nokta(...k.konum), n.renk, p, "kenar");
+  olcuYazisiCiz(ctx, y.ana, ...g.nokta(...y.konum), n.renk, p, y.mesafe ? "mesafe" : "ana");
+}
+
+// Beyaz zeminli, ölçünün renginde kenarlı yazı kutusu; mesafede noktanın sağında, öbürlerinde ortalı
+function olcuYazisiCiz(ctx, satirlar, x, y, renk, p, tur) {
+  const boy = (tur === "kenar" ? 10.5 : 12) * p, satirBoy = boy * 1.25, pay = [boy * 0.6, boy * 0.3];
+  ctx.save();
+  ctx.font = `${tur === "kenar" ? 600 : 700} ${boy}px Inter, sans-serif`;
+  const en = Math.max(...satirlar.map((s) => ctx.measureText(s).width)) + pay[0] * 2, yuk = satirBoy * satirlar.length + pay[1] * 2;
+  const x0 = tur === "mesafe" ? x + 9 * p : x - en / 2, y0 = y - yuk / 2;
+  ctx.fillStyle = token("--not-zemin-acik");
+  yuvarlakDikdortgen(ctx, x0, y0, en, yuk, Math.min(yuk / 2, 9 * p));
+  ctx.fill();
+  ctx.lineWidth = 1.5 * p;
+  ctx.strokeStyle = renk;
+  ctx.stroke();
+  ctx.fillStyle = token("--not-siyah");
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  satirlar.forEach((s, i) => ctx.fillText(s, x0 + en / 2, y0 + pay[1] + satirBoy * (i + 0.5)));
+  ctx.restore();
+}
+
 // Haritadaki alan adı rozeti: yarı saydam beyaz zemin, renkli nokta, ad.
 function alanAdiCiz(ctx, r, x, y, p) {
   ctx.save();
@@ -567,7 +613,7 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
     for (const id of sira.filter(altBant)) {
       if (typeof id === "number") {
         const r = referanslar.get(id)?.veri;
-        if (r?.gorunur) alanCiz(ctx, r, g, p);
+        if (r?.gorunur) alanCiz(ctx, r, g, p, katmanOpakligi(id) / 100);
         continue;
       }
       const n = notlar.get(id);
@@ -610,20 +656,27 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
       const r = referanslar.get(id)?.veri;
       if (!r?.gorunur || !r.gorsel.etiket) continue;
       const m = alanIcNokta(r);
+      ctx.save();
+      ctx.globalAlpha = katmanOpakligi(id) / 100;
       if (m) alanAdiCiz(ctx, r, ...g.nokta(m.lat, m.lng), p);
+      ctx.restore();
     }
     for (const id of sira.filter((i) => !altBant(i))) {
       const n = notlar.get(id);
       if (!n?.gorunur) continue;
-      if (n.tur === "yazi") yaziCiz(ctx, n.metin.split("\n"), ...g.nokta(...n.konum), { ...n, p });
+      ctx.save();
+      ctx.globalAlpha = katmanOpakligi(id) / 100;
+      if (n.tur === "olcu") olcuCiz(ctx, n, g, p);
+      else if (n.tur === "yazi") yaziCiz(ctx, n.metin.split("\n"), ...g.nokta(...n.konum), { ...n, p });
       else if (n.tur === "ok") okCiz(ctx, g.nokta(...n.noktalar[0]), g.nokta(...n.noktalar[1]), n, p);
       else if (n.tur === "tablo") tabloCiz(ctx, n, ...g.nokta(...n.konum), n.boyut * p);
-    else if (n.tur === "grafik") {
-      const { svg, en, boy } = dilimGrafigiSvg(n.veri, "kagit", n.ad);
-      const [x, y] = g.nokta(...n.konum), k = n.boyut * p;
-      const r = Math.min(1, (2 * Math.max(sayfa.en, sayfa.boy)) / Math.max(en * k, boy * k)); // sayfadan çok büyükse resim küçük üretilir
-      ctx.drawImage(await svgResmi(svg, Math.round(en * k * r), Math.round(boy * k * r)), x - (en * k) / 2, y - (boy * k) / 2, en * k, boy * k);
-    }
+      else if (n.tur === "grafik") {
+        const { svg, en, boy } = dilimGrafigiSvg(n.veri, "kagit", n.ad);
+        const [x, y] = g.nokta(...n.konum), k = n.boyut * p;
+        const r = Math.min(1, (2 * Math.max(sayfa.en, sayfa.boy)) / Math.max(en * k, boy * k)); // sayfadan çok büyükse resim küçük üretilir
+        ctx.drawImage(await svgResmi(svg, Math.round(en * k * r), Math.round(boy * k * r)), x - (en * k) / 2, y - (boy * k) / 2, en * k, boy * k);
+      }
+      ctx.restore();
     }
   } else if (parselNo.acik) {
     parselNumaralariCiz(ctx, g, hc, p); // canlı sayfada da çıktıdaki gibi; haritadakiler gizlenir (canliNumaralar)

@@ -433,7 +433,8 @@ class ReferansTest(GeciciStore):
         g = referans.gorsel_duzelt({"kalinlik": 3.3, "desen": "kareli", "aralik": 100, "opaklik": 0, "etiket": False})
         self.store.referans_guncelle(ref_id, gorsel=g)
         self.assertEqual(self.store.referans(ref_id)["gorsel"],
-                         {"kalinlik": 3.5, "cizgi": "kesik", "desen": "kareli", "aralik": 24, "opaklik": 5, "etiket": False})
+                         {"kalinlik": 3.5, "cizgi": "kesik", "desen": "kareli", "aralik": 24, "opaklik": 5, "etiket": False,
+                          "katman_opaklik": 100})
 
     def test_gorsel_dogrulama(self):
         for bozuk in ({"desen": "zigzag"}, {"cizgi": None}, {"kalinlik": "3"}, {"kalinlik": True},
