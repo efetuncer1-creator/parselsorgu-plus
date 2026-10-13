@@ -1,7 +1,8 @@
 """Haritaya ya da çıktı sayfasına konacak tabloları okur (Excel .xlsx/.xlsm, CSV).
 
 Hücreler ekranda göründüğü gibi metne çevrilir: ondalıklar Türkçe virgülle, tarihler gün.ay.yıl.
-Çok büyük sayfalar kesilir; tablo haritada okunacak boyda kalmalı.
+Çok büyük sayfalar kesilir (1.000 satır, 50 sütun): haritada ve sayfada bütün tablo gösterilir, ama binlerce
+satırlık bir liste harita ekranını ve proje dosyasını kilitlemesin.
 """
 
 import csv
@@ -11,8 +12,8 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-EN_FAZLA_SATIR = 60
-EN_FAZLA_SUTUN = 15
+EN_FAZLA_SATIR = 1000
+EN_FAZLA_SUTUN = 50
 
 
 def _metin(deger):

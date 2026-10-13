@@ -358,31 +358,47 @@ function okCiz(ctx, a, b, { renk, kalinlik, uc, cizgi }, p) {
   ctx.restore();
 }
 
-// Tablo: başlık satırı renkli, gövde beyaz zeminde; merkezi (x, y). Kutu ölçüleri döner.
+// Tablo: başlık satırı renkli, gövde beyaz zeminde; merkezi (x, y). Kutu ölçüleri döner. "Bütün sayfalar"
+// açıksa çalışma sayfaları adlarıyla alt alta (app.js tabloSayfalari); her birinin sütunları kendine göre.
 function tabloCiz(ctx, n, x, y, boyutPx, olc = false) {
-  const s = n.sayfalar[n.sayfa];
-  const satirlar = s.satirlar, bas = n.baslikSatiri ? 1 : 0;
+  const sayfalar = tabloSayfalari(n), adli = sayfalar.length > 1, bas = n.baslikSatiri ? 1 : 0;
   ctx.save();
   const yazi = (k) => `${k ? 650 : 400} ${boyutPx}px Inter, sans-serif`;
-  const dolgu = [boyutPx * 0.6, boyutPx * 0.3], satirBoy = boyutPx * 1.3 + dolgu[1] * 2;
-  const enler = satirlar[0].map((_, j) => Math.max(...satirlar.map((r, i) => { ctx.font = yazi(i < bas); return ctx.measureText(r[j] || "").width; })) + dolgu[0] * 2);
-  const en = enler.reduce((t, v) => t + v, 0), boy = satirBoy * satirlar.length;
-  const x0 = x - en / 2, y0 = y - boy / 2;
+  const dolgu = [boyutPx * 0.6, boyutPx * 0.3], satirBoy = boyutPx * 1.3 + dolgu[1] * 2, adBoy = adli ? satirBoy * 1.15 : 0;
+  const bloklar = sayfalar.map((s) => {
+    const satirlar = s.satirlar;
+    const enler = satirlar[0].map((_, j) => Math.max(...satirlar.map((r, i) => { ctx.font = yazi(i < bas); return ctx.measureText(r[j] || "").width; })) + dolgu[0] * 2);
+    ctx.font = yazi(true);
+    return { s, satirlar, enler, en: Math.max(enler.reduce((t, v) => t + v, 0), adli ? ctx.measureText(s.ad).width + dolgu[0] * 2 : 0), boy: adBoy + satirBoy * satirlar.length };
+  });
+  const en = Math.max(...bloklar.map((b) => b.en)), boy = bloklar.reduce((t, b) => t + b.boy, 0);
+  const x0 = x - en / 2, y0 = y - boy / 2, cizgi = Math.max(1, boyutPx / 12);
   if (!olc) {
     ctx.fillStyle = token("--not-beyaz");
     yuvarlakDikdortgen(ctx, x0, y0, en, boy, boyutPx * 0.5);
     ctx.fill();
     ctx.save();
     ctx.clip();
-    if (bas) { ctx.fillStyle = n.renk; ctx.fillRect(x0, y0, en, satirBoy); }
     ctx.textBaseline = "middle";
-    satirlar.forEach((r, i) => {
-      const ry = y0 + i * satirBoy;
-      if (i > bas - 1 && i < satirlar.length - 1) { ctx.fillStyle = token("--tablo-cizgi"); ctx.fillRect(x0, ry + satirBoy - Math.max(1, boyutPx / 12), en, Math.max(1, boyutPx / 12)); }
-      ctx.font = yazi(i < bas);
-      ctx.fillStyle = i < bas ? token(acikRenk(n.renk) ? "--not-siyah" : "--not-beyaz") : token("--not-siyah");
-      let cx = x0;
-      r.forEach((h, j) => { ctx.fillText(h, cx + dolgu[0], ry + satirBoy / 2); cx += enler[j]; });
+    let by = y0;
+    bloklar.forEach((b, k) => {
+      if (adli) {
+        if (k) { ctx.fillStyle = token("--tablo-cizgi"); ctx.fillRect(x0, by, en, cizgi); }
+        ctx.font = yazi(true);
+        ctx.fillStyle = token("--not-siyah");
+        ctx.fillText(b.s.ad, x0 + dolgu[0], by + adBoy / 2);
+        by += adBoy;
+      }
+      if (bas) { ctx.fillStyle = n.renk; ctx.fillRect(x0, by, en, satirBoy); }
+      b.satirlar.forEach((r, i) => {
+        const ry = by + i * satirBoy;
+        if (i > bas - 1 && i < b.satirlar.length - 1) { ctx.fillStyle = token("--tablo-cizgi"); ctx.fillRect(x0, ry + satirBoy - cizgi, en, cizgi); }
+        ctx.font = yazi(i < bas);
+        ctx.fillStyle = i < bas ? token(acikRenk(n.renk) ? "--not-siyah" : "--not-beyaz") : token("--not-siyah");
+        let cx = x0;
+        r.forEach((h, j) => { ctx.fillText(h, cx + dolgu[0], ry + satirBoy / 2); cx += b.enler[j]; });
+      });
+      by += b.satirlar.length * satirBoy;
     });
     ctx.restore();
   }
@@ -549,7 +565,8 @@ async function sayfaCiz({ onizleme = false, canli = false } = {}) {
     else if (n.tur === "grafik") {
       const { svg, en, boy } = dilimGrafigiSvg(n.veri, "kagit", n.ad);
       const [x, y] = g.nokta(...n.konum), k = n.boyut * p;
-      ctx.drawImage(await svgResmi(svg, Math.round(en * k), Math.round(boy * k)), x - (en * k) / 2, y - (boy * k) / 2, en * k, boy * k);
+      const r = Math.min(1, (2 * Math.max(sayfa.en, sayfa.boy)) / Math.max(en * k, boy * k)); // sayfadan çok büyükse resim küçük üretilir
+      ctx.drawImage(await svgResmi(svg, Math.round(en * k * r), Math.round(boy * k * r)), x - (en * k) / 2, y - (boy * k) / 2, en * k, boy * k);
     }
     }
   } else if (parselNo.acik) {
@@ -897,54 +914,6 @@ function ogeyiBuyut(id, carpan) {
   hazirBoyutlariDoldur();
 }
 
-// ---- kaydırıcı + elle yazılan sayı (Photoshop'taki gibi) --------------------------------------------------
-// Kaydırıcı alışılmış aralıkta gezer; kutuya her değer yazılabilir (virgül ya da nokta), ↑/↓ adım adım
-// değiştirir (Shift ile 10 adım). Kaydırıcı aralığın dışındaki değerde ucunda durur.
-const sayiYaz = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
-const sayiOku = (s) => { const v = Number(String(s).trim().replace(/\s/g, "").replace(",", ".")); return Number.isFinite(v) && v > 0 ? v : null; };
-
-function sayiliKaydirici({ is, etiket, aralik: [enAz, enCok, adim], deger, birim, ad }) {
-  return `<div class="kaydirici sayili"><span>${etiket}</span>`
-    + `<input type="range" data-is="${is}" min="${enAz}" max="${enCok}" step="${adim}" value="${deger}" aria-label="${esc(ad)}">`
-    + `<span class="sayi-kutusu"><input type="text" inputmode="decimal" data-is="${is}" data-adim="${adim}" data-deger="${deger}" value="${sayiYaz(deger)}" aria-label="${esc(ad)}, ${birim}"><span aria-hidden="true">${birim}</span></span></div>`;
-}
-
-// Kaydırıcı ya da kutu değişince öbürü eşitlenir. Dönüş: yeni değer; kutu henüz geçerli değilse null.
-function sayiliDegisti(el, sinir) {
-  const kap = el.closest(".sayili"), kaydirici = kap.querySelector("input[type=range]"), kutu = kap.querySelector("input[type=text]");
-  let v;
-  if (el === kutu) {
-    v = sayiOku(kutu.value);
-    kutu.setAttribute("aria-invalid", String(v === null));
-    if (v === null) return null;
-    v = Math.min(sinir[1], Math.max(sinir[0], v));
-    kaydirici.value = v;
-  } else {
-    v = Number(kaydirici.value);
-    kutu.value = sayiYaz(v);
-    kutu.removeAttribute("aria-invalid");
-  }
-  kutu.dataset.deger = v; // kutudan geçersiz değerle çıkılırsa buna döner
-  kaydiriciDoldur(kaydirici);
-  return v;
-}
-
-// Kutudan çıkınca yazılan değer düzgün biçimde gösterilir; ↑/↓ ile adım adım
-document.addEventListener("focusout", (e) => {
-  const kutu = e.target.closest?.(".sayili input[type=text]");
-  if (!kutu) return;
-  kutu.value = sayiYaz(Number(kutu.dataset.deger));
-  kutu.removeAttribute("aria-invalid");
-});
-document.addEventListener("keydown", (e) => {
-  const kutu = e.target.closest?.(".sayili input[type=text]");
-  if (!kutu || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
-  e.preventDefault();
-  const adim = Number(kutu.dataset.adim) * (e.shiftKey ? 10 : 1), v = sayiOku(kutu.value) ?? 0;
-  kutu.value = sayiYaz(Math.max(adim, v + (e.key === "ArrowUp" ? adim : -adim)));
-  kutu.dispatchEvent(new Event("input", { bubbles: true }));
-});
-
 // Hazır öğelerin (başlık, lejant, kuzey oku, ölçek) boyutu, yüzde
 const HAZIR_OGE_ADLARI = { baslik: "Başlık boyutu", lejant: "Lejant boyutu", kuzey: "Kuzey oku boyutu", olcek: "Ölçek boyutu" };
 function hazirBoyutlariDoldur() {
@@ -1053,10 +1022,16 @@ function sayfaOgeleriCiz() {
       ? `<textarea class="metin-girdi not-metin" data-is="metin" rows="2" maxlength="300" aria-label="Sayfadaki yazı">${esc(o.metin)}</textarea>`
       : `<input class="oge-ad" data-is="ad" maxlength="80" autocomplete="off" spellcheck="false" value="${esc(o.ad)}"
           placeholder="${o.tur === "grafik" ? "Başlıksız grafik" : SAYFA_OGE_AD[o.tur]}" aria-label="${o.tur === "grafik" ? "Grafiğin başlığı" : "Adı"}">`;
+    // Birden çok çalışma sayfası olan tabloda hangisi (ya da hepsi alt alta)
+    const sayfaSecimi = o.tur === "tablo" && o.sayfalar.length > 1
+      ? `<label class="sayfa-oge-sayfa"><span>Sayfa</span><select data-is="sayfa" class="metin-girdi">`
+        + `<option value="hepsi"${o.tumSayfalar ? " selected" : ""}>Bütün sayfalar</option>`
+        + o.sayfalar.map((s, i) => `<option value="${i}"${!o.tumSayfalar && o.sayfa === i ? " selected" : ""}>${esc(s.ad)}</option>`).join("")
+        + `</select></label>` : "";
     return `<li data-id="${o.id}">
       <div class="sayfa-oge-ust">${ikon({ gorsel: "resim", tablo: "tablo", grafik: "analiz" }[o.tur] || "yazi")}${ust}
         <button type="button" class="ikon-dugme" data-is="sil" aria-label="${esc(o.ad || "Grafik")} sayfadan çıkar" title="Sayfadan çıkar">${ikon("kapat")}</button></div>
-      ${boyut}
+      ${sayfaSecimi}${boyut}
     </li>`;
   }).join("");
   $("sayfaOgeleri").querySelectorAll("input[type=range]").forEach(kaydiriciDoldur);
@@ -1073,7 +1048,7 @@ async function sayfayaEkle(dosyalar) {
         cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "gorsel", ad, url: v.url, en: v.en, boy: v.boy, genislikMm: 40 });
       } else if (TABLO_MI(f)) {
         const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(f.name) }, body: await dosyaIcerigi(f) });
-        cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "tablo", ad, sayfalar: r.sayfalar, sayfa: 0, baslikSatiri: true, boyutMm: 2.6, renk: token("--not-siyah") });
+        cikti.sayfaOgeleri.push({ id: `s${++sayfaSayac}`, tur: "tablo", ad, sayfalar: r.sayfalar, sayfa: 0, tumSayfalar: r.sayfalar.length > 1, baslikSatiri: true, boyutMm: 2.6, renk: token("--not-siyah") });
       } else mesaj(`${f.name}: görsel, PDF ya da Excel/CSV seç.`, true);
     } catch (e) { mesaj(`${f.name}: ${e.message}`, true); }
   }
@@ -1096,6 +1071,11 @@ $("sayfaOgeleri").addEventListener("input", (e) => {
   if (e.target.dataset.is === "metin") { o.metin = e.target.value; o.ad = o.metin.split("\n")[0].slice(0, 30) || "Yazı"; return canliZamanla(); }
   if (e.target.dataset.is === "ad") {
     o.ad = o.tur === "grafik" ? e.target.value.trim() : e.target.value.trim() || SAYFA_OGE_AD[o.tur];
+    return canliZamanla();
+  }
+  if (e.target.dataset.is === "sayfa") {
+    o.tumSayfalar = e.target.value === "hepsi";
+    if (!o.tumSayfalar) o.sayfa = Number(e.target.value);
     return canliZamanla();
   }
   if (e.target.dataset.is !== "boyut") return;

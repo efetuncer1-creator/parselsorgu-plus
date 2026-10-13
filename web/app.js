@@ -1831,7 +1831,7 @@ function notSatiri(n) {
   const secili = n.id === seciliNot;
   const ozet = !n.gorunur ? "Haritada gizli" : n.tur === "yazi" ? `Yazı · ${n.boyut} px` : n.tur === "ok" ? `Ok · ${kalinlikMetni(n.kalinlik)}`
     : n.tur === "gorsel" ? `${n.pdf ? `PDF · sayfa ${n.sayfa}` : "Görsel"} · %${n.opaklik}`
-    : n.tur === "grafik" ? `Dilim grafiği · ${n.veri.dilimler.length} dilim` : `Tablo · ${n.sayfalar[n.sayfa].satirlar.length} satır`;
+    : n.tur === "grafik" ? `Dilim grafiği · ${n.veri.dilimler.length} dilim` : `Tablo · ${sayi(tabloSayfalari(n).reduce((t, s) => t + s.satirlar.length, 0))} satır`;
   return `
     <li data-id="${n.id}" class="${secili ? "secili" : ""}${n.gorunur ? "" : " gizli"}">
       <button type="button" class="tutamac" aria-label="${esc(notAdi(n))} katmanını taşı" title="Sürükle ya da yukarı/aşağı okla taşı">${ikon("tutamac")}</button>
@@ -1884,6 +1884,56 @@ function gorselDuzenDoldur(kaynak = null) {
 function kaydiriciDoldur(k) {
   k.style.setProperty("--dolum", `${(100 * (k.value - k.min)) / (k.max - k.min)}%`);
 }
+
+// ---- kaydırıcı + elle yazılan sayı (Photoshop'taki gibi) --------------------------------------------------
+// Kaydırıcı alışılmış aralıkta gezer; kutuya her değer yazılabilir (virgül ya da nokta), ↑/↓ adım adım
+// değiştirir (Shift ile 10 adım). Kaydırıcı aralığın dışındaki değerde ucunda durur. Değeri yalnızca
+// çağıranın verdiği geniş sınır kırpar (sıfıra inmesin, anlamsız büyümesin). Çıktı sayfasında ve
+// haritadaki notların düzenleyicisinde kullanılır.
+const sayiYaz = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
+const sayiOku = (s) => { const t = String(s).replace(/\s/g, "").replace(",", "."), v = Number(t); return t && Number.isFinite(v) ? v : null; };
+
+function sayiliKaydirici({ is, etiket, aralik: [enAz, enCok, adim], deger, birim, ad }) {
+  return `<div class="kaydirici sayili"><span>${etiket}</span>`
+    + `<input type="range" data-is="${is}" min="${enAz}" max="${enCok}" step="${adim}" value="${deger}" aria-label="${esc(ad)}">`
+    + `<span class="sayi-kutusu"><input type="text" inputmode="decimal" data-is="${is}" data-adim="${adim}" data-deger="${deger}" value="${sayiYaz(deger)}" aria-label="${esc(ad)}, ${birim}"><span aria-hidden="true">${birim}</span></span></div>`;
+}
+
+// Kaydırıcı ya da kutu değişince öbürü eşitlenir. Dönüş: yeni değer; kutu henüz geçerli değilse null.
+function sayiliDegisti(el, sinir) {
+  const kap = el.closest(".sayili"), kaydirici = kap.querySelector("input[type=range]"), kutu = kap.querySelector("input[type=text]");
+  let v;
+  if (el === kutu) {
+    v = sayiOku(kutu.value);
+    kutu.setAttribute("aria-invalid", String(v === null));
+    if (v === null) return null;
+    v = Math.min(sinir[1], Math.max(sinir[0], v));
+    kaydirici.value = v;
+  } else {
+    v = Number(kaydirici.value);
+    kutu.value = sayiYaz(v);
+    kutu.removeAttribute("aria-invalid");
+  }
+  kutu.dataset.deger = v; // kutudan geçersiz değerle çıkılırsa buna döner
+  kaydiriciDoldur(kaydirici);
+  return v;
+}
+
+// Kutudan çıkınca yazılan değer düzgün biçimde gösterilir; ↑/↓ ile adım adım
+document.addEventListener("focusout", (e) => {
+  const kutu = e.target.closest?.(".sayili input[type=text]");
+  if (!kutu) return;
+  kutu.value = sayiYaz(Number(kutu.dataset.deger));
+  kutu.removeAttribute("aria-invalid");
+});
+document.addEventListener("keydown", (e) => {
+  const kutu = e.target.closest?.(".sayili input[type=text]");
+  if (!kutu || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+  e.preventDefault();
+  const adim = Number(kutu.dataset.adim) * (e.shiftKey ? 10 : 1), v = sayiOku(kutu.value) ?? Number(kutu.dataset.deger);
+  kutu.value = sayiYaz(v + (e.key === "ArrowUp" ? adim : -adim)); // sınır sayiliDegisti'de
+  kutu.dispatchEvent(new Event("input", { bubbles: true }));
+});
 
 function gorselDegistir(id, { renk, ...ayar }, kaynak = null) {
   const ref = referanslar.get(id);
@@ -2616,43 +2666,58 @@ function notDuzenDoldur() {
   [...$("notRenkler").children].forEach((b) => b.setAttribute("aria-pressed", b.dataset.renk.toLowerCase() === (n.renk || "").toLowerCase()));
   if (document.activeElement !== $("notAd")) $("notAd").value = n.ad;
   $("notAd").placeholder = notAdi({ ...n, ad: "" });
-  const kaydirici = (id, deger, metin) => { $(id).value = deger; $(`${id}Deger`).textContent = metin; kaydiriciDoldur($(id)); };
+  const kaydirici = (id, deger) => {
+    $(id).value = deger;
+    kaydiriciDoldur($(id));
+    const kutu = $(`${id}Kutu`);
+    kutu.dataset.deger = deger;
+    if (document.activeElement !== kutu) kutu.value = sayiYaz(deger); // yazılırken bozulmasın
+  };
   if (n.tur === "yazi") {
     if (document.activeElement !== $("notMetin")) $("notMetin").value = n.metin;
-    kaydirici("notBoyut", n.boyut, `${n.boyut} px`);
+    kaydirici("notBoyut", n.boyut);
     document.querySelectorAll("input[name=notStil]").forEach((x) => { x.checked = x.value === n.stil; });
     $("notKalin").checked = n.kalin;
   } else if (n.tur === "ok") {
-    kaydirici("notKalinlik", n.kalinlik, kalinlikMetni(n.kalinlik));
+    kaydirici("notKalinlik", n.kalinlik);
     document.querySelectorAll("input[name=notUc]").forEach((x) => { x.checked = x.value === n.uc; });
     document.querySelectorAll("input[name=notCizgi]").forEach((x) => { x.checked = x.value === n.cizgi; });
   } else if (n.tur === "gorsel") {
-    kaydirici("notOpaklik", n.opaklik, `%${n.opaklik}`);
-    kaydirici("notAci", n.aci, `${String(n.aci).replace(".", ",")}°`);
+    kaydirici("notOpaklik", n.opaklik);
+    kaydirici("notAci", n.aci);
     $("notKaristir").checked = n.karistir;
   } else if (n.tur === "grafik") {
-    kaydirici("notGrafikBoyut", Math.round(n.boyut * 100), `%${Math.round(n.boyut * 100)}`);
+    kaydirici("notGrafikBoyut", Math.round(n.boyut * 1000) / 10);
   } else {
-    kaydirici("notTabloBoyut", n.boyut, `${n.boyut} px`);
+    kaydirici("notTabloBoyut", n.boyut);
     $("notBaslikSatiri").checked = n.baslikSatiri;
-    $("notKesildi").hidden = !n.sayfalar[n.sayfa].kesildi;
+    $("notTumSayfalarSatiri").hidden = n.sayfalar.length < 2;
+    $("notTumSayfalar").checked = !!n.tumSayfalar;
+    $("notKesildi").hidden = !tabloSayfalari(n).some((s) => s.kesildi);
   }
   // PDF'in sayfaları ya da Excel'in çalışma sayfaları arasında gezinme
   const sayfali = (n.tur === "gorsel" && n.sayfaSayisi > 1) || (n.tur === "tablo" && n.sayfalar.length > 1);
   $("notSayfa").hidden = !sayfali;
   if (sayfali) {
     const [no, toplam, ad] = n.tur === "gorsel" ? [n.sayfa, n.sayfaSayisi, "Sayfa"] : [n.sayfa + 1, n.sayfalar.length, n.sayfalar[n.sayfa].ad];
-    $("notSayfaAd").textContent = `${ad} · ${no}/${toplam}`;
-    $("notSayfaGeri").disabled = no <= 1;
-    $("notSayfaIleri").disabled = no >= toplam;
+    const hepsi = n.tur === "tablo" && n.tumSayfalar; // hepsi alt alta gösteriliyor
+    $("notSayfaAd").textContent = hepsi ? `Bütün sayfalar · ${toplam}` : `${ad} · ${no}/${toplam}`;
+    $("notSayfaGeri").disabled = hepsi || no <= 1;
+    $("notSayfaIleri").disabled = hepsi || no >= toplam;
   }
 }
 
 $("notMetin").addEventListener("input", (e) => notGuncelle(seciliNot, { metin: e.target.value }));
 $("notMetin").addEventListener("change", (e) => { if (!e.target.value.trim()) notGuncelle(seciliNot, { metin: "Yazı" }); });
 $("notAd").addEventListener("input", (e) => notGuncelle(seciliNot, { ad: e.target.value.trim() }));
-$("notBoyut").addEventListener("input", (e) => notGuncelle(seciliNot, { boyut: Number(e.target.value) }));
-$("notKalinlik").addEventListener("input", (e) => notGuncelle(seciliNot, { kalinlik: Number(e.target.value) }));
+// Kaydırıcı ve yanındaki kutu: elle yazılan değer kaydırıcının aralığıyla sınırlı değil.
+for (const [id, sinir, alan, carpan = 1] of [["notBoyut", [1, 2000], "boyut"], ["notKalinlik", [0.5, 200], "kalinlik"],
+  ["notOpaklik", [1, 100], "opaklik"], ["notAci", [-180, 180], "aci"], ["notTabloBoyut", [1, 500], "boyut"],
+  ["notGrafikBoyut", [5, 5000], "boyut", 0.01]]) {
+  const degisti = (e) => { const v = sayiliDegisti(e.target, sinir); if (v !== null) notGuncelle(seciliNot, { [alan]: v * carpan }); };
+  $(id).addEventListener("input", degisti);
+  $(`${id}Kutu`).addEventListener("input", degisti);
+}
 $("notKalin").addEventListener("change", (e) => notGuncelle(seciliNot, { kalin: e.target.checked }));
 for (const ad of ["notStil", "notUc", "notCizgi"]) {
   document.querySelectorAll(`input[name=${ad}]`).forEach((x) => x.addEventListener("change", () => {
@@ -2788,7 +2853,7 @@ async function gorselNotuEkle(dosya) {
 async function tabloNotuEkle(dosya) {
   const r = await api("tablo-oku", { method: "POST", headers: { "X-Dosya-Adi": encodeURIComponent(dosya.name) }, body: await dosyaIcerigi(dosya) });
   const merkez = harita.getCenter();
-  return notEkle("tablo", { ad: dosya.name.replace(/\.[^.]+$/, ""), sayfalar: r.sayfalar, sayfa: 0, baslikSatiri: true, boyut: 12,
+  return notEkle("tablo", { ad: dosya.name.replace(/\.[^.]+$/, ""), sayfalar: r.sayfalar, sayfa: 0, tumSayfalar: r.sayfalar.length > 1, baslikSatiri: true, boyut: 12,
     konum: [merkez.lat, merkez.lng], renk: token("--not-siyah") });
 }
 
@@ -2805,14 +2870,22 @@ async function notDosyalariniAl(dosyalar) {
   return kalan;
 }
 
+// Tablonun gösterilen çalışma sayfaları: seçili olan ya da ("bütün sayfalar" açıksa) hepsi alt alta.
+// Haritadaki not ve çıktı sayfasına konan tablo (cikti.js tabloCiz) ortak kullanır.
+const tabloSayfalari = (n) => (n.tumSayfalar && n.sayfalar.length > 1 ? n.sayfalar : [n.sayfalar[n.sayfa]]);
+
 function tabloHtml(n) {
-  const s = n.sayfalar[n.sayfa];
-  const [ilk, ...kalan] = s.satirlar;
+  const sayfalar = tabloSayfalari(n), adli = sayfalar.length > 1;
   const satir = (h, et) => `<tr>${h.map((x) => `<${et}>${esc(x)}</${et}>`).join("")}</tr>`;
-  const govde = (n.baslikSatiri ? kalan : s.satirlar).map((h) => satir(h, "td")).join("");
+  const tablo = (s) => {
+    const [ilk, ...kalan] = s.satirlar;
+    const govde = (n.baslikSatiri ? kalan : s.satirlar).map((h) => satir(h, "td")).join("");
+    return `${adli ? `<div class="harita-tablo-ad">${esc(s.ad)}</div>` : ""}`
+      + `<table>${n.baslikSatiri ? `<thead>${satir(ilk, "th")}</thead>` : ""}<tbody>${govde}</tbody></table>`;
+  };
   const secili = n.id === seciliNot && gorselSekmesinde();
-  return `<div class="harita-tablo${secili ? " secili" : ""}" style="--tablo-boyut:${n.boyut}px;--tablo-renk:${esc(n.renk)};--tablo-yazi:${acikRenk(n.renk) ? "var(--not-siyah)" : "var(--not-beyaz)"}">` +
-    `<table>${n.baslikSatiri ? `<thead>${satir(ilk, "th")}</thead>` : ""}<tbody>${govde}</tbody></table></div>`;
+  return `<div class="harita-tablo${secili ? " secili" : ""}" style="--tablo-boyut:${n.boyut}px;--tablo-renk:${esc(n.renk)};--tablo-yazi:${acikRenk(n.renk) ? "var(--not-siyah)" : "var(--not-beyaz)"}">`
+    + `${sayfalar.map(tablo).join("")}</div>`;
 }
 
 $("gorselEkle").addEventListener("click", () => $("gorselSec").click());
@@ -2849,12 +2922,9 @@ async function notSayfaDegistir(fark) {
   } catch (e) { mesaj(e.message, true); }
 }
 
-$("notOpaklik").addEventListener("input", (e) => notGuncelle(seciliNot, { opaklik: Number(e.target.value) }));
-$("notAci").addEventListener("input", (e) => notGuncelle(seciliNot, { aci: Number(e.target.value) }));
 $("notKaristir").addEventListener("change", (e) => notGuncelle(seciliNot, { karistir: e.target.checked }));
 $("notBaslikSatiri").addEventListener("change", (e) => notGuncelle(seciliNot, { baslikSatiri: e.target.checked }));
-$("notTabloBoyut").addEventListener("input", (e) => notGuncelle(seciliNot, { boyut: Number(e.target.value) }));
-$("notGrafikBoyut").addEventListener("input", (e) => notGuncelle(seciliNot, { boyut: Number(e.target.value) / 100 }));
+$("notTumSayfalar").addEventListener("change", (e) => notGuncelle(seciliNot, { tumSayfalar: e.target.checked }));
 
 // Haritadaki grafik kartı: Analiz sekmesindeki dilim grafiğinin aynısı (analiz.js dilimGrafigiSvg)
 function grafikHtml(n) {

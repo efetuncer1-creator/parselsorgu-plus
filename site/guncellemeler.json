@@ -19,6 +19,8 @@
         { "tur": "yeni", "metin": "Parseller niteliklerine göre renklendirilir; renkler değiştirilebilir, lejanta ve çıktıya yansır." },
         { "tur": "yeni", "metin": "Uygulama açılırken yeni sürüm olup olmadığına bakar; varsa her açılışta \"Güncel sürümü indir\" ya da \"Devam et\" diye sorar." },
         { "tur": "iyilestirme", "metin": "Ada/parsel numaraları ve alan adları haritada gösterilip gizlenebilir." },
+        { "tur": "iyilestirme", "metin": "Boyutlar elle yazılabilir: her kaydırıcının yanında bir kutu var, kaydırıcının sınırı dışında değer de girilir; çıktı sayfasında köşeden büyütmenin de sınırı yok." },
+        { "tur": "iyilestirme", "metin": "Tablolar 1.000 satır ve 50 sütuna kadar bütün olarak gösterilir; Excel'in bütün çalışma sayfaları alt alta konabilir. Sayfaya eklenen grafiğin başlığı değiştirilebilir." },
         { "tur": "iyilestirme", "metin": "Çıktıda bütün ada/parsel numaraları yazılır: sığmayan numara küçültülür, ince uzun parselde parselin yönüne döndürülür, çok küçük parselde yanına yazılıp çizgiyle bağlanır; yazılar üst üste binmez, ölçeğe ve kağıda göre kendiliğinden ayarlanır." },
         { "tur": "iyilestirme", "metin": "Dışa aktarırken, çıktı alırken ve proje kaydederken dosyanın kaydedileceği klasör ve ad sorulur (Chrome, Edge)." },
         { "tur": "duzeltme", "metin": "Ağ klasöründeki dosyalar yüklenirken çıkan \"Failed to fetch\" hatası giderildi; bazı Excel dosyaları ve Türkçe CSV'ler artık doğru okunuyor." }

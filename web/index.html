@@ -473,7 +473,7 @@
           <fieldset class="ayar" data-not="yazi">
             <legend>Yazı</legend>
             <textarea id="notMetin" class="metin-girdi not-metin" rows="2" maxlength="300" spellcheck="false" aria-label="Haritadaki yazı"></textarea>
-            <label class="kaydirici"><span>Boyut</span><input type="range" id="notBoyut" min="10" max="48" step="1"><output id="notBoyutDeger" for="notBoyut"></output></label>
+            <div class="kaydirici sayili"><span>Boyut</span><input type="range" id="notBoyut" min="10" max="48" step="1" aria-label="Yazı boyutu"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notBoyutKutu" data-adim="1" autocomplete="off" aria-label="Yazı boyutu, px"><span aria-hidden="true">px</span></span></div>
             <div class="bolumlu" role="radiogroup" aria-label="Yazı stili">
               <label><input type="radio" name="notStil" value="hale"><span>Gölgeli</span></label>
               <label><input type="radio" name="notStil" value="kutu"><span>Kutulu</span></label>
@@ -487,7 +487,7 @@
           </fieldset>
           <fieldset class="ayar" data-not="ok">
             <legend>Ok</legend>
-            <label class="kaydirici"><span>Kalınlık</span><input type="range" id="notKalinlik" min="1" max="10" step="0.5"><output id="notKalinlikDeger" for="notKalinlik"></output></label>
+            <div class="kaydirici sayili"><span>Kalınlık</span><input type="range" id="notKalinlik" min="1" max="10" step="0.5" aria-label="Ok kalınlığı"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notKalinlikKutu" data-adim="0.5" autocomplete="off" aria-label="Ok kalınlığı, px"><span aria-hidden="true">px</span></span></div>
             <div class="bolumlu" role="radiogroup" aria-label="Uçlar">
               <label><input type="radio" name="notUc" value="tek"><span>Tek uç</span></label>
               <label><input type="radio" name="notUc" value="cift"><span>Çift uç</span></label>
@@ -500,8 +500,8 @@
           </fieldset>
           <fieldset class="ayar" data-not="gorsel">
             <legend>Görsel</legend>
-            <label class="kaydirici"><span>Opaklık</span><input type="range" id="notOpaklik" min="10" max="100" step="5"><output id="notOpaklikDeger" for="notOpaklik"></output></label>
-            <label class="kaydirici"><span>Açı</span><input type="range" id="notAci" min="-180" max="180" step="0.5"><output id="notAciDeger" for="notAci"></output></label>
+            <div class="kaydirici sayili"><span>Opaklık</span><input type="range" id="notOpaklik" min="10" max="100" step="5" aria-label="Görselin opaklığı"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notOpaklikKutu" data-adim="1" autocomplete="off" aria-label="Görselin opaklığı, %"><span aria-hidden="true">%</span></span></div>
+            <div class="kaydirici sayili"><span>Açı</span><input type="range" id="notAci" min="-180" max="180" step="0.5" aria-label="Görselin açısı"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notAciKutu" data-adim="1" autocomplete="off" aria-label="Görselin açısı, °"><span aria-hidden="true">°</span></span></div>
             <label class="anahtar">
               <input type="checkbox" id="notKaristir" role="switch">
               <span class="anahtar-izi" aria-hidden="true"></span>
@@ -511,17 +511,22 @@
           </fieldset>
           <fieldset class="ayar" data-not="tablo">
             <legend>Tablo</legend>
-            <label class="kaydirici"><span>Boyut</span><input type="range" id="notTabloBoyut" min="9" max="18" step="1"><output id="notTabloBoyutDeger" for="notTabloBoyut"></output></label>
+            <div class="kaydirici sayili"><span>Boyut</span><input type="range" id="notTabloBoyut" min="9" max="18" step="1" aria-label="Tablonun yazı boyutu"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notTabloBoyutKutu" data-adim="1" autocomplete="off" aria-label="Tablonun yazı boyutu, px"><span aria-hidden="true">px</span></span></div>
             <label class="anahtar">
               <input type="checkbox" id="notBaslikSatiri" role="switch">
               <span class="anahtar-izi" aria-hidden="true"></span>
               <span>İlk satır başlık</span>
             </label>
-            <p id="notKesildi" class="ikincil-metin" hidden>Tablonun ilk 60 satırı ve 15 sütunu gösteriliyor.</p>
+            <label class="anahtar" id="notTumSayfalarSatiri">
+              <input type="checkbox" id="notTumSayfalar" role="switch">
+              <span class="anahtar-izi" aria-hidden="true"></span>
+              <span>Bütün sayfaları alt alta göster</span>
+            </label>
+            <p id="notKesildi" class="ikincil-metin" hidden>Tablonun ilk 1.000 satırı ve 50 sütunu gösteriliyor.</p>
           </fieldset>
           <fieldset class="ayar" data-not="grafik">
             <legend>Grafik</legend>
-            <label class="kaydirici"><span>Boyut</span><input type="range" id="notGrafikBoyut" min="50" max="200" step="5"><output id="notGrafikBoyutDeger" for="notGrafikBoyut"></output></label>
+            <div class="kaydirici sayili"><span>Boyut</span><input type="range" id="notGrafikBoyut" min="50" max="200" step="5" aria-label="Grafiğin boyutu"><span class="sayi-kutusu"><input type="text" inputmode="decimal" id="notGrafikBoyutKutu" data-adim="5" autocomplete="off" aria-label="Grafiğin boyutu, %"><span aria-hidden="true">%</span></span></div>
             <p class="ikincil-metin">Renkler nitelik renklerini izler; Parseller kutusunda değiştirince grafik de değişir.</p>
           </fieldset>
           <fieldset class="ayar" data-not="yazi ok tablo">
