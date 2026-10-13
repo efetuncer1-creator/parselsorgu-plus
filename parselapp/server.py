@@ -112,6 +112,8 @@ class Uygulama:
                 return {"keys": sonuc["keys"], "alanlar": [self.store.referans(i) for i in sonuc["alanlar"]]}
             case ("POST", ["izgara"]):
                 return self._izgara(_json(govde))
+            case ("POST", ["koordinat"]):
+                return self._koordinat(_json(govde))
             case ("POST", ["tablo-oku"]):
                 ad = unquote(basliklar.get("X-Dosya-Adi", "tablo.xlsx"))
                 try:
@@ -175,6 +177,23 @@ class Uygulama:
         except (KeyError, TypeError, ValueError) as e:
             raise Hata(HTTPStatus.BAD_REQUEST, "Izgara için Türkiye içinde geçerli bir alan gerekli.") from e
         return coords.izgara(bati, guney, dogu, kuzey, sistem, dom)
+
+    def _koordinat(self, g):
+        """Hızlı aramaya yazılan Y (doğu) ve X (kuzey): ITRF96 ve ED50 3° karşılıkları. Sayılardan hangi
+        sistem olduğu anlaşılmaz; ikisi de döner, kullanıcı seçer. Türkiye dışına düşen sonuç atılır."""
+        try:
+            y, x, dom = float(g["y"]), float(g["x"]), int(g["dilim"])
+            if dom not in coords.DILIMLER or not (100_000 <= y <= 900_000 and 3_500_000 <= x <= 4_800_000):
+                raise ValueError
+        except (KeyError, TypeError, ValueError) as e:
+            raise Hata(HTTPStatus.BAD_REQUEST, "Y (doğu) 100.000-900.000, X (kuzey) 3.500.000-4.800.000 arasında olmalı.") from e
+        sonuclar = []
+        for sistem, s in coords.SISTEMLER.items():
+            boylam, enlem = coords.cografyaya(y, x, sistem, dom)
+            if 25 <= boylam <= 46 and 35 <= enlem <= 43:
+                sonuclar.append({"sistem": sistem, "ad": s["ad"], "dom": dom,
+                                 "boylam": round(boylam, 7), "enlem": round(enlem, 7)})
+        return {"sonuclar": sonuclar}
 
     def _referans_al(self, ref_id):
         r = self.store.referans(int(ref_id), dokun=True)

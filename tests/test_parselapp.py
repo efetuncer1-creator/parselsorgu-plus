@@ -321,6 +321,28 @@ class KoordinatTest(unittest.TestCase):
         # ED50 ile ITRF96 arası Türkiye'de birkaç yüz metre değil, ~70-200 m civarı fark
         self.assertTrue(20 < abs(x2 - x) < 300)
 
+    def test_geri_donusum(self):
+        for sistem in coords.SISTEMLER:
+            y, x = coords.donustur(27.85, 41.08, sistem, 27)
+            boylam, enlem = coords.cografyaya(y, x, sistem, 27)
+            self.assertAlmostEqual(boylam, 27.85, places=7)
+            self.assertAlmostEqual(enlem, 41.08, places=7)
+
+    def test_koordinat_ucu(self):
+        from parselapp.server import Hata, Uygulama
+        with tempfile.TemporaryDirectory() as k:
+            uyg = Uygulama(Store(Path(k) / "t.db"))
+            y, x = coords.donustur(27.85, 41.08, "ed50", 27)
+            r = uyg.yonlendir("POST", ["koordinat"], json.dumps({"y": y, "x": x, "dilim": 27}).encode(), {})
+            self.assertEqual([s["sistem"] for s in r["sonuclar"]], ["itrf96", "ed50"])
+            ed50 = r["sonuclar"][1]
+            self.assertAlmostEqual(ed50["boylam"], 27.85, places=6)
+            self.assertAlmostEqual(ed50["enlem"], 41.08, places=6)
+            for bozuk in ({"y": y, "x": x, "dilim": 28}, {"y": 4550000, "x": 567000, "dilim": 27}, {"y": y, "x": x}, {}):
+                with self.subTest(govde=bozuk), self.assertRaises(Hata):
+                    uyg.yonlendir("POST", ["koordinat"], json.dumps(bozuk).encode(), {})
+            uyg.store._db.close()
+
 
 class DisaAktarmaTest(GeciciStore):
     def setUp(self):

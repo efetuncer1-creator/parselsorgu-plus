@@ -2747,9 +2747,10 @@ function notSil(id) {
   notDuzenDoldur();
 }
 
+// Ok ve ölçünün noktaları, görselin merkezi, yazı/tablo/grafiğin konumu var.
 function notaYaklas(n) {
-  if (n.tur === "yazi") harita.panTo(n.konum);
-  else harita.fitBounds(L.latLngBounds(n.noktalar), { padding: [80, 80], maxZoom: harita.getZoom() });
+  if (n.noktalar) harita.fitBounds(L.latLngBounds(n.noktalar), { padding: [80, 80], maxZoom: harita.getZoom() });
+  else harita.panTo(n.merkez || n.konum);
 }
 
 // Görsel sekmesinden çıkınca seçim çerçevesi ve tutamaçlar gizlenir, notlar tıklanmaz olur.

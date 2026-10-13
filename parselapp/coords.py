@@ -76,6 +76,11 @@ def _cografyaya(sistem, dom):
     return Transformer.from_crs(f"EPSG:{epsg}", "EPSG:4326", always_xy=True, area_of_interest=_TURKIYE)
 
 
+def cografyaya(y, x, sistem, dom):
+    """donustur()'un tersi: dilim düzleminde (Y, X) -> (boylam, enlem)."""
+    return _cografyaya(sistem, dom).transform(y, x)
+
+
 def izgara(bati, guney, dogu, kuzey, sistem="itrf96", dom=None, en_cok=6):
     """Coğrafi kutuyu kesen yuvarlak Y (doğu) ve X (kuzey) değerlerindeki çizgiler.
 

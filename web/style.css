@@ -47,7 +47,7 @@
   --boy-tarih: 112px; --onizleme-genislik: 1400px;
 
   /* Yerleşim */
-  --mesaj-alt: 84px; --mesaj-genislik: 440px; --diyalog-genislik: 360px; --guncelleme-genislik: 420px; --kart-genislik: 264px; --ipucu-genislik: 260px;
+  --mesaj-alt: 84px; --mesaj-genislik: 440px; --diyalog-genislik: 360px; --guncelleme-genislik: 420px; --hizli-genislik: 580px; --kart-genislik: 264px; --ipucu-genislik: 260px;
   --mobil-alt: 68px; --mobil-cubuk-ust: 58px; --mobil-mesaj-ust: 112px;
   --kenar: 12px;
   --lejant-alt: 44px; --lejant-min: 168px; --lejant-max: 300px; --lejant-yukseklik: 56vh; --lejant-mobil: 62vw; --lejant-mobil-yukseklik: 34vh;
@@ -748,6 +748,68 @@ input[type=checkbox].kutucuk:checked {
 .guncelleme .guncelleme-not { font: var(--t-ikincil); color: var(--metin-2); margin-bottom: var(--b-4); }
 .guncelleme a.dugme { text-decoration: none; }
 
+/* ---- Hızlı arama (Ctrl+K) -------------------------------------------------- */
+.arama-ac { display: flex; gap: var(--b-1-5); width: auto; padding: 0 var(--b-2) 0 var(--b-2-5); font: 500 13px/1 var(--yazi); color: var(--metin-2); }
+.arama-ac:hover:not(:disabled) { color: var(--metin); }
+.arama-ac kbd, .hizli-arama kbd {
+  padding: 3px var(--b-1-5); border-radius: var(--r-xs); background: var(--dolgu);
+  font: 600 10.5px/1 var(--yazi); color: var(--metin-2); white-space: nowrap;
+}
+.hizli-arama {
+  inset: 0; margin: 12vh auto auto;
+  width: min(var(--hizli-genislik), calc(100vw - var(--b-4))); max-height: min(72vh, 600px);
+  padding: var(--b-2); border-radius: var(--r-kart); color: var(--metin);
+  animation: diyalog-gir var(--sure) var(--yay);
+}
+.hizli-arama[open] { display: flex; flex-direction: column; }
+.hizli-arama::backdrop { background: var(--perde); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.hizli-arama .arama { flex: none; margin-bottom: var(--b-1-5); }
+.hizli-arama .arama input { height: var(--boy-xl); font: var(--t-govde); }
+.hizli-liste { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; flex: 1; scrollbar-width: thin; }
+.hizli-grup { padding: var(--b-2-5) var(--b-2-5) var(--b-1); font: var(--t-dipnot); color: var(--metin-3); letter-spacing: .02em; }
+.hizli-satir {
+  display: flex; align-items: center; gap: var(--b-2-5);
+  min-height: var(--boy-xl); padding: var(--b-1) var(--b-2-5); border-radius: var(--r-alan); cursor: pointer;
+}
+.hizli-satir.pasif { cursor: default; }
+.hizli-satir .katman-ornek { width: var(--boy-s); height: var(--boy-cip-g); }
+.hizli-simge { display: grid; place-items: center; flex: none; width: var(--boy-s); height: var(--boy-cip-g); color: var(--metin-2); }
+.hizli-metin { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.hizli-metin b, .hizli-metin small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hizli-metin b { font: 500 14px/19px var(--yazi); font-variant-numeric: tabular-nums; }
+.hizli-metin small { font: var(--t-kucuk); color: var(--metin-2); font-variant-numeric: tabular-nums; }
+.hizli-metin mark { background: none; color: inherit; font-weight: 700; }
+.hizli-sag { flex: none; font: var(--t-dipnot); color: var(--metin-3); }
+.hizli-satir.aktif { background: var(--vurgu); color: var(--metin-ters); }
+.hizli-satir.aktif :is(small, .hizli-simge, .hizli-sag) { color: var(--metin-ters); }
+.hizli-satir.aktif kbd { background: rgba(255, 255, 255, .2); color: var(--metin-ters); }
+.hizli-bos { padding: var(--b-5) var(--b-4); text-align: center; font: var(--t-ikincil); color: var(--metin-2); }
+.hizli-alt {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--b-1) var(--b-3); flex: none;
+  margin-top: var(--b-1-5); padding: var(--b-2) var(--b-2-5) var(--b-1); border-top: 1px solid var(--ayrac);
+  font: var(--t-dipnot); color: var(--metin-3);
+}
+.hizli-alt span { display: inline-flex; align-items: center; gap: var(--b-1); }
+.hizli-ornek { margin-left: auto; }
+
+/* Hızlı aramada gidilen konum: nabız gibi atan nokta ve koordinatı; tıklayınca ya da haritaya tıklayınca kalkar */
+.konum-isaret-ikon { background: none; border: 0; }
+.konum-isaret {
+  position: absolute; left: -8px; top: -8px; width: var(--boy-topuz); height: var(--boy-topuz); border-radius: 50%;
+  background: var(--harita-secili); box-shadow: 0 0 0 3px var(--harita-aktif), 0 2px 8px rgba(0, 0, 0, .5);
+  animation: konum-nabiz 1.8s var(--yay) infinite;
+}
+@keyframes konum-nabiz {
+  0% { box-shadow: 0 0 0 3px var(--harita-aktif), 0 0 0 3px color-mix(in srgb, var(--harita-secili) 70%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 3px var(--harita-aktif), 0 0 0 18px transparent; }
+}
+.konum-etiket {
+  position: absolute; left: 0; top: 14px; translate: -50% 0; white-space: nowrap;
+  padding: var(--b-1) var(--b-2); border-radius: var(--r-kucuk);
+  background: var(--not-zemin-acik); color: var(--not-siyah); box-shadow: var(--golge-yazi);
+  font: 600 11.5px/1.3 var(--yazi); font-variant-numeric: tabular-nums;
+}
+
 /* ---- Harita üstü öğeler: parsel menüsü, bilgi kartı, çizim pinleri ---------- */
 .parsel-menu-ikon, .cizim-pin-ikon { background: none; border: 0; }
 .parsel-menu {
@@ -832,6 +894,9 @@ input[type=checkbox].kutucuk:checked {
   .sekmeler [role=tab] .ikon { width: var(--ikon-m); height: var(--ikon-m); }
   .cekmece { top: auto; left: var(--kenar); right: var(--kenar); width: auto; bottom: calc(var(--mobil-alt) + env(safe-area-inset-bottom)); max-height: 52vh; }
   .harita-kontrolleri { top: var(--kenar); right: var(--kenar); }
+  .arama-ac { width: var(--boy-l); padding: 0; justify-content: center; }
+  .arama-ac :is(span, kbd), .hizli-alt .hizli-ornek { display: none; }
+  .hizli-arama { margin-top: var(--kenar); max-height: 60vh; }
   .altlik-secici span { padding: 0 var(--b-2); }
   .secili-bar { bottom: auto; top: var(--mobil-cubuk-ust); left: 50%; max-width: calc(100vw - var(--b-4)); padding-left: var(--b-3); }
   .secili-bar .secili-alan { display: none; }

@@ -724,6 +724,9 @@
 
   <!-- Harita kontrolleri -->
   <div class="harita-kontrolleri">
+    <button type="button" id="hizliAramaAc" class="tek-kontrol cam arama-ac" aria-keyshortcuts="Control+K" aria-haspopup="dialog" title="Parsel, alan, katman, komut ya da koordinat ara (Ctrl+K)">
+      <svg class="ikon"><use href="#i-ara"/></svg><span>Ara</span><kbd>Ctrl K</kbd>
+    </button>
     <div class="bolumlu cam altlik-secici" role="radiogroup" aria-label="Altlık harita">
       <label><input type="radio" name="altlik" value="Uydu" checked><span>Uydu</span></label>
       <label><input type="radio" name="altlik" value="OpenStreetMap"><span>Harita</span></label>
@@ -773,6 +776,19 @@
     <p id="seciciBos" class="secici-bos" hidden>Eşleşen sonuç yok</p>
   </div>
 
+  <!-- Hızlı arama (Ctrl+K): arama.js -->
+  <dialog id="hizliArama" class="hizli-arama cam" aria-label="Hızlı arama">
+    <div class="arama">
+      <svg class="ikon" aria-hidden="true"><use href="#i-ara"/></svg>
+      <input id="hizliGirdi" type="search" placeholder="Parsel, alan, katman, komut ya da koordinat" autocomplete="off" spellcheck="false"
+        role="combobox" aria-expanded="true" aria-controls="hizliListe" aria-autocomplete="list" aria-label="Hızlı arama">
+      <button type="button" class="arama-temizle" tabindex="-1" aria-label="Aramayı temizle"><svg class="ikon"><use href="#i-kapat"/></svg></button>
+    </div>
+    <ul id="hizliListe" class="hizli-liste" role="listbox" aria-label="Sonuçlar"></ul>
+    <p id="hizliBos" class="hizli-bos" hidden>Eşleşen sonuç yok. Ada/parsel (409/26), mahalle, nitelik, alan ya da katman adı, komut ya da koordinat yazabilirsin.</p>
+    <p class="hizli-alt"><span><kbd>↑</kbd><kbd>↓</kbd> seç</span><span><kbd>Enter</kbd> aç</span><span><kbd>Esc</kbd> kapat</span><span class="hizli-ornek">Koordinat: 41,08 27,85 ya da Y 567000 X 4550000</span></p>
+  </dialog>
+
   <!-- Uygulama içi onay / ad sorma penceresi (tarayıcının prompt/confirm kutuları her yerde çalışmıyor) -->
   <!-- Tarayıcının title kutusu ve renk seçicisi tasarıma uymadığı için kendi bileşenlerimiz -->
   <div id="ipucu" class="ipucu cam" hidden></div>
@@ -809,5 +825,6 @@
   <script src="proje.js"></script>
   <script src="analiz.js"></script>
   <script src="nitelik.js"></script>
+  <script src="arama.js"></script>
 </body>
 </html>
