@@ -9,7 +9,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from parselapp import analiz, coords, exporters, referans, tablo
+from parselapp import analiz, coords, exporters, guncelleme, referans, tablo
 from parselapp.importers import dosya_oku, ice_aktar, kml_oku
 from parselapp.store import Store
 from parselapp.tkgm import Bulunamadi, LimitAsildi, Tkgm
@@ -638,3 +638,59 @@ class TabloTest(unittest.TestCase):
         for ad, icerik in (("eski.xls", b"x"), ("resim.png", b"x"), ("bozuk.xlsx", b"PK bozuk")):
             with self.subTest(ad=ad), self.assertRaises(ValueError):
                 tablo.oku(ad, icerik)
+
+
+class GuncellemeTest(unittest.TestCase):
+    """GitHub'a bağlanmaz: son sürüm yanıtı sahte."""
+
+    @staticmethod
+    def yanit(etiket, dosyalar=("ParselSorguPlus-Kurulum-0.2.0.exe",)):
+        return lambda adres: {
+            "tag_name": etiket, "name": "Görsel sekmesi", "html_url": "https://github.com/x/y/releases/tag/" + etiket,
+            "assets": [{"name": d, "browser_download_url": "https://github.com/x/y/releases/download/" + d} for d in dosyalar],
+        }
+
+    def test_surum_parcalari(self):
+        self.assertEqual(guncelleme.parcalar("v0.2.0"), (0, 2, 0))
+        self.assertEqual(guncelleme.parcalar("0.10"), (0, 10, 0))
+        self.assertIsNone(guncelleme.parcalar("gelistirme"))
+        self.assertIsNone(guncelleme.parcalar(None))
+
+    def test_yeni_surum(self):
+        r = guncelleme.denetle("0.1.0", self.yanit("v0.2.0"))
+        self.assertTrue(r["yeni"])
+        self.assertEqual(r["son"], "0.2.0")
+        self.assertTrue(r["indir"].endswith(".exe"))
+        # 0.10 > 0.9 (metin olarak değil, sayı olarak karşılaştırılır)
+        self.assertTrue(guncelleme.denetle("0.9.0", self.yanit("v0.10.0"))["yeni"])
+
+    def test_guncel_ya_da_daha_yeni(self):
+        self.assertFalse(guncelleme.denetle("0.2.0", self.yanit("v0.2.0"))["yeni"])
+        self.assertFalse(guncelleme.denetle("0.3.0", self.yanit("v0.2.0"))["yeni"])
+
+    def test_kurulum_dosyasi_yoksa_surum_sayfasi(self):
+        r = guncelleme.denetle("0.1.0", self.yanit("v0.2.0", dosyalar=()))
+        self.assertEqual(r["indir"], r["sayfa"])
+
+    def test_denetlenemezse_uyari_yok(self):
+        def kopuk(adres):
+            raise OSError("internet yok")
+        self.assertFalse(guncelleme.denetle("0.1.0", kopuk)["yeni"])
+        self.assertFalse(guncelleme.denetle("0.1.0", lambda a: {"tag_name": "son"})["yeni"])
+
+    def test_kaynaktan_calisirken_denetlenmez(self):
+        cagri = []
+        r = guncelleme.denetle(None, lambda a: cagri.append(a))
+        self.assertFalse(r["yeni"])
+        self.assertEqual(cagri, [])
+
+    def test_denetci_bir_kez_sorar(self):
+        cagri = []
+        def getir(adres):
+            cagri.append(adres)
+            return self.yanit("v0.2.0")(adres)
+        d = guncelleme.Denetci("0.1.0", getir).baslat().baslat()
+        self.assertTrue(d.sonuc()["yeni"])
+        self.assertTrue(d.sonuc()["yeni"])
+        self.assertEqual(len(cagri), 1)
+

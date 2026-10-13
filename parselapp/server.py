@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
 
-from . import analiz, coords, exporters, proje, referans, tablo
+from . import analiz, coords, exporters, guncelleme, proje, referans, surum, tablo
 from .importers import ice_aktar
 from .store import Store
 from .tkgm import Bulunamadi, LimitAsildi, Tkgm, TkgmHatasi
@@ -54,6 +54,7 @@ class Uygulama:
     def __init__(self, store):
         self.store = store
         self.tkgm = Tkgm(store)
+        self.guncelleme = guncelleme.Denetci(surum.SURUM)  # sunucu açılınca baslat(); yoksa ilk istekte
 
     # Her uç nokta (yöntem, yol parçaları) ile seçilir.
     def yonlendir(self, yontem, parcalar, govde, basliklar):
@@ -67,6 +68,8 @@ class Uygulama:
                 return {"type": "FeatureCollection", "features": [ozellik(p) for p in self.store.listele(keys)]}
             case ("GET", ["sayac"]):
                 return self.store.bugunku_sorgu()
+            case ("GET", ["guncelleme"]):
+                return self.guncelleme.sonuc()
             case ("GET", ["iller"]):
                 return self._tkgm(self.tkgm.iller)
             case ("GET", ["ilceler", il_id]):
@@ -319,7 +322,8 @@ def main():
 
     adres = f"http://127.0.0.1:{a.port}/"
     try:
-        sunucu = Sunucu(("127.0.0.1", a.port), isleyici(Uygulama(Store(a.veri))))
+        uyg = Uygulama(Store(a.veri))
+        sunucu = Sunucu(("127.0.0.1", a.port), isleyici(uyg))
     except OSError:
         # Uygulama zaten açık: ikinci sunucu başlatma, açık olanı tarayıcıda göster.
         print(f"Parsel Sorgu + zaten çalışıyor: {adres}")
@@ -327,6 +331,7 @@ def main():
             webbrowser.open(adres)
         return
     print(f"Parsel Sorgu + çalışıyor: {adres}  (kapatmak için Ctrl+C)")
+    uyg.guncelleme.baslat()
     if not a.tarayici_acma:
         threading.Timer(0.8, webbrowser.open, (adres,)).start()
     try:

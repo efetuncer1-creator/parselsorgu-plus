@@ -47,7 +47,7 @@
   --boy-tarih: 112px; --onizleme-genislik: 1400px;
 
   /* Yerleşim */
-  --mesaj-alt: 84px; --mesaj-genislik: 440px; --diyalog-genislik: 360px; --kart-genislik: 264px; --ipucu-genislik: 260px;
+  --mesaj-alt: 84px; --mesaj-genislik: 440px; --diyalog-genislik: 360px; --guncelleme-genislik: 420px; --kart-genislik: 264px; --ipucu-genislik: 260px;
   --mobil-alt: 68px; --mobil-cubuk-ust: 58px; --mobil-mesaj-ust: 112px;
   --kenar: 12px;
   --lejant-alt: 44px; --lejant-min: 168px; --lejant-max: 300px; --lejant-yukseklik: 56vh; --lejant-mobil: 62vw; --lejant-mobil-yukseklik: 34vh;
@@ -740,6 +740,12 @@ input[type=checkbox].kutucuk:checked {
 .diyalog .butonlar { justify-content: flex-end; }
 .diyalog .dugme { min-width: var(--boy-diyalog-dugme); }
 @keyframes diyalog-gir { from { opacity: 0; transform: scale(.96); } }
+.guncelleme { width: min(var(--guncelleme-genislik), calc(100vw - var(--boy-m))); }
+.guncelleme h2 { display: flex; align-items: center; gap: var(--b-2); font: var(--t-baslik); margin-bottom: var(--b-2); }
+.guncelleme h2 .ikon { color: var(--vurgu-metin); }
+.guncelleme p { margin-bottom: var(--b-2); }
+.guncelleme .guncelleme-not { font: var(--t-ikincil); color: var(--metin-2); margin-bottom: var(--b-4); }
+.guncelleme a.dugme { text-decoration: none; }
 
 /* ---- Harita üstü öğeler: parsel menüsü, bilgi kartı, çizim pinleri ---------- */
 .parsel-menu-ikon, .cizim-pin-ikon { background: none; border: 0; }

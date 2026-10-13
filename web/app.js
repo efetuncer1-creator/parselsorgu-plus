@@ -2845,6 +2845,19 @@ $("notSigdir").addEventListener("click", () => {
 
 
 
+// ---- yeni sürüm uyarısı ----------------------------------------------------------
+// Sunucu açılışta GitHub'daki son sürüme bakar (parselapp/guncelleme.py). Yeni sürüm varsa her açılışta
+// söylenir: indir ya da devam et. Denetlenemezse (internet yok, kaynaktan çalışıyor) bir şey gösterilmez.
+async function guncellemeDenetle() {
+  let g;
+  try { g = await apiIstek("guncelleme"); } catch { return; }
+  if (!g?.yeni) return;
+  $("guncellemeMetin").textContent = `Parsel Sorgu + v${g.son} yayınlandı${g.baslik ? ` (${g.baslik})` : ""}. Bu bilgisayardaki sürüm v${g.surum}.`;
+  $("guncellemeIndir").href = g.indir;
+  $("guncellemeKutusu").showModal();
+}
+$("guncellemeIndir").addEventListener("click", () => $("guncellemeKutusu").close("indir"));
+
 // ---- başlangıç -----------------------------------------------------------------
 
 (() => {
@@ -2855,6 +2868,7 @@ $("notSigdir").addEventListener("click", () => {
 // Sayfa açılışı = yeni oturum: liste ve alanlar boş başlar. Önbellek (daha önce sorgulanan
 // parseller, il/ilçe/mahalle listeleri) sunucuda kalır; tekrar sorgulanınca TKGM'ye gidilmez.
 postJson("oturum/yeni", {}).catch((e) => mesaj(e.message, true));
+guncellemeDenetle();
 listeCiz();
 referansListeCiz();
 sayacGuncelle();

@@ -34,6 +34,15 @@ jobs:
       - name: Testler
         run: python -m unittest -v
 
+      # Uygulama kendi sürümünü bilsin: açılışta GitHub'daki son sürümle karşılaştırır. Elle çalıştırmada
+      # (etiket yok) dosya olduğu gibi kalır; o derleme güncelleme denetlemez.
+      - name: Sürüm numarası
+        shell: pwsh
+        run: |
+          $surum = "${{ github.ref_name }}".TrimStart("v")
+          if ($surum -match '^\d+\.\d+') { Set-Content -Path parselapp/surum.py -Value "SURUM = `"$surum`"" -Encoding utf8 }
+          Get-Content parselapp/surum.py | Select-Object -Last 1
+
       - name: Paket (PyInstaller)
         run: pyinstaller packaging/ParselSorgu.spec --noconfirm
 

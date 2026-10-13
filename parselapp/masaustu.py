@@ -73,8 +73,10 @@ def main():
     sahip = not calisiyor_mu()
     sunucu = None
     if sahip:
-        sunucu = server.Sunucu(("127.0.0.1", PORT), server.isleyici(server.Uygulama(Store(server.VERI))))
+        uyg = server.Uygulama(Store(server.VERI))
+        sunucu = server.Sunucu(("127.0.0.1", PORT), server.isleyici(uyg))
         threading.Thread(target=sunucu.serve_forever, daemon=True).start()
+        uyg.guncelleme.baslat()  # pencere açılırken GitHub'daki son sürüme bakılır
     if not pencere_ac():
         # Chrome da Edge de yok: varsayılan tarayıcı. Sunucu açık kalmalı; pencerenin kapandığı anlaşılamaz.
         webbrowser.open(ADRES)

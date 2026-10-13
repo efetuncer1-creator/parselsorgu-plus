@@ -740,6 +740,19 @@
   <div id="ipucu" class="ipucu cam" hidden></div>
   <div id="renkPaleti" class="renk-paleti cam" role="group" aria-label="Alan rengi" hidden></div>
 
+  <!-- Yeni sürüm: her açılışta gösterilir (app.js guncellemeDenetle). Uygulama kendini güncellemez. -->
+  <dialog id="guncellemeKutusu" class="diyalog guncelleme cam" aria-labelledby="guncellemeBaslik" aria-describedby="guncellemeMetin">
+    <form method="dialog">
+      <h2 id="guncellemeBaslik"><svg class="ikon"><use href="#i-indir"/></svg>Yeni sürüm var</h2>
+      <p id="guncellemeMetin"></p>
+      <p class="guncelleme-not">Kurulum dosyasını çalıştırmadan önce uygulamayı kapat. Kayıtlı parseller ve projeler silinmez.</p>
+      <div class="butonlar">
+        <button type="submit" value="devam" class="dugme ikincil">Devam et</button>
+        <a id="guncellemeIndir" class="dugme ana" target="_blank" rel="noopener"><svg class="ikon"><use href="#i-indir"/></svg>Güncel sürümü indir</a>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="diyalog" class="diyalog cam" aria-labelledby="diyalogMetin">
     <form method="dialog">
       <p id="diyalogMetin"></p>
