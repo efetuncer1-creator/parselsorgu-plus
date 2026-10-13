@@ -591,6 +591,7 @@ class TabloTest(unittest.TestCase):
         s.append([512, 15, 12683.71, date(2026, 10, 9), None])
         s.append([513, 2, 1250.0, None, None])
         s.append([None, None, None, None, None])
+        s["C2"].number_format = s["C3"].number_format = "#,##0.00"
         kitap.create_sheet("Boş")
         tampon = io.BytesIO()
         kitap.save(tampon)
@@ -599,9 +600,29 @@ class TabloTest(unittest.TestCase):
         self.assertEqual(sonuc["sayfalar"][0]["satirlar"], [
             ["Ada", "Parsel", "Alan (m²)", "Tarih"],
             ["512", "15", "12.683,71", "09.10.2026"],
-            ["513", "2", "1250", ""],
+            ["513", "2", "1.250,00", ""],
         ])
         self.assertFalse(sonuc["sayfalar"][0]["kesildi"])
+
+    def test_hucre_bicimi(self):
+        # Sayılar Excel'de hücre biçimiyle nasıl görünüyorsa öyle (koordinatlar kırpılmasın)
+        from openpyxl import Workbook
+        kitap = Workbook()
+        s = kitap.active
+        ornekler = [
+            (7000, "#,##0.00", "7.000,00"), (15227.36, "#,##0.00", "15.227,36"),
+            (4422771.3, "0.00", "4422771,30"), (525312.84, "0.00", "525312,84"),
+            (39.93876, "General", "39,93876"), (2009, "General", "2009"), (4423399.0, "General", "4423399"),
+            (0.256, "0.0%", "25,6%"), (1.5, "0.0#", "1,5"), (1.234, "0.0#", "1,23"), (12.7, "0", "13"),
+            (-3.25, "#,##0.00;[Red]-#,##0.00", "-3,25"), (1234.5, '#,##0.0 "m²"', "1.234,5"),
+        ]
+        for deger, bicim, _ in ornekler:
+            s.append([deger])
+            s.cell(s.max_row, 1).number_format = bicim
+        tampon = io.BytesIO()
+        kitap.save(tampon)
+        satirlar = tablo.oku("bicim.xlsx", tampon.getvalue())["sayfalar"][0]["satirlar"]
+        self.assertEqual([r[0] for r in satirlar], [beklenen for *_, beklenen in ornekler])
 
     def test_csv_noktali_virgul_ve_sinir(self):
         satirlar = ["Ada;Parsel"] + [f"{i};{i + 1}" for i in range(tablo.EN_FAZLA_SATIR + 5)]

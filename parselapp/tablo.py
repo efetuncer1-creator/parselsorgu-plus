@@ -1,12 +1,14 @@
 """Haritaya ya da çıktı sayfasına konacak tabloları okur (Excel .xlsx/.xlsm, CSV).
 
-Hücreler ekranda göründüğü gibi metne çevrilir: ondalıklar Türkçe virgülle, tarihler gün.ay.yıl.
+Hücreler Excel'de göründüğü gibi metne çevrilir: sayılar hücrenin kendi biçimiyle (ondalık basamak sayısı,
+binlik ayırıcı, yüzde; "Genel" biçimde olduğu gibi), Türkçe virgülle; tarihler gün.ay.yıl.
 Çok büyük sayfalar kesilir (1.000 satır, 50 sütun): haritada ve sayfada bütün tablo gösterilir, ama binlerce
 satırlık bir liste harita ekranını ve proje dosyasını kilitlemesin.
 """
 
 import csv
 import io
+import re
 from datetime import date, datetime
 from pathlib import Path
 
@@ -16,7 +18,35 @@ EN_FAZLA_SATIR = 1000
 EN_FAZLA_SUTUN = 50
 
 
-def _metin(deger):
+def _turkce(metin):
+    """"1,234.5" -> "1.234,5" (binlik nokta, ondalık virgül)."""
+    return metin.replace(",", " ").replace(".", ",").replace(" ", ".")
+
+
+def _sayi(deger, bicim):
+    """Sayıyı Excel'in hücre biçimiyle gösterdiği gibi yazar. Desteklenen: Genel; 0, 0.00, #,##0.00 gibi
+    ondalık ve binlik ayırıcılı biçimler; # ile isteğe bağlı basamaklar (0.0#); yüzde."""
+    b = (bicim or "General").split(";")[0]                      # yalnız artı sayılar bölümü
+    b = re.sub(r'"[^"]*"|\\.|\[[^\]]*\]|_.|\*.', "", b)          # tırnaklı metin, kaçışlar, [Renk], boşluk/doldurma
+    if b in ("General", "@") or not re.search(r"[0#?]", b):
+        # Genel: en çok 10 anlamlı basamak, binlik ayırıcı yok
+        metin = f"{deger:.10g}"
+        if "e" in metin:
+            metin = f"{deger:.0f}" if abs(deger) >= 1 else f"{deger:.10f}".rstrip("0").rstrip(".")
+        return metin.replace(".", ",")
+    if "%" in b:
+        deger *= 100
+    tam, _, kesir = b.partition(".")
+    kesir = re.match(r"[0#?]*", kesir).group()
+    en_az, en_cok = kesir.count("0"), len(kesir)
+    metin = f"{deger:,.{en_cok}f}" if "," in tam else f"{deger:.{en_cok}f}"
+    while en_cok > en_az and metin.endswith("0"):              # isteğe bağlı (#) basamaklardaki sondaki sıfırlar
+        metin, en_cok = metin[:-1], en_cok - 1
+    metin = _turkce(metin.rstrip(".")) if en_cok == 0 else _turkce(metin)
+    return metin + ("%" if "%" in b else "")
+
+
+def _metin(deger, bicim=None):
     if deger is None:
         return ""
     if isinstance(deger, bool):
@@ -25,10 +55,8 @@ def _metin(deger):
         return deger.strftime("%d.%m.%Y %H:%M") if (deger.hour, deger.minute) != (0, 0) else deger.strftime("%d.%m.%Y")
     if isinstance(deger, date):
         return deger.strftime("%d.%m.%Y")
-    if isinstance(deger, float):
-        if deger.is_integer():
-            return str(int(deger))
-        return f"{deger:,.2f}".replace(",", " ").replace(".", ",").replace(" ", ".").rstrip("0").rstrip(",")
+    if isinstance(deger, (int, float)):
+        return _sayi(deger, bicim)
     return str(deger).strip()
 
 
@@ -69,8 +97,8 @@ def oku(ad, icerik):
             # tabloyu tek hücre sanmasın.
             sayfa.reset_dimensions()
             ham = []
-            for s in sayfa.iter_rows(values_only=True):
-                ham.append(list(s))
+            for s in sayfa.iter_rows():  # hücre biçimi (number_format) için değerlerle birlikte
+                ham.append([_metin(h.value, getattr(h, "number_format", None)) for h in s])
                 if len(ham) > EN_FAZLA_SATIR + 200:  # sondaki boşlukları atabilmek için biraz fazlası
                     break
             satirlar, kesildi = _kirp(ham)
