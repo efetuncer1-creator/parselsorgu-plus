@@ -393,6 +393,10 @@ function tabloCiz(ctx, n, x, y, boyutPx, olc = false) {
       + govde.reduce((t, r) => t + (r.hucreler ? 1 : r.satirlar.length), 0));
     return { d, enler, en, ust, govde, boy };
   });
+  // Yan yanayken üst kısımlar en uzunu kadar yer kaplar: başlık satırları aynı hizada
+  const ustSatir = (b) => b.ust.reduce((t, u) => t + u.satirlar.length, 0);
+  const ustEnCok = Math.max(...bloklar.map(ustSatir));
+  if (yan) bloklar.forEach((b) => { b.boy += (ustEnCok - ustSatir(b)) * satirBoy; });
   const ara = cizgi;
   const en = yan ? bloklar.reduce((t, b) => t + b.en, 0) + ara * (bloklar.length - 1) : Math.max(...bloklar.map((b) => b.en));
   const boy = yan ? Math.max(...bloklar.map((b) => b.boy)) : bloklar.reduce((t, b) => t + b.boy, 0) + ara * (bloklar.length - 1);
@@ -417,6 +421,7 @@ function tabloCiz(ctx, n, x, y, boyutPx, olc = false) {
         ctx.fillStyle = token("--not-siyah");
         for (const m of u.satirlar) { ctx.fillText(m, bx + dolgu[0], yy + satirBoy / 2); yy += satirBoy; }
       }
+      if (yan) yy = by + ustEnCok * satirBoy;
       if (b.d.baslik) {
         ctx.fillStyle = n.renk;
         ctx.fillRect(bx, yy, b.en, satirBoy);

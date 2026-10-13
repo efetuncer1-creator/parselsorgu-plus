@@ -406,7 +406,9 @@ function katmanEkle(f) {
   k.on("click", (e) => {
     if (durum.mod) return; // sorgu/çizim modunda tıklama haritaya gider
     L.DomEvent.stopPropagation(e);
-    seciliDegistir(key);
+    // İlk dokunuş seçer ve bilgi düğmesini koyar; aynı parsele ikinci dokunuş ikisini de kaldırır
+    if (durum.aktif === key) { seciliDegistir(key, false); aktifBirak(); return; }
+    seciliDegistir(key, true);
     aktifYap(key, false);
   });
   k.addTo(parselKatmani);
@@ -415,7 +417,8 @@ function katmanEkle(f) {
   stilUygula(key);
 }
 
-// ---- parsel menüsü: aktif parselin üstünde "⋯", tıklanınca bilgi kartı ----
+// ---- parsel menüsü: aktif parselin üstünde bilgi ("i") düğmesi, tıklanınca bilgi kartı ----
+// Ekran görüntüsünde kalmasın: boş yere ya da aynı parsele tekrar tıklayınca kalkar (aktifBirak).
 
 let menuIsareti = null;
 
@@ -460,7 +463,7 @@ function menuGoster(key) {
   menuIsareti = L.marker(icNokta(f), {
     icon: L.divIcon({
       className: "parsel-menu-ikon",
-      html: `<button type="button" class="parsel-menu" title="Parsel bilgisi" aria-label="${esc(p.ada)}/${esc(p.parsel)} bilgisi">${ikon("daha")}</button>`,
+      html: `<button type="button" class="parsel-menu" title="Parsel bilgisi" aria-label="${esc(p.ada)}/${esc(p.parsel)} bilgisi">${ikon("bilgi-i")}</button>`,
       iconSize: [32, 32],
       iconAnchor: [16, 16],
     }),
@@ -625,6 +628,16 @@ function seciliDegistir(key, deger) {
   const sec = deger ?? !durum.secili.has(key);
   sec ? durum.secili.add(key) : durum.secili.delete(key);
   stilUygula(key);
+  listeCiz();
+}
+
+// Aktif parsel kalmaz: bilgi düğmesi ve kartı kalkar (seçili parseller seçili kalır).
+function aktifBirak() {
+  const onceki = durum.aktif;
+  if (!onceki) return;
+  durum.aktif = null;
+  stilUygula(onceki);
+  menuGoster(null);
   listeCiz();
 }
 
@@ -926,6 +939,12 @@ function sorguModu(acik) {
 $("haritaModu").addEventListener("click", () => sorguModu(durum.mod !== "sorgu"));
 
 harita.on("click", async (e) => {
+  // Boş yere tıklama, son tıklanan parsele ikinci kez dokunmakla aynı: seçimi ve bilgi düğmesi kalkar
+  // (listeden ya da toplu seçilen öbür parseller seçili kalır).
+  if (!durum.mod) {
+    if (durum.aktif) seciliDegistir(durum.aktif, false);
+    return aktifBirak();
+  }
   if (durum.mod === "cizim") return cizimPinEkle(e.latlng);
   if (durum.mod?.startsWith("not-")) return notTikla(e.latlng);
   if (durum.mod !== "sorgu") return;
@@ -2900,13 +2919,16 @@ function tabloDuzeni(s, baslikSatiri) {
 function tabloHtml(n) {
   const sayfalar = tabloSayfalari(n), adli = sayfalar.length > 1;
   const satir = (h, et) => `<tr>${h.map((x) => `<${et}>${esc(x)}</${et}>`).join("")}</tr>`;
-  const tablo = (s) => {
-    const d = tabloDuzeni(s, n.baslikSatiri);
-    // Yayılan satırın içeriği sütun genişliğini büyütmesin diye genişliği sıfır, en az hücre kadar (style.css)
-    const yay = (metin, sinif) => `<tr class="${sinif}"><td colspan="${d.sutunSayisi}"><div class="yayilan">${esc(metin)}</div></td></tr>`;
-    const ust = (adli ? [yay(s.ad, "tablo-ad")] : []).concat(d.ust.map((m) => yay(m, "tablo-not")));
-    const govde = d.govde.map((r) => (r.hucreler ? satir(r.hucreler, "td") : yay(r.yayilan, "tablo-ara"))).join("");
-    return `<table>${ust.length || d.baslik ? `<thead>${ust.join("")}${d.baslik ? satir(d.baslik, "th") : ""}</thead>` : ""}<tbody>${govde}</tbody></table>`;
+  // Her sayfa: üst kısım (sayfa adı, Excel'deki baştaki notlar) ve tablo. Yan yanayken ızgaranın ilk satırında
+  // üst kısımlar, ikincisinde tablolar durur; başlık satırları hep aynı hizada (style.css .harita-tablo.yan).
+  // Üst kısım ve yayılan satırlar sütun genişliğini büyütmesin diye genişlikleri sıfır, en az kutu kadar.
+  const tablo = (s, k) => {
+    const d = tabloDuzeni(s, n.baslikSatiri), sonraki = k ? "sonraki" : "";
+    const ust = [...(adli ? [`<div class="tablo-ad">${esc(s.ad)}</div>`] : []), ...d.ust.map((m) => `<div class="tablo-not">${esc(m)}</div>`)];
+    const yay = (m) => `<tr class="tablo-ara"><td colspan="${d.sutunSayisi}"><div class="yayilan">${esc(m)}</div></td></tr>`;
+    const govde = d.govde.map((r) => (r.hucreler ? satir(r.hucreler, "td") : yay(r.yayilan))).join("");
+    return `<div class="tablo-ust ${sonraki}">${ust.join("")}</div>`
+      + `<table class="${sonraki}">${d.baslik ? `<thead>${satir(d.baslik, "th")}</thead>` : ""}<tbody>${govde}</tbody></table>`;
   };
   const secili = n.id === seciliNot && gorselSekmesinde();
   return `<div class="harita-tablo ${tabloDizilisi(n)}${secili ? " secili" : ""}" style="--tablo-boyut:${n.boyut}px;--tablo-renk:${esc(n.renk)};--tablo-yazi:${acikRenk(n.renk) ? "var(--not-siyah)" : "var(--not-beyaz)"}">`
