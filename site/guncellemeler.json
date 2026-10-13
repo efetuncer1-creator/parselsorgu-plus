@@ -4,7 +4,7 @@
     {
       "surum": "0.2.0",
       "tarih": "2026-10-13",
-      "baslik": "Görsel, Analiz ve Çıktı sekmeleri",
+      "baslik": "Görsel, Analiz, Eğim ve Çıktı sekmeleri; hızlı arama",
       "notlar": [
         { "tur": "yeni", "metin": "Görsel sekmesi: her alan için renk (hazır ya da özel), kenar kalınlığı ve çizgi tipi, dokuz tarama tipi, aralık ve opaklık." },
         { "tur": "yeni", "metin": "Katman listesi: alanlar, yazılar, oklar, ölçüler, görseller ve tablolar sürükleyerek sıralanır; gruplara konur (aç/kapa, toplu gizle ve kilitle); her katmana opaklık, notlara kilit." },
@@ -14,6 +14,8 @@
         { "tur": "yeni", "metin": "Lejant: haritada açılıp kapanır; öğeler eklenir, çıkarılır, adlandırılır ve sıralanır; özel öğe de eklenebilir." },
         { "tur": "yeni", "metin": "Analiz sekmesi: alandaki, seçili ya da listedeki parsellerin türleri (tablo ya da dilim grafiği) ve sütunları seçilebilen ada/parsel tablosu; Excel'e, haritaya ya da çıktı sayfasına eklenir." },
         { "tur": "yeni", "metin": "Parseller niteliklerine göre renklendirilir; renkler değiştirilebilir, lejanta ve çıktıya yansır." },
+        { "tur": "yeni", "metin": "Eğim sekmesi: alanın ya da parsellerin en düşük, en yüksek ve ortalama kotu, ortalama eğimi ve eğim sınıflarının kapladığı alan; parsel başına kot ve eğim tablosu (Excel'e, haritaya, sayfaya). Eğim ya da yükseklik (gölgeli kabartmalı) haritası katman olarak çıktıya ve projeye girer; haritada çizilen hat boyunca kesit grafiği. Yükseklik ücretsiz Copernicus modelinden (30 m; çok büyük bölgede 60–240 m); ilk kullanımda indirilir, sonra internetsiz çalışır." },
+        { "tur": "yeni", "metin": "Hızlı arama (Ctrl+K): parsel (ada/parsel, mahalle, nitelik), alan, katman ve komutlar tek kutudan; enlem/boylam ya da ITRF96/ED50 3° koordinat yazınca oraya gidilir." },
         { "tur": "yeni", "metin": "Çıktı: seçilen alan ya da A4/A3 sayfa (yön, ölçek, 150/300 dpi); başlık ve tarih, lejant, kuzey oku ve ölçek, ITRF96/ED50 koordinat ızgarası; logo, tablo, grafik ve yazı. PNG ve PDF." },
         { "tur": "yeni", "metin": "Çıktıda bütün ada/parsel numaraları yazılır: sığmayan küçültülür ya da parselin yönüne döndürülür, çok küçük parselde yanına yazılıp çizgiyle bağlanır; yazılar üst üste binmez." },
         { "tur": "yeni", "metin": "Çıktı sayfası haritanın üstünde canlı görünür; başlık, lejant ve eklenenler orada ya da önizlemede sürüklenip köşeden büyütülür. Boyutlar kaydırıcının yanındaki kutuya elle de yazılır, üst sınır yok." },

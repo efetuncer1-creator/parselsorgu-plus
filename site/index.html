@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Parsel Sorgu + — TKGM parsel sorgu, KML ve Excel</title>
-  <meta name="description" content="TKGM parsellerini sorgula, alanı çiz, içindeki parselleri bul; KML ve Excel'e (ITRF96 / ED50 3°) aktar. Windows için ücretsiz ve açık kaynak.">
+  <meta name="description" content="TKGM parsellerini sorgula, alanı çiz, içindeki parselleri bul; KML ve Excel'e (ITRF96 / ED50 3°) aktar, eğim ve yüksekliği gör. Windows için ücretsiz ve açık kaynak.">
   <meta name="theme-color" content="#070b14">
   <link rel="icon" type="image/svg+xml" href="assets/isaret.svg">
   <link rel="apple-touch-icon" href="assets/ikon-192.png">
@@ -95,8 +95,9 @@
         <h2 class="rx-h2" data-reveal>Yaz, seç, bul.</h2>
         <p data-reveal>İl, ilçe ve mahalleyi yazarak seç, ada ve parseli gir. Ya da haritada parsele tıkla. Tapu alanı, nitelik, mevkii ve pafta tek kartta.</p>
         <p data-reveal>Sorgulanan her parsel bilgisayarında saklanır: aynı parsel için <strong>TKGM'ye ikinci kez gidilmez</strong>, günlük limitin boşa gitmez.</p>
+        <p data-reveal><strong>Ctrl+K</strong> ile hızlı arama: ada/parsel, mahalle, alan, katman ya da komut yaz; koordinat yazınca (enlem/boylam, ITRF96 ya da ED50) oraya gider.</p>
         <ul class="rx-cipler" data-reveal>
-          <li>Yazarak ara</li><li>Haritadan sorgu</li><li>Önbellek</li><li>Eski <span lang="en">KML</span>'leri içe aktar</li>
+          <li>Yazarak ara</li><li>Haritadan sorgu</li><li>Hızlı arama</li><li>Koordinata git</li><li>Önbellek</li><li>Eski <span lang="en">KML</span>'leri içe aktar</li>
         </ul>
       </div>
     </section>
@@ -153,10 +154,28 @@
       </div>
     </section>
 
+    <!-- SCENE: slope and elevation -->
+    <section class="rx-scene rx-scene--flip" aria-labelledby="s5">
+      <div class="rx-scene__media">
+        <div class="rx-scene__cerceve"><img data-speed="6" src="assets/uygulama-egim-1920.webp" srcset="assets/uygulama-egim-1200.webp 1200w, assets/uygulama-egim-1920.webp 1920w, assets/uygulama-egim-3200.webp 3200w" sizes="(min-width: 768px) 60vw, 100vw" alt="Eğim sekmesi: Çumra ovası alanı eğim sınıflarına göre renkli, solda kot özeti ve eğim sınıflarının alanı, haritada A-B kesit hattı" loading="lazy" width="3200" height="2000"></div>
+        <img class="rx-scene__kesit" data-speed="-10" src="assets/kesit-egim-748.webp" srcset="assets/kesit-egim-520.webp 520w, assets/kesit-egim-748.webp 748w" sizes="(min-width: 768px) 22vw, 50vw" alt="Kesit: 660 m'lik hat boyunca yükseklik grafiği; çıkış, iniş, ortalama eğim ve en dik bölüm" loading="lazy" width="748" height="975">
+      </div>
+      <div class="rx-scene__copy">
+        <p class="rx-eyebrow" data-reveal>Eğim ve yükseklik</p>
+        <h2 class="rx-h2" id="s5" data-reveal>Arazinin eğimini gör.</h2>
+        <p data-reveal>Alanın ya da parsellerin en düşük, en yüksek ve ortalama kotu, ortalama eğimi; eğim sınıflarının kapladığı alan. Her parsel için kot ve eğim tablosu, <span lang="en">Excel</span>'e ya da sayfaya.</p>
+        <p data-reveal>Eğim ya da yükseklik haritasını katman olarak çıktıya koy; haritada bir hat çiz, boyunca <strong>kesit</strong> çıksın. Yükseklik ücretsiz <span lang="en">Copernicus</span> modelinden: <strong>30 m</strong> çözünürlük, ön değerlendirme için.</p>
+        <ul class="rx-cipler" data-reveal>
+          <li>Eğim sınıfları</li><li>Yükseklik</li><li>Gölgeli kabartma</li><li>Kesit</li><li>Parsel kotları</li><li>30 m</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- MEDIA RAIL -->
     <section class="rx-rail" aria-labelledby="ray-baslik" data-rail>
       <h2 class="rx-h2 rx-rail__title" id="ray-baslik">Ekranlar</h2>
       <div class="rx-rail__track" data-rail-track>
+        <figure class="rx-card"><img src="assets/uygulama-arama-1200.webp" srcset="assets/uygulama-arama-1200.webp 1200w, assets/uygulama-arama-1920.webp 1920w" sizes="(min-width: 768px) 46vw, 82vw" alt="Hızlı arama penceresi: 409 yazınca 409 adasındaki parseller listeleniyor" loading="lazy" width="1200" height="750"><figcaption>Hızlı arama (Ctrl+K): parsel, alan, komut, koordinat</figcaption></figure>
         <figure class="rx-card"><img src="assets/uygulama-gorsel-1200.webp" srcset="assets/uygulama-gorsel-1200.webp 1200w, assets/uygulama-gorsel-1920.webp 1920w" sizes="(min-width: 768px) 46vw, 82vw" alt="Görsel sekmesi: katman listesi, alan ölçüsü, yazı, ok ve lejant" loading="lazy" width="1200" height="750"><figcaption>Görsel: katmanlar, ölçü, yazı, ok, lejant</figcaption></figure>
         <figure class="rx-card"><img src="assets/uygulama-analiz-1200.webp" srcset="assets/uygulama-analiz-1200.webp 1200w, assets/uygulama-analiz-1920.webp 1920w" sizes="(min-width: 768px) 46vw, 82vw" alt="Analiz sekmesi: parsel türleri ve sütunları seçilebilen ada/parsel tablosu" loading="lazy" width="1200" height="750"><figcaption>Analiz: parsel türleri ve ada/parsel tablosu</figcaption></figure>
         <figure class="rx-card"><img src="assets/uygulama-alan-1200.webp" srcset="assets/uygulama-alan-1200.webp 1200w, assets/uygulama-alan-1920.webp 1920w" sizes="(min-width: 768px) 46vw, 82vw" alt="Alan özeti ve boşluklar" loading="lazy" width="1200" height="750"><figcaption>Alan özeti: içindekiler, kesişenler, boşluklar</figcaption></figure>
@@ -230,7 +249,8 @@
         <details><summary>Ücretli mi?</summary><p>Hayır. Ücretsiz ve açık kaynak; hesap ya da kayıt gerekmez.</p></details>
         <details><summary>TKGM'nin günlük limiti dolarsa ne olur?</summary><p>Uygulama “Limit doldu” der. Daha önce sorguladığın parseller önbellekten gelmeye devam eder; yeni sorgular ertesi gün açılır. Limit her kullanıcının kendi bağlantısına göredir.</p></details>
         <details><summary>Alanlar ne kadar doğru?</summary><p>Tapu alanı TKGM'nin verdiği değerdir; uygulama onu hesaplamaz. Alan içi metrekare gibi hesaplar parsel sınırlarından yapılır ve yaklaşıktır. TKGM koordinatları yaklaşık 1 m hassasiyettedir; ED50 dönüşümü yaklaşık ±2 m'dir.</p></details>
-        <details><summary>Verilerim nerede duruyor?</summary><p>Yalnızca kendi bilgisayarında: <code>%LOCALAPPDATA%\ParselSorguPlus</code>. Uygulama hiçbir sunucuya veri göndermez; sadece TKGM'ye sorgu atar.</p></details>
+        <details><summary>Verilerim nerede duruyor?</summary><p>Yalnızca kendi bilgisayarında: <code>%LOCALAPPDATA%\ParselSorguPlus</code>. Uygulama hiçbir sunucuya veri göndermez: TKGM'ye sorgu atar, eğim için herkese açık yükseklik verisini indirir, açılırken GitHub'da yeni sürüm olup olmadığına bakar.</p></details>
+        <details><summary>Eğim ve yükseklik ne kadar doğru?</summary><p>Yükseklik, Avrupa Birliği ve ESA'nın ücretsiz <span lang="en">Copernicus DEM GLO-30</span> modelinden gelir: 30 m çözünürlük (çok büyük bölgede 60–240 m), birkaç metre sapma olabilir. Yüzey modelidir; binalar ve ağaçlar yüksekliğe dahildir. Ön değerlendirme içindir; proje ve resmi rapor için halihazır harita kullanılmalı. Veri ilk kullanımda indirilir, sonra internetsiz çalışır.</p></details>
         <details><summary>Windows kurulumda uyarı veriyor, güvenli mi?</summary><p>Kurulum dosyası henüz dijital olarak imzalı olmadığı için <span lang="en">SmartScreen</span> uyarı verebilir. <strong>Ek bilgi → Yine de çalıştır</strong> ile devam edebilirsin. Dosya, GitHub'daki açık kaynak koddan GitHub'ın kendi sunucularında derlenir.</p></details>
         <details><summary>Mac ya da Linux'ta çalışır mı?</summary><p>Kurulum paketi şimdilik yalnızca Windows için. Python yüklü her bilgisayarda kaynak koddan çalıştırılabilir; adımlar GitHub sayfasında.</p></details>
         <details><summary>TKGM'nin uygulaması mı?</summary><p>Hayır, resmi bir uygulama değildir ve TKGM ile bağlantısı yoktur. Parsel verileri Tapu ve Kadastro Genel Müdürlüğü'ne aittir; uygulama, parselsorgu sitesinin kullandığı herkese açık servisi kullanır.</p></details>
